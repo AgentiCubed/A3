@@ -37,8 +37,9 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default=KanbanColumn.BACKLOG,
     )
-    # Assigned agent FK is added in Phase 4 (agents table). Plain UUID for now.
-    assigned_agent_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
+    assigned_agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
+    )
     required_capabilities: Mapped[list | None] = mapped_column(JSON, nullable=True)
     estimate_hours: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=3)

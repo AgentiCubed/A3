@@ -7,6 +7,13 @@ the imports below as later phases land.
 
 from __future__ import annotations
 
+from app.models.agent import (
+    Agent,
+    AgentCapability,
+    AgentToolPermission,
+    PromptTemplate,
+    Tool,
+)
 from app.models.audit_event import AuditEvent
 from app.models.organization import Organization
 from app.models.project import (
@@ -20,6 +27,9 @@ from app.models.task import Task, TaskDependency
 from app.models.user import ProjectMember, User
 
 __all__ = [
+    "Agent",
+    "AgentCapability",
+    "AgentToolPermission",
     "AuditEvent",
     "Decision",
     "Milestone",
@@ -28,8 +38,10 @@ __all__ = [
     "ProjectMember",
     "ProjectMethodology",
     "ProjectRequirement",
+    "PromptTemplate",
     "Risk",
     "Task",
     "TaskDependency",
+    "Tool",
     "User",
 ]

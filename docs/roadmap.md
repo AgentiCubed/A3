@@ -87,15 +87,36 @@ Kanban workflow, timeline, critical-path calculation.
 - System-plane RBAC is enforced on mutations; project-plane role resolution
   (e.g. a `manager` who isn't an org admin) lands with agents in Phase 4 (A18).
 
-## Phase 4 — Agents, capabilities, matching
+## Phase 4 — Agents, capabilities, matching *(complete)*
 Agent registry, capability taxonomy, tool registry, agent-tool permissions,
 provider-neutral adapter, agent matching.
 
 **Acceptance criteria**
-- [ ] `AgentAdapter` port + `MockProvider` + one real provider.
-- [ ] Capability taxonomy + agent capability declarations.
-- [ ] Tool registry + default-deny `AgentToolPermission`.
-- [ ] Matching ranks agents by required capabilities.
+- [x] `AgentAdapter` port + `MockProvider` (deterministic) + a real provider
+  (`AnthropicProvider`), selected by name via the registry (ADR-0003). The real
+  adapter resolves its credential by reference *before* any network call.
+  Verified by `test_providers`.
+- [x] Curated capability taxonomy (`app/core/capabilities.py`); agent capability
+  declarations validated against it (unknown → 422). Verified by `test_agents`.
+- [x] Tool registry + default-deny `AgentToolPermission` (row existence = grant;
+  expiry-aware `has_permission`). Verified by `test_agents`.
+- [x] Capability-based matching ranks eligible (active + full-cover) agents ahead
+  of partial matches, then by coverage and proficiency (`app/services/matching`).
+  Verified by `test_matching` + `/agents/matches`.
+- [x] Bonus: capability-checked task→agent assignment (422 on mismatch); the
+  agent self-escalation block is enforced at the service layer and tested.
+
+**Verification (run 2026-06-25, local):**
+- `pytest` → `73 passed` · `ruff` + `black --check` → clean
+- `alembic upgrade head --sql` renders 0001→0004 cleanly (incl. the deferred
+  `tasks.assigned_agent_id → agents` FK).
+
+**Phase-4 notes:**
+- New RBAC actions `AGENT_MANAGE` / `TOOL_MANAGE` (owner/admin system, manager
+  project plane); agents remain hard-denied every management action.
+- High-sensitivity tools carry a `sensitivity` flag; the approval gate that
+  blocks their invocation lands in Phase 6. `has_permission` is wired for the
+  Phase-5 dispatcher.
 
 ## Phase 5 — Dispatch & execution
 Task dispatch, execution records, background workers, retries, timeouts,

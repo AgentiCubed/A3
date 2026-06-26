@@ -104,4 +104,6 @@ pytest
 
 **Phase 3** (projects, requirements, milestones, tasks, dependencies with cycle rejection, risks, decisions, Kanban, CPM timeline + dependency graph, rule-based methodology recommender) — **complete & verified** (backend **56/56** pytest, ruff + black clean, migrations render 0001→0003).
 
-**Phase 4** (agent registry, capability taxonomy, tool registry, agent-tool permissions, provider-neutral adapter, agent matching) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.
+**Phase 4** (agent registry, capability taxonomy, tool registry, default-deny agent-tool permissions, provider-neutral adapter with mock + Anthropic providers, capability-based matching + assignment) — **complete & verified** (backend **73/73** pytest, ruff + black clean, migrations render 0001→0004).
+
+**Phase 5** (task dispatch, execution records, background workers, retries, timeouts, reassignment, escalation, execution state machine) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.

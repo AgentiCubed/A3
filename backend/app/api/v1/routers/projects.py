@@ -23,6 +23,7 @@ from app.models.project import (
 )
 from app.models.risk import Decision, Risk
 from app.models.user import User
+from app.schemas.agent import AssignRequest
 from app.schemas.project import (
     MethodologyResponse,
     MilestoneCreate,
@@ -51,7 +52,7 @@ from app.schemas.task import (
     TaskScheduleResponse,
     TimelineResponse,
 )
-from app.services import project_service, task_service
+from app.services import agent_service, project_service, task_service
 from app.services.methodology import ProjectSignals
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -204,6 +205,36 @@ async def move_task(
         )
     except task_service.TaskNotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found") from exc
+    await session.commit()
+    return TaskResponse.model_validate(task)
+
+
+@router.patch("/{project_id}/tasks/{task_id}/assign", response_model=TaskResponse)
+async def assign_task_agent(
+    project_id: uuid.UUID,
+    task_id: uuid.UUID,
+    req: AssignRequest,
+    session: DbSession,
+    user: Annotated[User, Depends(require(Action.AGENT_ASSIGN))],
+):
+    project = await _load_project(session, user, project_id)
+    tasks = await task_service.list_tasks(session, project.id)
+    task = next((t for t in tasks if t.id == task_id), None)
+    if task is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
+    try:
+        agent = await agent_service.get_agent(session, user.organization_id, req.agent_id)
+    except agent_service.NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "agent not found") from exc
+    try:
+        task = await agent_service.assign_agent_to_task(
+            session, org_id=user.organization_id, actor_id=user.id, task=task, agent=agent
+        )
+    except agent_service.CapabilityMismatch as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {"error": "capability_mismatch", "missing": exc.missing},
+        ) from exc
     await session.commit()
     return TaskResponse.model_validate(task)
 

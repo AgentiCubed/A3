@@ -25,6 +25,8 @@ class Action(StrEnum):
     PROJECT_EDIT = "project.edit"
     TASK_EDIT = "task.edit"
     AGENT_ASSIGN = "agent.assign"
+    AGENT_MANAGE = "agent.manage"
+    TOOL_MANAGE = "tool.manage"
     TOOL_PERMISSION_GRANT = "tool_permission.grant"
     APPROVAL_DECIDE = "approval.decide"
     DASHBOARD_VIEW = "dashboard.view"
@@ -52,6 +54,8 @@ _MATRIX: dict[Action, tuple[set[SystemRole], set[ProjectRole]]] = {
         {ProjectRole.MANAGER, ProjectRole.CONTRIBUTOR},
     ),
     Action.AGENT_ASSIGN: ({SystemRole.OWNER, SystemRole.ADMIN}, {ProjectRole.MANAGER}),
+    Action.AGENT_MANAGE: ({SystemRole.OWNER, SystemRole.ADMIN}, {ProjectRole.MANAGER}),
+    Action.TOOL_MANAGE: ({SystemRole.OWNER, SystemRole.ADMIN}, {ProjectRole.MANAGER}),
     Action.TOOL_PERMISSION_GRANT: (
         {SystemRole.OWNER, SystemRole.ADMIN},
         {ProjectRole.MANAGER},

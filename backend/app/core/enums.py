@@ -66,3 +66,37 @@ class RiskStatus(StrEnum):
     OPEN = "open"
     MITIGATING = "mitigating"
     CLOSED = "closed"
+
+
+class AgentKind(StrEnum):
+    AI = "ai"
+    HUMAN = "human"
+
+
+class AgentStatus(StrEnum):
+    ACTIVE = "active"
+    DISABLED = "disabled"
+
+
+class AgentRole(StrEnum):
+    EXECUTOR = "executor"
+    EVALUATOR = "evaluator"
+    EITHER = "either"
+
+
+class ToolKind(StrEnum):
+    HTTP = "http"
+    PYTHON_FN = "python_fn"
+    SHELL = "shell"
+    DATA_SOURCE = "data_source"
+
+
+class ToolSensitivity(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class PromptRole(StrEnum):
+    EXECUTOR = "executor"
+    EVALUATOR = "evaluator"
