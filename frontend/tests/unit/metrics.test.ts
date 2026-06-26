@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  ganttRows,
-  mermaidFromGraph,
-  pct,
-  riskGrid,
-  severityClass,
-} from "@/lib/metrics";
+import { ganttRows, mermaidFromGraph, pct, riskGrid, severityClass } from "@/lib/metrics";
 
 describe("pct", () => {
   it("formats a rate as a rounded percentage", () => {
@@ -19,8 +13,20 @@ describe("ganttRows", () => {
   it("scales schedules to 0-100% bars", () => {
     const rows = ganttRows(
       [
-        { task_id: "a", earliest_start: 0, earliest_finish: 3, slack: 0, is_critical: true },
-        { task_id: "b", earliest_start: 3, earliest_finish: 9, slack: 0, is_critical: true },
+        {
+          task_id: "a",
+          earliest_start: 0,
+          earliest_finish: 3,
+          slack: 0,
+          is_critical: true,
+        },
+        {
+          task_id: "b",
+          earliest_start: 3,
+          earliest_finish: 9,
+          slack: 0,
+          is_critical: true,
+        },
       ],
       9,
     );
@@ -32,7 +38,15 @@ describe("ganttRows", () => {
 
   it("handles zero duration without dividing by zero", () => {
     const rows = ganttRows(
-      [{ task_id: "a", earliest_start: 0, earliest_finish: 0, slack: 0, is_critical: false }],
+      [
+        {
+          task_id: "a",
+          earliest_start: 0,
+          earliest_finish: 0,
+          slack: 0,
+          is_critical: false,
+        },
+      ],
       0,
     );
     expect(Number.isFinite(rows[0].leftPct)).toBe(true);

@@ -24,10 +24,7 @@ export function ganttRows(
   return schedules.map((s) => ({
     taskId: s.task_id,
     leftPct: (s.earliest_start / span) * 100,
-    widthPct: Math.max(
-      1,
-      ((s.earliest_finish - s.earliest_start) / span) * 100,
-    ),
+    widthPct: Math.max(1, ((s.earliest_finish - s.earliest_start) / span) * 100),
     isCritical: s.is_critical,
   }));
 }
@@ -46,7 +43,10 @@ export function riskGrid(matrix: Record<string, number>): number[][] {
 }
 
 /** Severity bucket for a (likelihood, impact) cell — drives the heat color. */
-export function severityClass(likelihood: number, impact: number): "low" | "medium" | "high" {
+export function severityClass(
+  likelihood: number,
+  impact: number,
+): "low" | "medium" | "high" {
   const s = likelihood * impact;
   if (s >= 15) return "high";
   if (s >= 6) return "medium";

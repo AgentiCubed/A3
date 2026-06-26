@@ -16,13 +16,18 @@ export function GanttChart({
     return <p style={{ color: "#9fb0c0" }}>No scheduled tasks.</p>;
   }
   return (
-    <div aria-label="Gantt chart" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div
+      aria-label="Gantt chart"
+      style={{ display: "flex", flexDirection: "column", gap: 6 }}
+    >
       {rows.map((r) => (
         <div key={r.taskId} style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ width: 160, fontSize: 12, color: "#c9d4df" }}>
             {titles[r.taskId] ?? r.taskId.slice(0, 8)}
           </span>
-          <div style={{ position: "relative", flex: 1, height: 18, background: "#0d1117" }}>
+          <div
+            style={{ position: "relative", flex: 1, height: 18, background: "#0d1117" }}
+          >
             <div
               style={{
                 position: "absolute",
@@ -37,7 +42,8 @@ export function GanttChart({
         </div>
       ))}
       <div style={{ fontSize: 11, color: "#9fb0c0", marginTop: 4 }}>
-        Duration: {projectDuration}h · <span style={{ color: "#c0392b" }}>red = critical path</span>
+        Duration: {projectDuration}h ·{" "}
+        <span style={{ color: "#c0392b" }}>red = critical path</span>
       </div>
     </div>
   );

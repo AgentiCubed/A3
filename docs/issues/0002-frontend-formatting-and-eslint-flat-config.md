@@ -1,6 +1,17 @@
 # Issue 0002 — Frontend: Prettier deferred; ESLint on legacy config
 
-**Status:** Open · **Opened:** 2026-06-25 · **Phase:** 1
+**Status:** RESOLVED (Prettier) (2026-06-26) · **Opened:** 2026-06-25 · **Phase:** 1
+
+## Resolution
+Prettier is wired into the frontend: `prettier` + `eslint-config-prettier`, a
+`.prettierrc.json` / `.prettierignore`, `format` + `format:check` scripts, and a
+**Format check** step in the CI frontend job. ESLint extends `prettier` to disable
+conflicting rules. All frontend files are formatted.
+
+Residual (low priority): ESLint still uses the legacy `.eslintrc.json`
+(`next/core-web-vitals` + `next/typescript` + `prettier`). `next lint` supports it,
+so the flat-config (`eslint.config.mjs`) migration is deferred — cosmetic, no
+functional impact.
 
 ## What is incomplete
 1. **Prettier** is not wired into the frontend. The roadmap's Phase 1 criterion

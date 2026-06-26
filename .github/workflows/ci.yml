@@ -78,9 +78,18 @@ jobs:
           node-version: "22"
       - name: Install
         run: npm ci
+      - name: Format check
+        run: npm run format:check
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
         run: npm run lint
       - name: Tests
         run: npm run test
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose
+        run: docker compose config -q

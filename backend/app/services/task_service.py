@@ -184,7 +184,12 @@ async def compute_timeline(session: AsyncSession, project_id: uuid.UUID) -> Time
 
     nodes = [TaskNode(id=t.id, duration=t.estimate_hours) for t in tasks]
     edges = [
-        Edge(predecessor=d.predecessor_task_id, successor=d.successor_task_id, lag=d.lag_hours)
+        Edge(
+            predecessor=d.predecessor_task_id,
+            successor=d.successor_task_id,
+            lag=d.lag_hours,
+            dep_type=d.dependency_type.value,
+        )
         for d in deps
     ]
     result = compute_critical_path(nodes, edges)  # raises CycleError if corrupt

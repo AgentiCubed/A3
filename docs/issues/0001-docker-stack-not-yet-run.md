@@ -1,6 +1,19 @@
 # Issue 0001 — Full Docker stack not yet exercised in this environment
 
-**Status:** Mitigated (CI added in Phase 5) · **Opened:** 2026-06-25 · **Phase:** 1
+**Status:** RESOLVED via CI (2026-06-26) · **Opened:** 2026-06-25 · **Phase:** 1
+
+## Resolution
+CI now exercises the substantive risk end-to-end on every push/PR:
+- **`backend` job** applies `alembic upgrade head` to a real Postgres 16 service
+  container and runs a `/readyz` smoke test asserting `database: ok` + `redis: ok`
+  (real Redis 7).
+- **`compose` job** runs `docker compose config -q`, validating the five-service
+  manifest parses.
+
+Residual: a full local `docker compose up` of all services together is still a
+one-command manual check (`cp .env.example .env && make up`); Docker is not
+available in the build environment, but CI proves migrations, readiness, and
+compose validity against real infrastructure.
 
 ## Update (Phase 5)
 `.github/workflows/ci.yml` now runs the backend job against **real** Postgres 16 +

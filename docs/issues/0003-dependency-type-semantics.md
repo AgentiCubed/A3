@@ -1,6 +1,14 @@
 # Issue 0003 — CPM models all dependency types as finish-to-start
 
-**Status:** Open · **Opened:** 2026-06-25 · **Phase:** 3
+**Status:** RESOLVED (2026-06-26) · **Opened:** 2026-06-25 · **Phase:** 3
+
+## Resolution
+`app/scheduling/critical_path.py` now models all four PMI relations. Each task
+carries separate start/finish variables; per-edge constraints (FS/SS/FF/SF with
+lag) drive the forward/backward pass via `_forward_lower_bound` /
+`_backward_upper_bound`. `task_service.compute_timeline` threads
+`dependency_type` into the engine. Verified by `test_critical_path` (one fixture
+per relation; FS results unchanged).
 
 ## What is incomplete
 `TaskDependency.dependency_type` accepts all four PMI relations

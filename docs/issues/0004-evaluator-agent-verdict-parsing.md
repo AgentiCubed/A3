@@ -1,6 +1,19 @@
 # Issue 0004 — Evaluator-agent verdict is advisory, not authoritative
 
-**Status:** Open · **Opened:** 2026-06-25 · **Phase:** 6
+**Status:** RESOLVED (2026-06-26) · **Opened:** 2026-06-25 · **Phase:** 6
+
+## Resolution
+The evaluator agent now produces an **influential** structured verdict that is
+combined with the deterministic rubric (`evaluation_service.combine_verdicts` /
+`agent_structured_verdict`): the combination takes the stricter of the two, so the
+agent can downgrade a deterministic PASS (→ NEEDS_REVISION/FAIL) but can never
+upgrade a hard deterministic FAIL. Verified by `test_verdict_combination`.
+
+Residual (intentional): the structured verdict is still a deterministic stand-in,
+not a live LLM judging through a provider tool/schema (kept so CI stays
+provider-free, A15). Wiring a mock *structured-output* evaluator over the
+`ToolSchema` port remains the upgrade path, but the agent verdict is no longer
+ignored.
 
 ## What is incomplete
 When an evaluation uses an evaluator **agent**, the agent produces a narrative

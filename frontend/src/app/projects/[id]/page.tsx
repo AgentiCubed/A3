@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import Link from "next/link";
 import { AgentTable } from "@/components/AgentTable";
 import { DependencyDiagram } from "@/components/DependencyDiagram";
 import { GanttChart } from "@/components/GanttChart";
@@ -6,8 +8,9 @@ import { RiskMatrix } from "@/components/RiskMatrix";
 import { api, type Dashboard, type ProjectGraph } from "@/lib/api";
 import { pct } from "@/lib/metrics";
 
-// Server component. Auth is passed as ?token=<jwt> for the MVP (no login UI yet —
-// see ADR-0005 / roadmap). Production wires a session cookie.
+// Server component. Auth comes from the httpOnly `ac_token` session cookie set by
+// /api/session (see /login). A `?token=` query param is still accepted as a
+// fallback for scripted/demo access. (Issue 0005.)
 export default async function ProjectDashboard({
   params,
   searchParams,
@@ -16,15 +19,17 @@ export default async function ProjectDashboard({
   searchParams: Promise<{ token?: string }>;
 }) {
   const { id } = await params;
-  const { token } = await searchParams;
+  const { token: queryToken } = await searchParams;
+  const cookieToken = (await cookies()).get("ac_token")?.value;
+  const token = cookieToken ?? queryToken;
 
   if (!token) {
     return (
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "48px 24px" }}>
         <h1>Project dashboard</h1>
         <p style={{ color: "#9a6b00" }}>
-          Append <code>?token=&lt;access_token&gt;</code> to view this dashboard
-          (MVP auth — no login UI yet).
+          You are not signed in. <Link href="/login">Sign in</Link> to view this
+          dashboard.
         </p>
       </main>
     );
@@ -57,8 +62,15 @@ export default async function ProjectDashboard({
       <h1 style={{ marginTop: 0 }}>Project dashboard</h1>
 
       <section style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-        <MetricCard label="Completion" value={pct(m.completion_rate ?? 0)} accent="#5ad17a" />
-        <MetricCard label="Tasks" value={`${m.tasks_completed ?? 0}/${m.tasks_total ?? 0}`} />
+        <MetricCard
+          label="Completion"
+          value={pct(m.completion_rate ?? 0)}
+          accent="#5ad17a"
+        />
+        <MetricCard
+          label="Tasks"
+          value={`${m.tasks_completed ?? 0}/${m.tasks_total ?? 0}`}
+        />
         <MetricCard label="Exec success" value={pct(m.execution_success_rate ?? 0)} />
         <MetricCard label="Eval pass" value={pct(m.evaluation_pass_rate ?? 0)} />
         <MetricCard label="Avg score" value={(m.avg_evaluation_score ?? 0).toFixed(2)} />

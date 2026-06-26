@@ -1,12 +1,16 @@
-"""Critical Path Method (CPM).
+"""Critical Path Method (CPM) with all four PMI dependency relations.
 
-Forward pass computes earliest start/finish; backward pass computes latest
-start/finish; slack = LS - ES; the critical path is the zero-slack chain.
+Each task has a start S and finish F = S + duration. Every dependency edge
+(predecessor p → successor s, lag L) imposes a constraint by relation:
 
-MVP scope: dependencies are treated as finish-to-start with an optional lag
-(the dominant case). Other dependency types are accepted by the caller but
-modeled as finish-to-start here; richer semantics are a documented follow-up
-(see docs/issues). Durations are in hours; missing/None durations count as 0.
+- finish_to_start (FS):  s.start  >= p.finish + L
+- start_to_start  (SS):  s.start  >= p.start  + L
+- finish_to_finish (FF): s.finish >= p.finish + L
+- start_to_finish (SF):  s.finish >= p.start  + L
+
+The forward pass derives earliest start/finish (ES/EF); the backward pass derives
+latest start/finish (LS/LF); slack = LS - ES; the critical path is the zero-slack
+chain. Durations are in hours; missing/None durations count as 0.
 """
 
 from __future__ import annotations
@@ -18,6 +22,11 @@ from typing import Generic, TypeVar
 from app.scheduling.graph import DependencyGraph
 
 NodeT = TypeVar("NodeT", bound=Hashable)
+
+FINISH_TO_START = "finish_to_start"
+START_TO_START = "start_to_start"
+FINISH_TO_FINISH = "finish_to_finish"
+START_TO_FINISH = "start_to_finish"
 
 
 @dataclass(frozen=True)
@@ -31,6 +40,7 @@ class Edge(Generic[NodeT]):
     predecessor: NodeT
     successor: NodeT
     lag: float = 0.0
+    dep_type: str = FINISH_TO_START
 
 
 @dataclass(frozen=True)
@@ -53,6 +63,32 @@ class CriticalPathResult(Generic[NodeT]):
     project_duration: float
 
 
+def _forward_lower_bound(
+    dep_type: str, es_p: float, ef_p: float, lag: float, dur_s: float
+) -> float:
+    """Lower bound on the successor's START implied by one incoming edge."""
+    if dep_type == START_TO_START:
+        return es_p + lag
+    if dep_type == FINISH_TO_FINISH:
+        return ef_p + lag - dur_s
+    if dep_type == START_TO_FINISH:
+        return es_p + lag - dur_s
+    return ef_p + lag  # finish_to_start (default)
+
+
+def _backward_upper_bound(
+    dep_type: str, ls_s: float, lf_s: float, lag: float, dur_n: float
+) -> float:
+    """Upper bound on the predecessor's FINISH implied by one outgoing edge."""
+    if dep_type == START_TO_START:
+        return ls_s - lag + dur_n
+    if dep_type == FINISH_TO_FINISH:
+        return lf_s - lag
+    if dep_type == START_TO_FINISH:
+        return lf_s - lag + dur_n
+    return ls_s - lag  # finish_to_start (default)
+
+
 def compute_critical_path(
     tasks: Iterable[TaskNode[NodeT]], edges: Iterable[Edge[NodeT]]
 ) -> CriticalPathResult[NodeT]:
@@ -62,14 +98,14 @@ def compute_critical_path(
     graph: DependencyGraph[NodeT] = DependencyGraph()
     for tid in duration:
         graph.add_node(tid)
-    lag: dict[tuple[NodeT, NodeT], float] = {}
+    incoming: dict[NodeT, list[Edge[NodeT]]] = {tid: [] for tid in duration}
+    outgoing: dict[NodeT, list[Edge[NodeT]]] = {tid: [] for tid in duration}
     for e in edges:
         if e.predecessor not in duration or e.successor not in duration:
             raise ValueError("edge references unknown task")
         graph.add_edge(e.predecessor, e.successor)
-        # Largest lag wins if duplicated.
-        key = (e.predecessor, e.successor)
-        lag[key] = max(lag.get(key, e.lag), e.lag)
+        incoming[e.successor].append(e)
+        outgoing[e.predecessor].append(e)
 
     order = graph.topological_order()  # raises CycleError on a loop
 
@@ -77,8 +113,13 @@ def compute_critical_path(
     es: dict[NodeT, float] = {}
     ef: dict[NodeT, float] = {}
     for node in order:
-        preds = graph.predecessors(node)
-        es[node] = max((ef[p] + lag.get((p, node), 0.0) for p in preds), default=0.0)
+        bounds = [
+            _forward_lower_bound(
+                e.dep_type, es[e.predecessor], ef[e.predecessor], e.lag, duration[node]
+            )
+            for e in incoming[node]
+        ]
+        es[node] = max([0.0, *bounds])
         ef[node] = es[node] + duration[node]
 
     project_duration = max(ef.values(), default=0.0)
@@ -87,24 +128,26 @@ def compute_critical_path(
     ls: dict[NodeT, float] = {}
     lf: dict[NodeT, float] = {}
     for node in reversed(order):
-        succs = graph.successors(node)
-        lf[node] = min((ls[s] - lag.get((node, s), 0.0) for s in succs), default=project_duration)
+        bounds = [
+            _backward_upper_bound(
+                e.dep_type, ls[e.successor], lf[e.successor], e.lag, duration[node]
+            )
+            for e in outgoing[node]
+        ]
+        lf[node] = min([project_duration, *bounds])
         ls[node] = lf[node] - duration[node]
 
-    schedules: dict[NodeT, Schedule] = {}
-    for node in order:
-        slack = ls[node] - es[node]
-        schedules[node] = Schedule(
+    schedules: dict[NodeT, Schedule] = {
+        node: Schedule(
             earliest_start=es[node],
             earliest_finish=ef[node],
             latest_start=ls[node],
             latest_finish=lf[node],
-            slack=slack,
+            slack=ls[node] - es[node],
         )
-
+        for node in order
+    }
     critical_path = [n for n in order if schedules[n].is_critical]
     return CriticalPathResult(
-        schedules=schedules,
-        critical_path=critical_path,
-        project_duration=project_duration,
+        schedules=schedules, critical_path=critical_path, project_duration=project_duration
     )

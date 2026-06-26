@@ -9,10 +9,11 @@ describe("api client", () => {
   it("parses a successful health response", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ status: "ok", version: "0.1.0" }), {
-          status: 200,
-        }),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ status: "ok", version: "0.1.0" }), {
+            status: 200,
+          }),
       ),
     );
     const health = await api.health("http://test");

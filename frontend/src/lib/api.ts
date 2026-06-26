@@ -80,11 +80,7 @@ export function apiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 }
 
-async function getJson<T>(
-  path: string,
-  base = apiBaseUrl(),
-  token?: string,
-): Promise<T> {
+async function getJson<T>(path: string, base = apiBaseUrl(), token?: string): Promise<T> {
   const headers: Record<string, string> = { accept: "application/json" };
   if (token) {
     headers.authorization = `Bearer ${token}`;

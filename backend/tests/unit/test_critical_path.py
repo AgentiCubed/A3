@@ -60,3 +60,43 @@ def test_cycle_raises():
 def test_unknown_edge_rejected():
     with pytest.raises(ValueError):
         compute_critical_path(_tasks(A=1), [Edge("A", "Z")])
+
+
+# ── Multi-relation CPM (issue 0003) ───────────────────────────────────────
+def test_start_to_start():
+    # B starts when A starts (+0 lag); both 4h, run in parallel.
+    tasks = _tasks(A=4, B=4)
+    r = compute_critical_path(tasks, [Edge("A", "B", dep_type="start_to_start")])
+    assert r.schedules["B"].earliest_start == 0
+    assert r.project_duration == 4
+
+
+def test_start_to_start_with_lag():
+    tasks = _tasks(A=4, B=4)
+    r = compute_critical_path(tasks, [Edge("A", "B", lag=2, dep_type="start_to_start")])
+    assert r.schedules["B"].earliest_start == 2  # 2h after A starts
+    assert r.project_duration == 6
+
+
+def test_finish_to_finish():
+    # B must finish when A finishes. A=5, B=2 → B starts at 3 so it finishes at 5.
+    tasks = _tasks(A=5, B=2)
+    r = compute_critical_path(tasks, [Edge("A", "B", dep_type="finish_to_finish")])
+    assert r.schedules["B"].earliest_finish == 5
+    assert r.schedules["B"].earliest_start == 3
+    assert r.project_duration == 5
+
+
+def test_start_to_finish():
+    # B must finish at-or-after A starts. A starts at 0, B=2 → B can finish at >=0.
+    tasks = _tasks(A=5, B=2)
+    r = compute_critical_path(tasks, [Edge("A", "B", lag=4, dep_type="start_to_finish")])
+    # B.finish >= A.start(0) + 4 → B.finish >= 4 → B.start >= 2.
+    assert r.schedules["B"].earliest_finish == 4
+    assert r.schedules["B"].earliest_start == 2
+
+
+def test_fs_still_default():
+    tasks = _tasks(A=3, B=2)
+    r = compute_critical_path(tasks, [Edge("A", "B")])
+    assert r.schedules["B"].earliest_start == 3  # finish_to_start default unchanged

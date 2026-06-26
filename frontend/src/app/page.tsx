@@ -34,8 +34,8 @@ export default async function Home() {
         <HealthBadge state={state} />
       </header>
       <p style={{ color: "#9fb0c0" }}>
-        Agentic project-orchestration platform. Plan → Assign → Execute →
-        Evaluate → Identify Gaps → Remediate → Re-execute.
+        Agentic project-orchestration platform. Plan → Assign → Execute → Evaluate →
+        Identify Gaps → Remediate → Re-execute.
       </p>
 
       <section style={{ marginTop: 32 }}>
