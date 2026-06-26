@@ -16,11 +16,7 @@ from app.core.config import get_settings
 from app.db.base import Base
 
 # Import model modules so they register on Base.metadata for autogenerate.
-# (No models yet in Phase 1; imports are added as models land.)
-try:  # pragma: no cover - models package may be empty in Phase 1
-    import app.models  # noqa: F401
-except Exception:  # noqa: BLE001
-    pass
+import app.models  # noqa: F401,E402
 
 config = context.config
 if config.config_file_name is not None:

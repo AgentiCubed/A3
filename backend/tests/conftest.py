@@ -1,0 +1,69 @@
+"""Shared test fixtures.
+
+Backend tests run against a file-backed SQLite database (async, NullPool so each
+checkout is a fresh connection — safe across the TestClient portal loop and the
+pytest-asyncio loop). The real Postgres engine is never touched; the ``db_session``
+dependency is overridden.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+
+import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
+
+import app.models  # noqa: F401  - register models on Base.metadata
+from app.api.deps import db_session
+from app.db.base import Base
+from app.main import app
+
+TEST_DB_PATH = "/tmp/agenticubed_test.db"
+TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
+
+engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+TestSessionFactory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
+
+async def _override_db_session():
+    async with TestSessionFactory() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _prepare_database():
+    if os.path.exists(TEST_DB_PATH):
+        os.remove(TEST_DB_PATH)
+
+    async def _create() -> None:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.run(_create())
+    app.dependency_overrides[db_session] = _override_db_session
+    yield
+    app.dependency_overrides.clear()
+    asyncio.run(engine.dispose())
+    if os.path.exists(TEST_DB_PATH):
+        os.remove(TEST_DB_PATH)
+
+
+@pytest.fixture()
+def client():
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture()
+async def session():
+    async with TestSessionFactory() as s:
+        yield s

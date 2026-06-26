@@ -20,3 +20,6 @@ can be revisited; revisions that change architecture become ADRs.
 | A13 | Time stored in UTC; presentation localizes. | Standard. | No |
 | A14 | "Power BI-compatible export" = flat CSV + a JSON schema descriptor + a star-shaped table layout PBI can ingest; no native `.pbix` generation. | PBI ingests CSV/JSON readily; native pbix is out of scope. | Yes |
 | A15 | Deterministic tests must never call a live provider; CI uses MockProvider only. | Reproducible CI. | No |
+| A16 | Login is by email + password with no org selector; email is therefore globally unique (in addition to the per-org uniqueness in the data model). | Avoids an org-picker UX for MVP; ambiguous-login path still guarded in code. | Yes (add org-scoped login + drop global unique) |
+| A17 | `project_members` ships in Phase 2 (so the RBAC project plane is testable) but its FK to `projects` is deferred until the table exists in Phase 3. | Lets RBAC land fully without pulling Phase 3 schema forward. | Yes |
+| A18 | RBAC enforces system-plane permissions at the API in Phase 2; the `contributor`-only-on-assigned-tasks refinement and project-plane resolution land in Phase 3 with tasks/projects. | No tasks exist yet to scope against. | Yes |

@@ -98,4 +98,8 @@ pytest
 
 ## Status
 
-Phase 1 (monorepo, compose, backend + frontend scaffolding, DB/Redis/worker, migrations, health checks, lint/format, test framework) — **complete and verified** (backend 3/3 pytest, frontend 5/5 vitest, ruff + black + tsc clean). Phase 2 (auth, orgs, roles, RBAC, secure config, audit events) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.
+**Phase 1** (monorepo, compose, backend + frontend scaffolding, DB/Redis/worker, migrations, health checks, lint/format, test framework) — **complete & verified**.
+
+**Phase 2** (JWT auth + argon2, organizations, system + project RBAC planes, org-scoped repositories, secret resolution-by-reference + redaction, append-only audit events with app- and DB-level immutability) — **complete & verified** (backend **30/30** pytest, ruff + black clean, migrations render 0001→0002).
+
+**Phase 3** (projects, requirements, milestones, tasks, dependencies, risks, decisions, Kanban, timeline, critical path) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.

@@ -29,16 +29,34 @@ linting, formatting, test frameworks.
 - `vitest run` → `5 passed (2 files)`
 - `tsc --noEmit` → exit 0
 
-## Phase 2 — Identity, RBAC, audit
+## Phase 2 — Identity, RBAC, audit *(complete)*
 Authentication, organizations, project roles, role-based permissions, secure
 configuration handling, audit events.
 
 **Acceptance criteria**
-- [ ] Register/login issues JWT; passwords hashed with argon2.
-- [ ] Org scoping enforced at repository layer.
-- [ ] `authorize()` guard with system + project role planes.
-- [ ] Secrets resolved by reference; redaction filter on logs/audit.
-- [ ] Material changes emit `AuditEvent`; immutability guards in DB.
+- [x] Register/login issues JWT (access + refresh); passwords hashed with argon2
+  (`app/core/security.py`). Verified by `test_auth_flow` + `test_security`.
+- [x] Org scoping enforced at repository layer (`OrgScopedRepository`,
+  `app/db/repository.py`). Verified by `test_org_scoping` (cross-org → 404).
+- [x] `authorize()` guard with system + project role planes (`app/core/rbac.py`),
+  incl. the agent-cannot-escalate hard rule. Verified by `test_rbac`.
+- [x] Secrets resolved by reference (`app/core/secrets.py`); recursive redaction
+  on audit before/after and logs (`app/core/redaction.py`). Verified by
+  `test_redaction` + `test_audit_and_immutability::test_secret_redacted...`.
+- [x] Material changes emit `AuditEvent`; immutability enforced in the app
+  (session `before_flush` guard) **and** in the DB (Postgres UPDATE/DELETE
+  trigger in migration `0002`). Verified by `test_audit_and_immutability`.
+
+**Verification (run 2026-06-25, local):**
+- `pytest` → `30 passed` · `ruff` + `black --check` → clean
+- `alembic upgrade head --sql` renders 0001→0002 cleanly (tables, indexes,
+  immutability trigger). Live apply against Postgres still tracked in issue 0001.
+
+**Phase-2 design notes:**
+- Login is by email + password. Email is unique per org *and* (for MVP) globally,
+  so login needs no org selector. See `docs/assumptions.md`.
+- `project_members` exists now (project-role plane is testable), but its FK to
+  `projects` is deferred to Phase 3 when that table lands.
 
 ## Phase 3 — Projects & planning domain
 Projects, requirements, milestones, tasks, dependencies, risks, decisions,

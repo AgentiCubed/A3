@@ -9,12 +9,38 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, func
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import DateTime, event, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 
 class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
+
+
+class ImmutableError(RuntimeError):
+    """Raised when application code attempts to UPDATE or DELETE an append-only row."""
+
+
+class Immutable:
+    """Marker mixin for append-only entities (TaskExecution, Evaluation, AuditEvent…).
+
+    A session-level guard (below) rejects any flush that would update or delete an
+    instance of an Immutable subclass. Inserts are allowed. This enforces the
+    immutability invariant on every backend (SQLite tests included); a Postgres
+    trigger in the migrations adds defense-in-depth for direct SQL.
+    """
+
+
+@event.listens_for(Session, "before_flush")
+def _block_immutable_mutations(
+    session: Session, _flush_context: object, _instances: object
+) -> None:
+    for obj in session.dirty:
+        if isinstance(obj, Immutable) and session.is_modified(obj, include_collections=False):
+            raise ImmutableError(f"{type(obj).__name__} is append-only and cannot be updated")
+    for obj in session.deleted:
+        if isinstance(obj, Immutable):
+            raise ImmutableError(f"{type(obj).__name__} is append-only and cannot be deleted")
 
 
 class UUIDPrimaryKeyMixin:
