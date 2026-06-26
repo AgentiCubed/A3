@@ -20,7 +20,10 @@ class AuditEvent(UUIDPrimaryKeyMixin, Immutable, Base):
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
     actor_type: Mapped[ActorType] = mapped_column(
-        Enum(ActorType, native_enum=False, length=12), nullable=False
+        Enum(
+            ActorType, native_enum=False, values_callable=lambda o: [e.value for e in o], length=12
+        ),
+        nullable=False,
     )
     actor_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     action: Mapped[str] = mapped_column(String(80), nullable=False, index=True)

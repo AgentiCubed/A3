@@ -22,7 +22,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     system_role: Mapped[SystemRole] = mapped_column(
-        Enum(SystemRole, native_enum=False, length=20),
+        Enum(
+            SystemRole, native_enum=False, values_callable=lambda o: [e.value for e in o], length=20
+        ),
         nullable=False,
         default=SystemRole.MEMBER,
     )
@@ -45,5 +47,11 @@ class ProjectMember(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     project_role: Mapped[ProjectRole] = mapped_column(
-        Enum(ProjectRole, native_enum=False, length=20), nullable=False
+        Enum(
+            ProjectRole,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
+        nullable=False,
     )

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import RiskStatus
@@ -28,7 +28,9 @@ class Risk(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     # severity = likelihood * impact, persisted for dashboards/sorting.
     severity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[RiskStatus] = mapped_column(
-        Enum(RiskStatus, native_enum=False, length=12),
+        Enum(
+            RiskStatus, native_enum=False, values_callable=lambda o: [e.value for e in o], length=12
+        ),
         nullable=False,
         default=RiskStatus.OPEN,
     )
@@ -54,4 +56,6 @@ class Decision(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     decided_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    decided_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    decided_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

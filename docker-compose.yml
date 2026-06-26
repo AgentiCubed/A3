@@ -71,7 +71,10 @@ services:
       dockerfile: Dockerfile
     env_file: .env
     environment:
+      # Browser (on the host) reaches the API via the published port…
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      # …while the web container's server-side calls reach it over the compose network.
+      INTERNAL_API_BASE_URL: http://api:8000
     command: npm run dev
     ports:
       - "3000:3000"

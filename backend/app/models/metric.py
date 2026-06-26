@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Float, ForeignKey, String, func
+from sqlalchemy import DateTime, Float, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -24,7 +24,9 @@ class ProjectMetric(UUIDPrimaryKeyMixin, Base):
     metric: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     dimensions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    as_of: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    as_of: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class AgentMetric(UUIDPrimaryKeyMixin, Base):
@@ -39,4 +41,6 @@ class AgentMetric(UUIDPrimaryKeyMixin, Base):
     metric: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     dimensions: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    as_of: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    as_of: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

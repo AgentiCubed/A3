@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -29,7 +29,12 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     objective: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[ProjectStatus] = mapped_column(
-        Enum(ProjectStatus, native_enum=False, length=20),
+        Enum(
+            ProjectStatus,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
         nullable=False,
         default=ProjectStatus.INTAKE,
     )
@@ -49,10 +54,21 @@ class ProjectMethodology(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
     )
     methodology: Mapped[Methodology] = mapped_column(
-        Enum(Methodology, native_enum=False, length=20), nullable=False
+        Enum(
+            Methodology,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
+        nullable=False,
     )
     recommended_by: Mapped[RecommendedBy] = mapped_column(
-        Enum(RecommendedBy, native_enum=False, length=12),
+        Enum(
+            RecommendedBy,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=12,
+        ),
         nullable=False,
         default=RecommendedBy.SYSTEM,
     )
@@ -70,11 +86,22 @@ class ProjectRequirement(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
     )
     kind: Mapped[RequirementKind] = mapped_column(
-        Enum(RequirementKind, native_enum=False, length=20), nullable=False
+        Enum(
+            RequirementKind,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
+        nullable=False,
     )
     text: Mapped[str] = mapped_column(Text, nullable=False)
     priority: Mapped[RequirementPriority] = mapped_column(
-        Enum(RequirementPriority, native_enum=False, length=10),
+        Enum(
+            RequirementPriority,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=10,
+        ),
         nullable=False,
         default=RequirementPriority.SHOULD,
     )
@@ -91,9 +118,14 @@ class Milestone(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
     )
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    due_date: Mapped[datetime | None] = mapped_column(nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[MilestoneStatus] = mapped_column(
-        Enum(MilestoneStatus, native_enum=False, length=12),
+        Enum(
+            MilestoneStatus,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=12,
+        ),
         nullable=False,
         default=MilestoneStatus.OPEN,
     )

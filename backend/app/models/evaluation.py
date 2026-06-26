@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum, Float, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -29,15 +29,24 @@ class Evaluation(UUIDPrimaryKeyMixin, Immutable, Base):
         ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
     )
     evaluator_kind: Mapped[EvaluatorKind] = mapped_column(
-        Enum(EvaluatorKind, native_enum=False, length=16), nullable=False
+        Enum(
+            EvaluatorKind,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=16,
+        ),
+        nullable=False,
     )
     verdict: Mapped[Verdict] = mapped_column(
-        Enum(Verdict, native_enum=False, length=16), nullable=False
+        Enum(Verdict, native_enum=False, values_callable=lambda o: [e.value for e in o], length=16),
+        nullable=False,
     )
     score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     gaps: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class EvaluationCriterion(UUIDPrimaryKeyMixin, Immutable, Base):
@@ -56,4 +65,6 @@ class EvaluationCriterion(UUIDPrimaryKeyMixin, Immutable, Base):
     passed: Mapped[bool] = mapped_column(Boolean, nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

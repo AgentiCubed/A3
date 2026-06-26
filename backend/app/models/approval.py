@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums import ApprovalStatus, RiskLevel
@@ -26,17 +26,24 @@ class Approval(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     requested_action: Mapped[str] = mapped_column(Text, nullable=False)
     risk_level: Mapped[RiskLevel] = mapped_column(
-        Enum(RiskLevel, native_enum=False, length=10),
+        Enum(
+            RiskLevel, native_enum=False, values_callable=lambda o: [e.value for e in o], length=10
+        ),
         nullable=False,
         default=RiskLevel.MEDIUM,
     )
     status: Mapped[ApprovalStatus] = mapped_column(
-        Enum(ApprovalStatus, native_enum=False, length=12),
+        Enum(
+            ApprovalStatus,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=12,
+        ),
         nullable=False,
         default=ApprovalStatus.PENDING,
     )
     decided_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    decided_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)

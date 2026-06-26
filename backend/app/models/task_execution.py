@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -30,7 +30,13 @@ class TaskExecution(UUIDPrimaryKeyMixin, Immutable, Base):
     attempt_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     # Terminal state snapshot for this attempt (COMPLETED or FAILED).
     state: Mapped[ExecutionState] = mapped_column(
-        Enum(ExecutionState, native_enum=False, length=20), nullable=False
+        Enum(
+            ExecutionState,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
+        nullable=False,
     )
     # Secret-free context that was sent to the agent.
     input_context: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -38,8 +44,10 @@ class TaskExecution(UUIDPrimaryKeyMixin, Immutable, Base):
     tokens_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cost_estimate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     provider: Mapped[str | None] = mapped_column(String(60), nullable=True)
-    started_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
-    finished_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     workflow_handle: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # Links this attempt to the prior execution it remediates (Phase 6).

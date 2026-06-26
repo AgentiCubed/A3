@@ -28,12 +28,22 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[ExecutionState] = mapped_column(
-        Enum(ExecutionState, native_enum=False, length=20),
+        Enum(
+            ExecutionState,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
         nullable=False,
         default=ExecutionState.PLANNED,
     )
     kanban_column: Mapped[KanbanColumn] = mapped_column(
-        Enum(KanbanColumn, native_enum=False, length=12),
+        Enum(
+            KanbanColumn,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=12,
+        ),
         nullable=False,
         default=KanbanColumn.BACKLOG,
     )
@@ -69,7 +79,12 @@ class TaskDependency(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
     )
     dependency_type: Mapped[DependencyType] = mapped_column(
-        Enum(DependencyType, native_enum=False, length=20),
+        Enum(
+            DependencyType,
+            native_enum=False,
+            values_callable=lambda o: [e.value for e in o],
+            length=20,
+        ),
         nullable=False,
         default=DependencyType.FINISH_TO_START,
     )
