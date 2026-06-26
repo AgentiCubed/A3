@@ -108,4 +108,6 @@ pytest
 
 **Phase 5** (durable execution state machine, task dispatch, immutable execution records, retries/timeouts/escalation, reassignment, Celery `WorkflowEngine` engine) — **complete & verified** (backend **84/84** pytest, ruff + black clean, migrations render 0001→0005). A **GitHub Actions CI** workflow now applies migrations against real Postgres + smoke-tests `/readyz`.
 
-**Phase 6** (evaluation rubrics, deterministic validation, evaluator agents, human approvals, revision requests, closed-loop remediation) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.
+**Phase 6** (deterministic evaluation rubrics, evaluator agents with enforced executor/evaluator separation, human approval gates, and the closed-loop remediation policy over the ten actions) — **complete & verified** (backend **102/102** pytest, ruff + black clean, migrations render 0001→0006).
+
+**Phase 7** (dashboards, Gantt, dependency views, risk matrices, project/agent metrics, CSV/JSON/Power BI exports) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.

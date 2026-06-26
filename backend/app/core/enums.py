@@ -100,3 +100,40 @@ class ToolSensitivity(StrEnum):
 class PromptRole(StrEnum):
     EXECUTOR = "executor"
     EVALUATOR = "evaluator"
+
+
+class EvaluatorKind(StrEnum):
+    DETERMINISTIC = "deterministic"
+    AGENT = "agent"
+    HUMAN = "human"
+
+
+class Verdict(StrEnum):
+    PASS = "pass"  # noqa: S105 - evaluation verdict, not a credential
+    FAIL = "fail"
+    NEEDS_REVISION = "needs_revision"
+
+
+class ApprovalStatus(StrEnum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class RiskLevel(StrEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class RemediationAction(StrEnum):
+    RE_PROMPT = "re_prompt"
+    ADD_CONTEXT = "add_context"
+    ADD_TOOL = "add_tool"
+    SPLIT_TASK = "split_task"
+    REPLACE_AGENT = "replace_agent"
+    MULTI_AGENT = "multi_agent"
+    ADD_SPECIALIST_EVALUATOR = "add_specialist_evaluator"
+    ESCALATE_HUMAN = "escalate_human"
+    MODIFY_PLAN = "modify_plan"
+    UPDATE_ESTIMATES = "update_estimates"

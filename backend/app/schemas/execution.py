@@ -7,12 +7,17 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.core.enums import Verdict
 from app.orchestration.state_machine.states import ExecutionState
 
 
 class DispatchRequest(BaseModel):
     max_attempts: int = Field(default=2, ge=1, le=10)
     timeout_s: float = Field(default=30.0, gt=0, le=600)
+    # Optional closed-loop evaluation. Omit for a plain run that completes on success.
+    rubric: list[dict] | None = None
+    evaluator_agent_id: uuid.UUID | None = None
+    max_remediations: int = Field(default=1, ge=0, le=5)
 
 
 class DispatchResultResponse(BaseModel):
@@ -21,6 +26,21 @@ class DispatchResultResponse(BaseModel):
     escalated: bool
     output: str | None
     execution_ids: list[uuid.UUID]
+    verdict: Verdict | None = None
+    remediations: int = 0
+
+
+class EvaluationResponse(BaseModel):
+    id: uuid.UUID
+    task_execution_id: uuid.UUID
+    evaluator_agent_id: uuid.UUID | None
+    evaluator_kind: str
+    verdict: Verdict
+    score: float
+    summary: str
+    gaps: list | None
+
+    model_config = {"from_attributes": True}
 
 
 class ExecutionResponse(BaseModel):

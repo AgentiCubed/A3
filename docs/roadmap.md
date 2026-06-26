@@ -152,15 +152,38 @@ reassignment, human escalation, execution state machine.
 - The Celery worker path is verified in eager mode; a live broker run needs Redis
   (Docker/CI), tracked alongside issue 0001.
 
-## Phase 6 — Evaluation & remediation
+## Phase 6 — Evaluation & remediation *(complete)*
 Evaluation rubrics, deterministic validation, evaluator agents, human approvals,
 revision requests, closed-loop remediation.
 
 **Acceptance criteria**
-- [ ] Deterministic validators + evaluator-agent path produce `Evaluation`.
-- [ ] Executor/evaluator separation enforced.
-- [ ] Remediation policy selects + records action and justification.
-- [ ] Approval gate blocks irreversible actions.
+- [x] Deterministic validators (`app/evaluation/rubric.py`: non_empty, min/max
+  length, contains_all/any, is_json, regex) + an evaluator-agent path produce an
+  immutable `Evaluation` with per-criterion rows. Verified by `test_rubric` +
+  `test_evaluation`.
+- [x] Executor/evaluator separation enforced (`evaluator_agent_id !=
+  execution.agent_id` → `EvaluatorConflict` → 422). Verified by
+  `test_evaluation::test_executor_cannot_evaluate_itself`.
+- [x] Remediation policy selects ONE of the ten actions and records it with a
+  justification (`app/remediation/policy.py`; audit `remediation.selected`).
+  Auto-applicable actions re-execute inline; the rest escalate. Verified by
+  `test_remediation_policy` + `test_evaluation`.
+- [x] Approval gate: a failed-evaluation escalation creates a pending `Approval`
+  and moves the task to AWAITING_APPROVAL; approve→COMPLETED, reject→READY (never
+  a silent proceed). Verified by `test_evaluation`.
+
+**Verification (run 2026-06-25, local):**
+- `pytest` → `102 passed` · `ruff` + `black --check` → clean
+- `alembic upgrade head --sql` renders 0001→0006 cleanly (evaluations +
+  evaluation_criteria immutability triggers included).
+
+**Phase-6 notes:**
+- The closed loop runs inside `execute_task`: success → EVALUATING → evaluate →
+  pass=COMPLETED / fail=remediate (re-execute with gap feedback, up to
+  `max_remediations`) or escalate to a human gate.
+- The deterministic rubric is the gate; an evaluator agent layers a narrative
+  critique. Parsing a real LLM verdict (vs. the deterministic gate) is a tracked
+  refinement — see `docs/issues/0004`.
 
 ## Phase 7 — Analytics & visualization
 Dashboards, Gantt, dependency views, risk matrices, project metrics, agent

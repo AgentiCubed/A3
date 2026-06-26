@@ -13,7 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.api.deps import CurrentUser, DbSession, require
+from app.api.deps import CurrentUser, DbSession, actor_from_user, require
 from app.core.rbac import Action
 from app.core.roles import ActorType
 from app.models.project import (
@@ -26,9 +26,11 @@ from app.models.risk import Decision, Risk
 from app.models.user import User
 from app.orchestration.state_machine.machine import IllegalTransition
 from app.schemas.agent import AssignRequest
+from app.schemas.approval import ApprovalDecision, ApprovalResponse
 from app.schemas.execution import (
     DispatchRequest,
     DispatchResultResponse,
+    EvaluationResponse,
     ExecutionResponse,
     ReassignRequest,
 )
@@ -62,6 +64,8 @@ from app.schemas.task import (
 )
 from app.services import (
     agent_service,
+    approval_service,
+    evaluation_service,
     execution_service,
     project_service,
     task_service,
@@ -266,6 +270,13 @@ async def dispatch_task(
     task = next((t for t in tasks if t.id == task_id), None)
     if task is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
+    evaluation_cfg = None
+    if req.rubric is not None or req.evaluator_agent_id is not None:
+        evaluation_cfg = execution_service.EvaluationConfig(
+            rubric_specs=req.rubric or [],
+            evaluator_agent_id=req.evaluator_agent_id,
+            max_remediations=req.max_remediations,
+        )
     try:
         result = await execution_service.execute_task(
             session,
@@ -274,6 +285,7 @@ async def dispatch_task(
             actor_type=ActorType.USER,
             max_attempts=req.max_attempts,
             timeout_s=req.timeout_s,
+            evaluation=evaluation_cfg,
         )
     except execution_service.NotAssigned as exc:
         raise HTTPException(
@@ -282,6 +294,11 @@ async def dispatch_task(
     except execution_service.NotExecutable as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned agent is not an AI agent"
+        ) from exc
+    except evaluation_service.EvaluatorConflict as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "evaluator agent must differ from the executor (executor/evaluator separation)",
         ) from exc
     except IllegalTransition as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
@@ -292,6 +309,8 @@ async def dispatch_task(
         escalated=result.escalated,
         output=result.output,
         execution_ids=result.execution_ids,
+        verdict=result.verdict,
+        remediations=result.remediations,
     )
 
 
@@ -304,6 +323,52 @@ async def list_executions(
         session, org_id=user.organization_id, task_id=task_id
     )
     return [ExecutionResponse.model_validate(r) for r in rows]
+
+
+@router.get("/{project_id}/tasks/{task_id}/evaluations", response_model=list[EvaluationResponse])
+async def list_task_evaluations(
+    project_id: uuid.UUID, task_id: uuid.UUID, session: DbSession, user: CurrentUser
+):
+    await _load_project(session, user, project_id)
+    rows = await evaluation_service.list_evaluations_for_task(
+        session, org_id=user.organization_id, task_id=task_id
+    )
+    return [EvaluationResponse.model_validate(r) for r in rows]
+
+
+# ── Approvals ─────────────────────────────────────────────────────────────
+@router.get("/{project_id}/approvals", response_model=list[ApprovalResponse])
+async def list_approvals(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
+    project = await _load_project(session, user, project_id)
+    rows = await approval_service.list_approvals(
+        session, org_id=user.organization_id, project_id=project.id
+    )
+    return [ApprovalResponse.model_validate(a) for a in rows]
+
+
+@router.post("/{project_id}/approvals/{approval_id}/decide", response_model=ApprovalResponse)
+async def decide_approval(
+    project_id: uuid.UUID,
+    approval_id: uuid.UUID,
+    req: ApprovalDecision,
+    session: DbSession,
+    user: Annotated[User, Depends(require(Action.APPROVAL_DECIDE))],
+):
+    await _load_project(session, user, project_id)
+    try:
+        approval = await approval_service.decide_approval(
+            session,
+            actor=actor_from_user(user),
+            approval_id=approval_id,
+            approve=req.approve,
+            comment=req.comment,
+        )
+    except approval_service.NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "approval not found") from exc
+    except approval_service.AlreadyDecided as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, "approval already decided") from exc
+    await session.commit()
+    return ApprovalResponse.model_validate(approval)
 
 
 @router.patch("/{project_id}/tasks/{task_id}/reassign", response_model=TaskResponse)

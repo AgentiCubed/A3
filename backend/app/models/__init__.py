@@ -14,7 +14,9 @@ from app.models.agent import (
     PromptTemplate,
     Tool,
 )
+from app.models.approval import Approval
 from app.models.audit_event import AuditEvent
+from app.models.evaluation import Evaluation, EvaluationCriterion
 from app.models.organization import Organization
 from app.models.project import (
     Milestone,
@@ -31,8 +33,11 @@ __all__ = [
     "Agent",
     "AgentCapability",
     "AgentToolPermission",
+    "Approval",
     "AuditEvent",
     "Decision",
+    "Evaluation",
+    "EvaluationCriterion",
     "Milestone",
     "Organization",
     "Project",

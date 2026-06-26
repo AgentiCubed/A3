@@ -18,15 +18,18 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
-from app.core.enums import AgentKind
+from app.core.enums import AgentKind, RiskLevel, Verdict
 from app.core.roles import ActorType
 from app.models.agent import Agent
+from app.models.approval import Approval
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
 from app.orchestration.state_machine.machine import assert_transition
 from app.orchestration.state_machine.states import ExecutionState
+from app.remediation.policy import RemediationContext, select_remediation
+from app.services import evaluation_service
 
 
 class NotAssigned(Exception):
@@ -38,24 +41,37 @@ class NotExecutable(Exception):
 
 
 @dataclass
+class EvaluationConfig:
+    """How to evaluate a successful execution and remediate failures."""
+
+    rubric_specs: list[dict] = field(default_factory=list)
+    evaluator_agent_id: uuid.UUID | None = None
+    max_remediations: int = 1
+
+
+@dataclass
 class DispatchResult:
     final_state: ExecutionState
     attempts: int
     escalated: bool
     output: str | None = None
     execution_ids: list[uuid.UUID] = field(default_factory=list)
+    verdict: Verdict | None = None
+    remediations: int = 0
 
 
 def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def build_prompt(task: Task) -> str:
+def build_prompt(task: Task, extra_context: str | None = None) -> str:
     parts = [f"Task: {task.title}"]
     if task.description:
         parts.append(task.description)
     if task.required_capabilities:
         parts.append("Required capabilities: " + ", ".join(task.required_capabilities))
+    if extra_context:
+        parts.append(extra_context)
     return "\n\n".join(parts)
 
 
@@ -101,6 +117,50 @@ async def _move_to_queued(
         assert_transition(task.status, ExecutionState.QUEUED)
 
 
+async def transition_task(
+    session: AsyncSession,
+    task: Task,
+    to: ExecutionState,
+    *,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType = ActorType.USER,
+    reason: str | None = None,
+) -> None:
+    """Public, audited transition used by approval handling."""
+    await _transition(session, task, to, actor_id=actor_id, actor_type=actor_type, reason=reason)
+
+
+async def _create_approval(
+    session: AsyncSession,
+    *,
+    task: Task,
+    execution_id: uuid.UUID,
+    requested_action: str,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+) -> Approval:
+    approval = Approval(
+        organization_id=task.organization_id,
+        project_id=task.project_id,
+        task_execution_id=execution_id,
+        requested_action=requested_action,
+        risk_level=RiskLevel.MEDIUM,
+    )
+    session.add(approval)
+    await session.flush()
+    await record_audit(
+        session,
+        organization_id=task.organization_id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action="approval.requested",
+        entity_type="Approval",
+        entity_id=approval.id,
+        after={"task_id": str(task.id), "requested_action": requested_action},
+    )
+    return approval
+
+
 async def execute_task(
     session: AsyncSession,
     *,
@@ -109,8 +169,14 @@ async def execute_task(
     actor_type: ActorType = ActorType.USER,
     max_attempts: int = 2,
     timeout_s: float = 30.0,
+    evaluation: EvaluationConfig | None = None,
 ) -> DispatchResult:
-    """Run a task end-to-end with retries and escalation. Inline (awaitable)."""
+    """Run a task end-to-end: execute (with retries) → evaluate → remediate.
+
+    Without ``evaluation`` a successful run simply completes (Phase-5 behavior).
+    With ``evaluation`` a successful run is graded; a failing verdict triggers the
+    remediation policy, which either re-executes inline or escalates to a human.
+    """
     if task.assigned_agent_id is None:
         raise NotAssigned()
     agent = await session.get(Agent, task.assigned_agent_id)
@@ -121,10 +187,11 @@ async def execute_task(
 
     adapter = get_adapter(agent.provider)
     credential_ref = (agent.config or {}).get("api_key_ref")
-    prompt = build_prompt(task)
 
     execution_ids: list[uuid.UUID] = []
     attempt = 0
+    remediations = 0
+    extra_context: str | None = None
 
     await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 
@@ -134,6 +201,7 @@ async def execute_task(
             session, task, ExecutionState.RUNNING, actor_id=actor_id, actor_type=actor_type
         )
         started = _now()
+        prompt = build_prompt(task, extra_context)
         request = AgentRunRequest(prompt=prompt, model=agent.model, credential_ref=credential_ref)
         try:
             result = await asyncio.wait_for(adapter.run(request), timeout=timeout_s)
@@ -178,32 +246,133 @@ async def execute_task(
                 return DispatchResult(outcome, attempt, escalated=True, execution_ids=execution_ids)
             continue
 
-        # Success.
-        execution_ids.append(
-            await _record(
-                session,
-                task=task,
-                agent=agent,
-                attempt=attempt,
-                state=ExecutionState.COMPLETED,
-                started=started,
+        # Execution attempt succeeded — record it and move to evaluation.
+        execution_id = await _record(
+            session,
+            task=task,
+            agent=agent,
+            attempt=attempt,
+            state=ExecutionState.COMPLETED,
+            started=started,
+            output=result.output,
+            error=None,
+            provider=result.provider,
+            tokens_used=result.tokens_used,
+            cost_estimate=result.cost_estimate,
+        )
+        execution_ids.append(execution_id)
+        await _transition(
+            session, task, ExecutionState.EVALUATING, actor_id=actor_id, actor_type=actor_type
+        )
+
+        if evaluation is None:
+            await _transition(
+                session, task, ExecutionState.COMPLETED, actor_id=actor_id, actor_type=actor_type
+            )
+            return DispatchResult(
+                ExecutionState.COMPLETED,
+                attempt,
+                escalated=False,
                 output=result.output,
-                error=None,
-                provider=result.provider,
-                tokens_used=result.tokens_used,
-                cost_estimate=result.cost_estimate,
+                execution_ids=execution_ids,
+                verdict=Verdict.PASS,
+                remediations=remediations,
+            )
+
+        execution = await session.get(TaskExecution, execution_id)
+        evaluator_agent = (
+            await session.get(Agent, evaluation.evaluator_agent_id)
+            if evaluation.evaluator_agent_id
+            else None
+        )
+        ev = await evaluation_service.evaluate_execution(
+            session,
+            execution=execution,
+            rubric_specs=evaluation.rubric_specs,
+            evaluator_agent=evaluator_agent,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+
+        if ev.verdict == Verdict.PASS:
+            await _transition(
+                session, task, ExecutionState.COMPLETED, actor_id=actor_id, actor_type=actor_type
+            )
+            return DispatchResult(
+                ExecutionState.COMPLETED,
+                attempt,
+                escalated=False,
+                output=result.output,
+                execution_ids=execution_ids,
+                verdict=ev.verdict,
+                remediations=remediations,
+            )
+
+        # Failed evaluation → choose and record a remediation action.
+        decision = select_remediation(
+            RemediationContext(
+                verdict=ev.verdict,
+                score=ev.score,
+                gaps=list(ev.gaps or []),
+                remediations_used=remediations,
+                max_remediations=evaluation.max_remediations,
             )
         )
-        # Phase 6 interposes EVALUATING; for now a successful run completes.
+        await record_audit(
+            session,
+            organization_id=task.organization_id,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            action="remediation.selected",
+            entity_type="TaskExecution",
+            entity_id=execution_id,
+            after={"action": decision.action.value, "justification": decision.justification},
+        )
+
+        if decision.auto_applicable:
+            remediations += 1
+            extra_context = "Address these evaluation gaps: " + "; ".join(ev.gaps or [])
+            await _transition(
+                session,
+                task,
+                ExecutionState.READY,
+                actor_id=actor_id,
+                actor_type=actor_type,
+                reason=f"remediation: {decision.action.value}",
+            )
+            await _transition(
+                session, task, ExecutionState.QUEUED, actor_id=actor_id, actor_type=actor_type
+            )
+            continue
+
+        # Non-automatable remediation → human approval gate.
+        await _create_approval(
+            session,
+            task=task,
+            execution_id=execution_id,
+            requested_action=(
+                f"Evaluation failed for task '{task.title}'. Recommended remediation: "
+                f"{decision.action.value} ({decision.justification})."
+            ),
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
         await _transition(
-            session, task, ExecutionState.COMPLETED, actor_id=actor_id, actor_type=actor_type
+            session,
+            task,
+            ExecutionState.AWAITING_APPROVAL,
+            actor_id=actor_id,
+            actor_type=actor_type,
+            reason=f"remediation: {decision.action.value}",
         )
         return DispatchResult(
-            ExecutionState.COMPLETED,
+            ExecutionState.AWAITING_APPROVAL,
             attempt,
-            escalated=False,
+            escalated=True,
             output=result.output,
             execution_ids=execution_ids,
+            verdict=ev.verdict,
+            remediations=remediations,
         )
 
 
