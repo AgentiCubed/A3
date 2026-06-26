@@ -23,7 +23,7 @@ async def meta() -> dict[str, object]:
     return {
         "api": "agenticubed",
         "version": "v1",
-        "phase": 7,
+        "phase": 8,
         "modules": [
             "intake",
             "methodology",

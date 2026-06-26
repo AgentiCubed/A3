@@ -15,6 +15,7 @@ from app.models.agent import (
     Tool,
 )
 from app.models.approval import Approval
+from app.models.artifact import Artifact
 from app.models.audit_event import AuditEvent
 from app.models.evaluation import Evaluation, EvaluationCriterion
 from app.models.metric import AgentMetric, ProjectMetric
@@ -36,6 +37,7 @@ __all__ = [
     "AgentMetric",
     "AgentToolPermission",
     "Approval",
+    "Artifact",
     "AuditEvent",
     "Decision",
     "Evaluation",

@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app import __version__
 from app.api.v1.router import api_router
@@ -20,9 +22,26 @@ settings = get_settings()
 configure_logging(settings.log_level)
 log = get_logger("app.main")
 
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "X-XSS-Protection": "0",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+}
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        for key, value in _SECURITY_HEADERS.items():
+            response.headers.setdefault(key, value)
+        return response
+
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    settings.assert_production_safe()  # refuse insecure default secret in prod
     log.info("startup", environment=settings.environment, version=__version__)
     yield
     log.info("shutdown")
@@ -33,6 +52,15 @@ app = FastAPI(
     version=__version__,
     description="Agentic project-orchestration platform.",
     lifespan=lifespan,
+)
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(api_router, prefix="/api/v1")

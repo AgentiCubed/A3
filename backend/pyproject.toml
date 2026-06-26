@@ -30,6 +30,11 @@ dev = [
     "mypy>=1.10",
     "aiosqlite>=0.20",
 ]
+# Analysis workers (Python). The R worker shells out to Rscript (system R).
+analysis = [
+    "pandas>=2.2",
+    "matplotlib>=3.8",
+]
 
 [build-system]
 requires = ["setuptools>=68"]

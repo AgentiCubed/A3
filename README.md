@@ -112,4 +112,6 @@ pytest
 
 **Phase 7** (project + agent metrics, a project dashboard with Gantt/dependency/risk-matrix/agent views, and CSV / JSON / Power BI-ready star-schema exports) — **complete & verified** (backend **112/112** pytest, frontend **14/14** vitest + tsc clean, migrations render 0001→0007).
 
-**Phase 8** (comprehensive testing, security hardening, documentation, seed data, and the end-to-end demonstration project) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.
+**Phase 8** (security hardening, real Python + R analysis workers, artifact storage, the seeded **end-to-end demonstration** — research → brief → data analysis → visualization → evaluation → deliberate failure → remediation → completion → closeout report, plus docs) — **complete & verified** (backend **120/120** pytest, frontend **14/14** vitest + tsc, ruff + black clean, migrations render 0001→0008).
+
+**All eight phases are complete.** Run the demonstration with `make demo` (see [`docs/demo.md`](docs/demo.md)). See [`docs/roadmap.md`](docs/roadmap.md) for the full phase-by-phase record and any tracked follow-ups in [`docs/issues/`](docs/issues/).

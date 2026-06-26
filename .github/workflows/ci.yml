@@ -43,7 +43,7 @@ jobs:
       - name: Create venv + install
         run: |
           uv venv .venv
-          uv pip install --python .venv -e ".[dev]"
+          uv pip install --python .venv -e ".[dev,analysis]"
       - name: Lint (ruff + black)
         run: |
           .venv/bin/ruff check app tests

@@ -1,5 +1,5 @@
 .PHONY: help up down logs check backend-install backend-lint backend-fmt backend-test \
-        frontend-install frontend-lint frontend-test migrate revision
+        frontend-install frontend-lint frontend-test migrate revision demo
 
 help:
 	@echo "AgentiCubed make targets:"
@@ -16,6 +16,7 @@ help:
 	@echo "  frontend-test    vitest run"
 	@echo "  migrate          alembic upgrade head"
 	@echo "  revision m=msg   alembic autogenerate revision"
+	@echo "  demo             run the end-to-end demonstration project"
 
 up:
 	docker compose up --build
@@ -29,7 +30,10 @@ logs:
 check: backend-lint backend-test frontend-lint frontend-test
 
 backend-install:
-	cd backend && pip install -e ".[dev]"
+	cd backend && pip install -e ".[dev,analysis]"
+
+demo:
+	cd backend && python -m app.seed.demo
 
 backend-lint:
 	cd backend && ruff check . && black --check .

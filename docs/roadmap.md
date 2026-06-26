@@ -212,15 +212,37 @@ metrics, CSV export, JSON export, Power BI-ready exports.
 - The dashboard authenticates via `?token=<jwt>` for the MVP (no login UI yet);
   a session cookie is the planned replacement (`docs/issues/0005`).
 
-## Phase 8 — Hardening & demonstration
+## Phase 8 — Hardening & demonstration *(complete)*
 Comprehensive testing, security hardening, documentation, seed data, end-to-end
 demonstration project.
 
 **Acceptance criteria**
-- [ ] E2E demo: research → brief → data analysis → visualization → evaluation →
-      deliberate failure → remediation → completion → closeout report.
-- [ ] Security review checklist passed.
-- [ ] Seed data + docs complete.
+- [x] E2E demo (`app/seed/demo.py`, `make demo`): research → brief → **real**
+      data analysis (pandas) → **real** visualization (matplotlib PNG artifact) →
+      evaluation (separate evaluator) → one deliberate failure → remediation →
+      completion → closeout report. Verified by `test_demo` (and run via CLI).
+      R worker cross-checks the stats when `Rscript` is present.
+- [x] Security hardening: response security headers, CORS config, and a startup
+      guard that refuses the insecure default `SECRET_KEY` in production. Verified
+      by `test_security`. See also `docs/security-model.md`.
+- [x] Analysis workers: real Python (pandas/matplotlib) + real R (Rscript via a
+      language-neutral job interface). Verified by `test_analysis_workers`.
+- [x] Artifacts: `ArtifactStore` port + local FS adapter + `Artifact` model;
+      content-addressed (sha256). Migration 0008.
+- [x] Seed data + docs (`docs/demo.md`); README quickstart updated.
+
+**Verification (run 2026-06-26, local):**
+- backend `pytest` → `120 passed`; frontend `vitest` → `14 passed`, `tsc` clean
+- `ruff` + `black --check` clean; `alembic upgrade head --sql` renders 0001→0008
+- `make demo` (SQLite + live) prints a closeout report; Python **and** R workers
+  both compute mean=116.25 on the sample dataset; one PNG deliverable produced.
+
+**Phase-8 notes:**
+- The demo's agent "thinking" uses the deterministic MockProvider (A15); only the
+  analysis/visualization workers are real. Live Claude runs when an agent is set
+  to `provider=anthropic` with `ANTHROPIC_API_KEY` present.
+- Remediation-event scoping in the closeout is org-wide for the single-project
+  demo; multi-project scoping by joining audit→task is a follow-up.
 
 ## Incomplete-requirement policy
 A requirement that cannot be completed is **not** silently dropped. It is logged

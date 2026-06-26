@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -11,7 +12,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.deps import CurrentUser, DbSession, require
 from app.core.rbac import Action
 from app.models.user import User
-from app.services import analytics_service, export_service, project_service
+from app.schemas.artifact import ArtifactResponse
+from app.services import (
+    analytics_service,
+    artifact_service,
+    closeout_service,
+    export_service,
+    project_service,
+)
 
 router = APIRouter(prefix="/projects", tags=["analytics"])
 
@@ -43,6 +51,41 @@ async def recompute_metrics(
     )
     await session.commit()
     return result
+
+
+@router.get("/{project_id}/artifacts", response_model=list[ArtifactResponse])
+async def list_artifacts(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
+    await _project(session, user, project_id)
+    rows = await artifact_service.list_artifacts(
+        session, org_id=user.organization_id, project_id=project_id
+    )
+    return [ArtifactResponse.model_validate(a) for a in rows]
+
+
+@router.get("/{project_id}/closeout")
+async def closeout(project_id: uuid.UUID, session: DbSession, user: CurrentUser) -> dict:
+    await _project(session, user, project_id)
+    return await closeout_service.generate_closeout(
+        session,
+        org_id=user.organization_id,
+        project_id=project_id,
+        generated_at=datetime.now(UTC),
+    )
+
+
+@router.post("/{project_id}/close")
+async def close_project(
+    project_id: uuid.UUID,
+    session: DbSession,
+    user: Annotated[User, Depends(require(Action.PROJECT_EDIT))],
+) -> dict:
+    project = await _project(session, user, project_id)
+    await closeout_service.close_project(session, project=project, actor_id=user.id)
+    report = await closeout_service.generate_closeout(
+        session, org_id=user.organization_id, project_id=project_id, generated_at=datetime.now(UTC)
+    )
+    await session.commit()
+    return {"status": project.status.value, "closeout": report}
 
 
 @router.get("/{project_id}/export.json")
