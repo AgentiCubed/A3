@@ -110,4 +110,6 @@ pytest
 
 **Phase 6** (deterministic evaluation rubrics, evaluator agents with enforced executor/evaluator separation, human approval gates, and the closed-loop remediation policy over the ten actions) — **complete & verified** (backend **102/102** pytest, ruff + black clean, migrations render 0001→0006).
 
-**Phase 7** (dashboards, Gantt, dependency views, risk matrices, project/agent metrics, CSV/JSON/Power BI exports) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.
+**Phase 7** (project + agent metrics, a project dashboard with Gantt/dependency/risk-matrix/agent views, and CSV / JSON / Power BI-ready star-schema exports) — **complete & verified** (backend **112/112** pytest, frontend **14/14** vitest + tsc clean, migrations render 0001→0007).
+
+**Phase 8** (comprehensive testing, security hardening, documentation, seed data, and the end-to-end demonstration project) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.

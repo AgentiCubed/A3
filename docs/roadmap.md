@@ -185,14 +185,32 @@ revision requests, closed-loop remediation.
   critique. Parsing a real LLM verdict (vs. the deterministic gate) is a tracked
   refinement — see `docs/issues/0004`.
 
-## Phase 7 — Analytics & visualization
+## Phase 7 — Analytics & visualization *(complete)*
 Dashboards, Gantt, dependency views, risk matrices, project metrics, agent
 metrics, CSV export, JSON export, Power BI-ready exports.
 
 **Acceptance criteria**
-- [ ] Project + agent metrics computed and persisted.
-- [ ] Gantt + dependency graph + risk matrix render in UI.
-- [ ] CSV / JSON / Power BI-compatible exports.
+- [x] Project + agent metrics computed (`app/analytics/compute.py`, pure +
+  tested) and persisted via `POST /metrics/recompute` into `ProjectMetric` /
+  `AgentMetric`. Verified by `test_analytics_compute` + `test_analytics`.
+- [x] Gantt + dependency graph + risk matrix render in the UI
+  (`/projects/[id]?token=…` dashboard; `GanttChart`, `DependencyDiagram`,
+  `RiskMatrix`, `AgentTable`, `MetricCard`). Pure helpers unit-tested; components
+  RTL-tested. Visualization approach recorded in ADR-0005.
+- [x] CSV / JSON / Power BI-compatible exports (`/export.json`,
+  `/export/tasks.csv`, `/export/powerbi.zip` — a star-schema ZIP of dim/fact CSVs
+  with stable keys). Verified by `test_analytics`.
+
+**Verification (run 2026-06-25, local):**
+- backend `pytest` → `112 passed`; frontend `vitest` → `14 passed`, `tsc` clean
+- `ruff` + `black --check` clean; `alembic upgrade head --sql` renders 0001→0007
+
+**Phase-7 notes:**
+- Charts use lightweight SVG/CSS and the dependency graph emits Mermaid source
+  (ADR-0005); upgrading to Recharts/Plotly + live Mermaid is tracked in
+  `docs/issues/0005`.
+- The dashboard authenticates via `?token=<jwt>` for the MVP (no login UI yet);
+  a session cookie is the planned replacement (`docs/issues/0005`).
 
 ## Phase 8 — Hardening & demonstration
 Comprehensive testing, security hardening, documentation, seed data, end-to-end

@@ -17,6 +17,7 @@ from app.models.agent import (
 from app.models.approval import Approval
 from app.models.audit_event import AuditEvent
 from app.models.evaluation import Evaluation, EvaluationCriterion
+from app.models.metric import AgentMetric, ProjectMetric
 from app.models.organization import Organization
 from app.models.project import (
     Milestone,
@@ -32,6 +33,7 @@ from app.models.user import ProjectMember, User
 __all__ = [
     "Agent",
     "AgentCapability",
+    "AgentMetric",
     "AgentToolPermission",
     "Approval",
     "AuditEvent",
@@ -40,6 +42,7 @@ __all__ = [
     "EvaluationCriterion",
     "Milestone",
     "Organization",
+    "ProjectMetric",
     "Project",
     "ProjectMember",
     "ProjectMethodology",
