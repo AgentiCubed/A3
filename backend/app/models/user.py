@@ -29,9 +29,8 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class ProjectMember(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Project-plane role grant. The FK to projects is added in Phase 3 when the
-    projects table exists; project_id is a plain UUID here so the RBAC project
-    plane can be implemented and tested now."""
+    """Project-plane role grant (the RBAC project plane). FK to projects added in
+    Phase 3 now that the projects table exists."""
 
     __tablename__ = "project_members"
     __table_args__ = (UniqueConstraint("project_id", "user_id", name="uq_member_project_user"),)
@@ -39,7 +38,9 @@ class ProjectMember(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    project_id: Mapped[uuid.UUID] = mapped_column(nullable=False, index=True)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )

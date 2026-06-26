@@ -58,15 +58,34 @@ configuration handling, audit events.
 - `project_members` exists now (project-role plane is testable), but its FK to
   `projects` is deferred to Phase 3 when that table lands.
 
-## Phase 3 — Projects & planning domain
+## Phase 3 — Projects & planning domain *(complete)*
 Projects, requirements, milestones, tasks, dependencies, risks, decisions,
 Kanban workflow, timeline, critical-path calculation.
 
 **Acceptance criteria**
-- [ ] CRUD for project/requirement/milestone/task/risk/decision.
-- [ ] Dependency creation rejects cycles.
-- [ ] Kanban board state transitions.
-- [ ] CPM computes earliest/latest start/finish + critical path.
+- [x] CRUD for project/requirement/milestone/task/risk/decision (`projects`
+  router + `project_service`/`task_service`). Org-scoped, audited mutations.
+- [x] Dependency creation rejects self-loops, duplicates, and cycles
+  (`app/scheduling/graph.py` DFS/Kahn; service builds the proposed graph and
+  rejects → HTTP 409 with the offending cycle). Verified by `test_projects` +
+  `test_graph`.
+- [x] Kanban board transitions (`PATCH .../tasks/{id}/kanban`, audited).
+- [x] CPM computes ES/EF/LS/LF + slack + critical path
+  (`app/scheduling/critical_path.py`). Verified by `test_critical_path` (classic
+  diamond, lag, parallel) and end-to-end via `/timeline` + `/graph`.
+- [x] Bonus: rule-based methodology recommender (Module 2) wired into project
+  creation. Verified by `test_methodology`.
+
+**Verification (run 2026-06-25, local):**
+- `pytest` → `56 passed` · `ruff` + `black --check` → clean
+- `alembic upgrade head --sql` renders 0001→0003 cleanly (incl. the
+  `project_members→projects` FK that resolves assumption A17).
+
+**Phase-3 notes:**
+- CPM models all dependency types as finish-to-start for the MVP; the field is
+  stored and surfaced but SS/FF/SF schedule as FS. Tracked in `docs/issues/0003`.
+- System-plane RBAC is enforced on mutations; project-plane role resolution
+  (e.g. a `manager` who isn't an org admin) lands with agents in Phase 4 (A18).
 
 ## Phase 4 — Agents, capabilities, matching
 Agent registry, capability taxonomy, tool registry, agent-tool permissions,

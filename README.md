@@ -102,4 +102,6 @@ pytest
 
 **Phase 2** (JWT auth + argon2, organizations, system + project RBAC planes, org-scoped repositories, secret resolution-by-reference + redaction, append-only audit events with app- and DB-level immutability) — **complete & verified** (backend **30/30** pytest, ruff + black clean, migrations render 0001→0002).
 
-**Phase 3** (projects, requirements, milestones, tasks, dependencies, risks, decisions, Kanban, timeline, critical path) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.
+**Phase 3** (projects, requirements, milestones, tasks, dependencies with cycle rejection, risks, decisions, Kanban, CPM timeline + dependency graph, rule-based methodology recommender) — **complete & verified** (backend **56/56** pytest, ruff + black clean, migrations render 0001→0003).
+
+**Phase 4** (agent registry, capability taxonomy, tool registry, agent-tool permissions, provider-neutral adapter, agent matching) is next. See [`docs/roadmap.md`](docs/roadmap.md) for phase-by-phase acceptance criteria.

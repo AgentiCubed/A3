@@ -6,12 +6,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import auth, orgs
+from app.api.v1.routers import auth, orgs, projects
 
 api_router = APIRouter()
 
 api_router.include_router(auth.router)
 api_router.include_router(orgs.router)
+api_router.include_router(projects.router)
 
 
 @api_router.get("/meta", tags=["meta"])
@@ -20,7 +21,7 @@ async def meta() -> dict[str, object]:
     return {
         "api": "agenticubed",
         "version": "v1",
-        "phase": 1,
+        "phase": 3,
         "modules": [
             "intake",
             "methodology",
