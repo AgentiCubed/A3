@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agenticubed
+          POSTGRES_PASSWORD: agenticubed
+          POSTGRES_DB: agenticubed
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agenticubed"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      # Live Postgres/Redis so we verify migrations + readiness for real (issue 0001).
+      DATABASE_URL: postgresql+asyncpg://agenticubed:agenticubed@localhost:5432/agenticubed
+      DATABASE_URL_SYNC: postgresql+psycopg://agenticubed:agenticubed@localhost:5432/agenticubed
+      REDIS_URL: redis://localhost:6379/0
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pipx install uv
+      - name: Create venv + install
+        run: |
+          uv venv .venv
+          uv pip install --python .venv -e ".[dev]"
+      - name: Lint (ruff + black)
+        run: |
+          .venv/bin/ruff check app tests
+          .venv/bin/black --check app tests
+      - name: Apply migrations against real Postgres
+        run: .venv/bin/alembic upgrade head
+      - name: Tests
+        run: .venv/bin/python -m pytest -q
+      - name: Readiness smoke test (db + redis)
+        run: |
+          .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          SERVER_PID=$!
+          for i in $(seq 1 20); do
+            if curl -sf http://localhost:8000/healthz > /dev/null; then break; fi
+            sleep 1
+          done
+          BODY=$(curl -sf http://localhost:8000/readyz)
+          echo "$BODY"
+          echo "$BODY" | grep -q '"database": "ok"'
+          echo "$BODY" | grep -q '"redis": "ok"'
+          kill $SERVER_PID
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm run test

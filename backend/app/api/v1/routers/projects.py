@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, require
 from app.core.rbac import Action
+from app.core.roles import ActorType
 from app.models.project import (
     Milestone,
     Project,
@@ -23,7 +24,14 @@ from app.models.project import (
 )
 from app.models.risk import Decision, Risk
 from app.models.user import User
+from app.orchestration.state_machine.machine import IllegalTransition
 from app.schemas.agent import AssignRequest
+from app.schemas.execution import (
+    DispatchRequest,
+    DispatchResultResponse,
+    ExecutionResponse,
+    ReassignRequest,
+)
 from app.schemas.project import (
     MethodologyResponse,
     MilestoneCreate,
@@ -52,7 +60,12 @@ from app.schemas.task import (
     TaskScheduleResponse,
     TimelineResponse,
 )
-from app.services import agent_service, project_service, task_service
+from app.services import (
+    agent_service,
+    execution_service,
+    project_service,
+    task_service,
+)
 from app.services.methodology import ProjectSignals
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -235,6 +248,96 @@ async def assign_task_agent(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             {"error": "capability_mismatch", "missing": exc.missing},
         ) from exc
+    await session.commit()
+    return TaskResponse.model_validate(task)
+
+
+# ── Execution (dispatch, history, reassignment) ───────────────────────────
+@router.post("/{project_id}/tasks/{task_id}/dispatch", response_model=DispatchResultResponse)
+async def dispatch_task(
+    project_id: uuid.UUID,
+    task_id: uuid.UUID,
+    req: DispatchRequest,
+    session: DbSession,
+    user: TaskEditor,
+):
+    project = await _load_project(session, user, project_id)
+    tasks = await task_service.list_tasks(session, project.id)
+    task = next((t for t in tasks if t.id == task_id), None)
+    if task is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
+    try:
+        result = await execution_service.execute_task(
+            session,
+            task=task,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+        )
+    except execution_service.NotAssigned as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "task has no assigned agent"
+        ) from exc
+    except execution_service.NotExecutable as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned agent is not an AI agent"
+        ) from exc
+    except IllegalTransition as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    await session.commit()
+    return DispatchResultResponse(
+        final_state=result.final_state,
+        attempts=result.attempts,
+        escalated=result.escalated,
+        output=result.output,
+        execution_ids=result.execution_ids,
+    )
+
+
+@router.get("/{project_id}/tasks/{task_id}/executions", response_model=list[ExecutionResponse])
+async def list_executions(
+    project_id: uuid.UUID, task_id: uuid.UUID, session: DbSession, user: CurrentUser
+):
+    await _load_project(session, user, project_id)
+    rows = await execution_service.list_executions(
+        session, org_id=user.organization_id, task_id=task_id
+    )
+    return [ExecutionResponse.model_validate(r) for r in rows]
+
+
+@router.patch("/{project_id}/tasks/{task_id}/reassign", response_model=TaskResponse)
+async def reassign_task(
+    project_id: uuid.UUID,
+    task_id: uuid.UUID,
+    req: ReassignRequest,
+    session: DbSession,
+    user: Annotated[User, Depends(require(Action.AGENT_ASSIGN))],
+):
+    project = await _load_project(session, user, project_id)
+    tasks = await task_service.list_tasks(session, project.id)
+    task = next((t for t in tasks if t.id == task_id), None)
+    if task is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
+    try:
+        agent = await agent_service.get_agent(session, user.organization_id, req.agent_id)
+    except agent_service.NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "agent not found") from exc
+
+    missing = await agent_service.missing_capabilities(
+        session, user.organization_id, agent.id, list(task.required_capabilities or [])
+    )
+    if missing:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {"error": "capability_mismatch", "missing": missing},
+        )
+    try:
+        await execution_service.reassign_task(
+            session, task=task, new_agent=agent, actor_id=user.id, actor_type=ActorType.USER
+        )
+    except IllegalTransition as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     await session.commit()
     return TaskResponse.model_validate(task)
 

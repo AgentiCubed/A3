@@ -24,6 +24,7 @@ from app.models.project import (
 )
 from app.models.risk import Decision, Risk
 from app.models.task import Task, TaskDependency
+from app.models.task_execution import TaskExecution
 from app.models.user import ProjectMember, User
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "Risk",
     "Task",
     "TaskDependency",
+    "TaskExecution",
     "Tool",
     "User",
 ]

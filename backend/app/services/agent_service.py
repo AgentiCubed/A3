@@ -133,6 +133,15 @@ async def match_for_capabilities(
     return match_agents(required, await _profiles(session, org_id))
 
 
+async def missing_capabilities(
+    session: AsyncSession, org_id: uuid.UUID, agent_id: uuid.UUID, required: list[str]
+) -> list[str]:
+    """Return required capabilities the given agent does not declare."""
+    profiles = await _profiles(session, org_id)
+    caps = next((p.capabilities for p in profiles if p.agent_id == agent_id), {})
+    return [c for c in required if c not in caps]
+
+
 async def assign_agent_to_task(
     session: AsyncSession,
     *,

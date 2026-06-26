@@ -1,6 +1,15 @@
 # Issue 0001 — Full Docker stack not yet exercised in this environment
 
-**Status:** Open · **Opened:** 2026-06-25 · **Phase:** 1
+**Status:** Mitigated (CI added in Phase 5) · **Opened:** 2026-06-25 · **Phase:** 1
+
+## Update (Phase 5)
+`.github/workflows/ci.yml` now runs the backend job against **real** Postgres 16 +
+Redis 7 service containers: it applies `alembic upgrade head` to a live Postgres
+and runs a `/readyz` smoke test asserting `database: ok` and `redis: ok`. This
+closes the "migrations + readiness verified against real infra" gap on every
+push/PR. A local `docker compose up` of all five services together still hasn't
+been run in this build environment, so that specific path remains unverified
+locally until CI runs or someone runs `make up`.
 
 ## What is incomplete
 The `docker compose up` path (db + redis + api + worker + frontend together) and

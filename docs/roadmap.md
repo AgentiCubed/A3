@@ -118,15 +118,39 @@ provider-neutral adapter, agent matching.
   blocks their invocation lands in Phase 6. `has_permission` is wired for the
   Phase-5 dispatcher.
 
-## Phase 5 — Dispatch & execution
+## Phase 5 — Dispatch & execution *(complete)*
 Task dispatch, execution records, background workers, retries, timeouts,
 reassignment, human escalation, execution state machine.
 
 **Acceptance criteria**
-- [ ] State machine table enforces legal transitions; illegal ones audited.
-- [ ] Worker runs an execution end-to-end via the engine port.
-- [ ] Retry + timeout + reassignment paths exercised by tests.
-- [ ] Immutable `TaskExecution` per attempt.
+- [x] State machine enforces legal transitions; every transition is audited and
+  illegal ones raise `IllegalTransition` (`app/orchestration/state_machine/`).
+  Verified by `test_state_machine` + execution flow tests.
+- [x] Worker runs an execution end-to-end via the engine port
+  (`CeleryWorkflowEngine` implements `WorkflowEngine`; eager-mode test runs the
+  full `execute_task` through `submit_execution`). Verified by
+  `test_execution::test_worker_runs_execution_via_engine_port`.
+- [x] Retry + timeout + reassignment exercised by tests (mock provider `[[FAIL]]`
+  / `[[SLEEP:n]]` markers drive deterministic failure/timeout; escalation →
+  BLOCKED; reassignment → READY). Verified by `test_execution`.
+- [x] Immutable `TaskExecution` per attempt (app guard + Postgres trigger in
+  migration 0005). Verified by `test_execution::test_task_execution_is_immutable`.
+
+**Verification (run 2026-06-25, local):**
+- `pytest` → `84 passed` · `ruff` + `black --check` → clean
+- `alembic upgrade head --sql` renders 0001→0005 cleanly (incl. the execution
+  immutability trigger).
+- **CI added** (`.github/workflows/ci.yml`): applies migrations to real Postgres
+  16 + runs a `/readyz` smoke test (db + redis) — mitigates issue 0001.
+
+**Phase-5 notes:**
+- Inline execution (`execute_task`) is the unit of work the API calls directly;
+  the Celery engine runs that same function in a worker. Temporal would implement
+  the same `WorkflowEngine` port (ADR-0002).
+- A successful run currently transitions RUNNING→COMPLETED; Phase 6 interposes
+  EVALUATING (the machine already permits RUNNING→EVALUATING→COMPLETED).
+- The Celery worker path is verified in eager mode; a live broker run needs Redis
+  (Docker/CI), tracked alongside issue 0001.
 
 ## Phase 6 — Evaluation & remediation
 Evaluation rubrics, deterministic validation, evaluator agents, human approvals,
