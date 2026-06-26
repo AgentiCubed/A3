@@ -1,4 +1,5 @@
 import { HealthBadge, type HealthState } from "@/components/HealthBadge";
+import { Wordmark } from "@/components/Wordmark";
 import { api, type ApiMeta, type ReadyStatus } from "@/lib/api";
 
 // Server component. Runs on the Next server, so it can reach the API over the
@@ -30,7 +31,9 @@ export default async function Home() {
           justifyContent: "space-between",
         }}
       >
-        <h1 style={{ margin: 0, fontSize: 28 }}>AgentiCubed</h1>
+        <h1 style={{ margin: 0 }}>
+          <Wordmark size={30} />
+        </h1>
         <HealthBadge state={state} />
       </header>
       <p style={{ color: "#9fb0c0" }}>

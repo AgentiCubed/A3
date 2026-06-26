@@ -5,6 +5,7 @@ import { DependencyDiagram } from "@/components/DependencyDiagram";
 import { GanttChart } from "@/components/GanttChart";
 import { MetricCard } from "@/components/MetricCard";
 import { RiskMatrix } from "@/components/RiskMatrix";
+import { Wordmark } from "@/components/Wordmark";
 import { api, type Dashboard, type ProjectGraph } from "@/lib/api";
 import { pct } from "@/lib/metrics";
 
@@ -59,6 +60,9 @@ export default async function ProjectDashboard({
 
   return (
     <main style={{ maxWidth: 1040, margin: "0 auto", padding: "40px 24px" }}>
+      <div style={{ marginBottom: 8 }}>
+        <Wordmark size={22} />
+      </div>
       <h1 style={{ marginTop: 0 }}>Project dashboard</h1>
 
       <section style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>

@@ -22,20 +22,39 @@ settings = get_settings()
 configure_logging(settings.log_level)
 log = get_logger("app.main")
 
-_SECURITY_HEADERS = {
+_BASE_SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "X-XSS-Protection": "0",
-    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
 }
+
+# Strict CSP for the JSON API (it serves no scripts/styles/images of its own).
+_STRICT_CSP = "default-src 'none'; frame-ancestors 'none'"
+
+# The interactive docs (Swagger UI / ReDoc) load assets from a CDN + inline init,
+# so they get a narrowly-relaxed CSP. The API itself stays locked down.
+_DOCS_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+    "img-src 'self' data: https://fastapi.tiangolo.com https://cdn.jsdelivr.net; "
+    "worker-src 'self' blob:; "
+    "frame-ancestors 'none'"
+)
+_DOCS_PATHS = ("/docs", "/redoc", "/openapi.json")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
-        for key, value in _SECURITY_HEADERS.items():
+        for key, value in _BASE_SECURITY_HEADERS.items():
             response.headers.setdefault(key, value)
+        path = request.url.path
+        is_docs = any(path == p or path.startswith(p + "/") for p in _DOCS_PATHS)
+        response.headers.setdefault(
+            "Content-Security-Policy", _DOCS_CSP if is_docs else _STRICT_CSP
+        )
         return response
 
 

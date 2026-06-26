@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "AgentiCubed",
+  title: "Agentic³",
   description: "Agentic project-orchestration platform",
 };
 
