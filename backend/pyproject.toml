@@ -47,6 +47,10 @@ include = ["app*"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Policy: alembic/versions/* are generated migration artifacts and are excluded
+# from lint/format by decision (see stabilize/v1.0.1). alembic/env.py is
+# maintained code and remains fully linted.
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S"]
@@ -58,6 +62,7 @@ ignore = ["S101"]  # assert in tests
 [tool.black]
 line-length = 100
 target-version = ["py311"]
+extend-exclude = 'alembic/versions'
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

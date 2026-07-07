@@ -46,8 +46,8 @@ jobs:
           uv pip install --python .venv -e ".[dev,analysis]"
       - name: Lint (ruff + black)
         run: |
-          .venv/bin/ruff check app tests
-          .venv/bin/black --check app tests
+          .venv/bin/ruff check .
+          .venv/bin/black --check .
       - name: Apply migrations against real Postgres
         run: .venv/bin/alembic upgrade head
       - name: Tests
@@ -62,9 +62,9 @@ jobs:
           done
           BODY=$(curl -sf http://localhost:8000/readyz)
           echo "$BODY"
-          echo "$BODY" | grep -q '"database": "ok"'
-          echo "$BODY" | grep -q '"redis": "ok"'
-          kill $SERVER_PID
+          echo "$BODY" | grep -Eq '"database": ?"ok"'
+          echo "$BODY" | grep -Eq '"redis": ?"ok"'
+          kill $SERVER_PID && wait $SERVER_PID 2>/dev/null || true
 
   frontend:
     runs-on: ubuntu-latest
@@ -91,5 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Provide CI env file (.env is intentionally untracked)
+        run: cp .env.example .env
       - name: Validate docker-compose
         run: docker compose config -q

@@ -86,6 +86,38 @@ uvicorn app.main:app --reload
 pytest
 ```
 
+## Running the demo (canonical for v1.0.x)
+
+The end-to-end demonstration project (governed loop: plan → assign → execute →
+evaluate → remediate → closeout) runs **host-side** against the compose-published
+database/redis, with artifacts written outside the repository:
+
+```bash
+docker compose up -d db redis        # published on 127.0.0.1 only
+cd backend
+
+# one-time: apply migrations (skip if the api container already ran them)
+DATABASE_URL_SYNC="postgresql+psycopg://agenticubed:agenticubed@localhost:5432/agenticubed" \
+.venv/bin/alembic upgrade head
+
+DATABASE_URL="postgresql+asyncpg://agenticubed:agenticubed@localhost:5432/agenticubed" \
+DATABASE_URL_SYNC="postgresql+psycopg://agenticubed:agenticubed@localhost:5432/agenticubed" \
+REDIS_URL="redis://localhost:6379/0" \
+CELERY_BROKER_URL="redis://localhost:6379/1" \
+ARTIFACT_STORE_PATH="/tmp/agenticubed-demo-artifacts" \
+.venv/bin/python -m app.seed.demo
+```
+
+Requires the backend venv (`make backend-install`, i.e. `pip install -e
+".[dev,analysis]"`) and a system `Rscript` on the host — the demo exercises both
+the Python and R analysis workers. Credentials above are the committed dev
+defaults; override via environment if you changed `.env`.
+
+> **Note:** the container image intentionally excludes the analysis extras
+> (pandas/matplotlib) and R in v1.0.x to keep it lean, so
+> `docker compose exec api python -m app.seed.demo` is **not** a supported path
+> yet. Containerizing the analysis stack is tracked as backlog.
+
 ## Documentation
 
 - [`docs/architecture.md`](docs/architecture.md) — system architecture and module boundaries
