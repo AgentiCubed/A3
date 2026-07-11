@@ -41,12 +41,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "status",
-            sa.Enum(
-                *_RUN_STATUS,
-                name="project_run_status",
-                native_enum=False,
-                create_constraint=True,
-            ),
+            sa.Enum(*_RUN_STATUS, native_enum=False),
             nullable=False,
             server_default="running",
         ),

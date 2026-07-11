@@ -17,6 +17,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from sqlalchemy import func, select
 
 from app.core.enums import AgentKind, ProjectRunStatus
 from app.models.agent import Agent
@@ -101,8 +102,6 @@ async def test_project_run_start_and_advance():
         assert reloaded_run.project_id == project_id
 
         # Baseline execution count.
-        from sqlalchemy import func, select
-
         count_stmt = select(func.count()).where(TaskExecution.task_id == task_id)
         count_before: int = (await s2.execute(count_stmt)).scalar_one()
 
@@ -120,8 +119,6 @@ async def test_project_run_start_and_advance():
 
     # The execution belongs to the expected task / project context.
     async with TestSessionFactory() as s3:
-        from sqlalchemy import select
-
         exec_stmt = (
             select(TaskExecution)
             .where(TaskExecution.task_id == task_id)
