@@ -46,8 +46,8 @@ jobs:
           uv pip install --python .venv -e ".[dev,analysis]"
       - name: Lint (ruff + black)
         run: |
-          .venv/bin/ruff check app tests
-          .venv/bin/black --check app tests
+          .venv/bin/ruff check app tests alembic/env.py
+          .venv/bin/black --check app tests alembic/env.py
       - name: Apply migrations against real Postgres
         run: .venv/bin/alembic upgrade head
       - name: Tests
@@ -62,8 +62,8 @@ jobs:
           done
           BODY=$(curl -sf http://localhost:8000/readyz)
           echo "$BODY"
-          echo "$BODY" | grep -q '"database": "ok"'
-          echo "$BODY" | grep -q '"redis": "ok"'
+          echo "$BODY" | grep -q '"database":"ok"'
+          echo "$BODY" | grep -q '"redis":"ok"'
           kill $SERVER_PID
 
   frontend:
@@ -91,5 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Materialize CI-only .env for compose validation
+        run: cp .env.example .env
       - name: Validate docker-compose
         run: docker compose config -q
