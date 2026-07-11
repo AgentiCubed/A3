@@ -126,6 +126,12 @@ class RiskLevel(StrEnum):
     HIGH = "high"
 
 
+class ProjectRunStatus(StrEnum):
+    RUNNING = "running"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
 class RemediationAction(StrEnum):
     RE_PROMPT = "re_prompt"
     ADD_CONTEXT = "add_context"

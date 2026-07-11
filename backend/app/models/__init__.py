@@ -26,6 +26,7 @@ from app.models.project import (
     ProjectMethodology,
     ProjectRequirement,
 )
+from app.models.project_run import ProjectRun
 from app.models.risk import Decision, Risk
 from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
@@ -46,6 +47,7 @@ __all__ = [
     "Organization",
     "ProjectMetric",
     "Project",
+    "ProjectRun",
     "ProjectMember",
     "ProjectMethodology",
     "ProjectRequirement",
