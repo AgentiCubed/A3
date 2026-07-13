@@ -115,3 +115,25 @@ pytest
 **Phase 8** (security hardening, real Python + R analysis workers, artifact storage, the seeded **end-to-end demonstration** — research → brief → data analysis → visualization → evaluation → deliberate failure → remediation → completion → closeout report, plus docs) — **complete & verified** (backend **120/120** pytest, frontend **14/14** vitest + tsc, ruff + black clean, migrations render 0001→0008).
 
 **All eight phases are complete.** See **[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md)** for the consolidated overview. Canonical host demo invocation is from repo root: `make demo` (see [`docs/demo.md`](docs/demo.md)). The [`docs/roadmap.md`](docs/roadmap.md) has the full phase-by-phase record; tracked follow-ups (all addressed) are in [`docs/issues/`](docs/issues/).
+
+## Manual fork automation workflows
+
+This repo includes manual GitHub Actions workflows for controlled fork operations:
+
+- **Create Fork** (`.github/workflows/create-fork.yml`)
+- **Fork Remote Instructions** (`.github/workflows/fork-remote-instructions.yml`)
+
+### Required setup
+
+1. Add a fine-grained PAT as secret **`FORK_CREATOR_PAT`** (do not use `GITHUB_TOKEN`).
+   - Minimum recommended token setup: repository access to the source repository with **Metadata: Read-only** and **Contents: Read-only**.
+   - The token identity must also be allowed to create the destination fork (personal account or target organization policy/permissions).
+2. Add repository or org variable **`FORK_ALLOWED_TARGET_OWNERS`** with a comma-separated allowlist (example: `JamesTRichmond,AgentiCubed`).
+3. Configure environment **`fork-management`** with required reviewers to gate manual runs.
+
+### How to run
+
+1. Open **Actions** tab.
+2. Run **Create Fork** via **Run workflow**.
+3. Provide `source_owner`, `source_repo`, `target_owner`, and `default_branch_only`.
+4. Review the step summary and download artifact `fork-result` for the API result payload.

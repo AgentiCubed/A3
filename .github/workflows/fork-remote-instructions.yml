@@ -1,0 +1,42 @@
+name: Fork Remote Instructions
+
+on:
+  workflow_dispatch:
+    inputs:
+      fork_owner:
+        description: Owner of your fork
+        required: true
+      repo_name:
+        description: Repository name
+        required: true
+        default: agenticubed
+      upstream_owner:
+        description: Upstream owner
+        required: true
+        default: AgentiCubed
+      upstream_repo:
+        description: Upstream repository name
+        required: true
+        default: agenticubed
+
+permissions:
+  contents: read
+
+jobs:
+  print-commands:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show local remote setup commands
+        run: |
+          cat <<'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ### Local git remote setup
+
+          ```bash
+          cd /path/to/your/local/repo
+          git remote rename origin upstream
+          git remote add origin git@github.com:${{ inputs.fork_owner }}/${{ inputs.repo_name }}.git
+          git remote set-url upstream git@github.com:${{ inputs.upstream_owner }}/${{ inputs.upstream_repo }}.git
+          git remote -v
+          git fetch upstream
+          ```
+          EOF

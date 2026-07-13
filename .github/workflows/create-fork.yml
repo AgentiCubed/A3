@@ -1,0 +1,153 @@
+name: Create Fork
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_owner:
+        description: Source repository owner
+        required: true
+        default: AgentiCubed
+      source_repo:
+        description: Source repository name
+        required: true
+        default: agenticubed
+      target_owner:
+        description: Target account/org that should receive the fork
+        required: true
+      default_branch_only:
+        description: If true, fork only the default branch
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+permissions:
+  contents: read
+
+jobs:
+  create-fork:
+    runs-on: ubuntu-latest
+    environment: fork-management
+    env:
+      FORK_PAT: ${{ secrets.FORK_CREATOR_PAT }}
+      ALLOWED_TARGET_OWNERS: ${{ vars.FORK_ALLOWED_TARGET_OWNERS }}
+      SOURCE_OWNER: ${{ inputs.source_owner }}
+      SOURCE_REPO: ${{ inputs.source_repo }}
+      TARGET_OWNER: ${{ inputs.target_owner }}
+      DEFAULT_BRANCH_ONLY: ${{ inputs.default_branch_only }}
+    steps:
+      - name: Validate configuration and inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${FORK_PAT}" ]]; then
+            echo "Missing required secret FORK_CREATOR_PAT."
+            exit 1
+          fi
+          if [[ -z "${ALLOWED_TARGET_OWNERS}" ]]; then
+            echo "Missing required repository/org variable FORK_ALLOWED_TARGET_OWNERS."
+            echo "Set it to a comma-separated allowlist (example: JamesTRichmond,AgentiCubed)."
+            exit 1
+          fi
+          python - <<'PY'
+          import os, sys
+          allowed = [x.strip() for x in os.environ["ALLOWED_TARGET_OWNERS"].split(",") if x.strip()]
+          target = os.environ["TARGET_OWNER"].strip()
+          if not target:
+              print("target_owner cannot be empty.")
+              sys.exit(1)
+          if target not in allowed:
+              print(f"target_owner '{target}' is not in allowlist: {allowed}")
+              sys.exit(1)
+          print(f"Validated target_owner '{target}' against allowlist.")
+          PY
+
+      - name: Validate token identity and source access
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH_HEADER=$(printf "Authorization: token %s" "${FORK_PAT}")
+          USER_STATUS=$(curl -sS -o /tmp/user.json -w "%{http_code}" \
+            -H "${AUTH_HEADER}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/user)
+          if [[ "${USER_STATUS}" != "200" ]]; then
+            echo "FORK_CREATOR_PAT cannot access /user (status ${USER_STATUS})."
+            exit 1
+          fi
+          AUTH_LOGIN=$(jq -r '.login' /tmp/user.json)
+          echo "Authenticated as ${AUTH_LOGIN}."
+          echo "AUTH_LOGIN=${AUTH_LOGIN}" >> "$GITHUB_ENV"
+          SRC_STATUS=$(curl -sS -o /tmp/source.json -w "%{http_code}" \
+            -H "${AUTH_HEADER}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${SOURCE_OWNER}/${SOURCE_REPO}")
+          if [[ "${SRC_STATUS}" != "200" ]]; then
+            echo "Cannot access source repo ${SOURCE_OWNER}/${SOURCE_REPO} (status ${SRC_STATUS})."
+            exit 1
+          fi
+
+      - name: Create fork
+        id: create
+        shell: bash
+        run: |
+          set -euo pipefail
+          AUTH_HEADER=$(printf "Authorization: token %s" "${FORK_PAT}")
+          if [[ -z "${AUTH_LOGIN:-}" ]]; then
+            echo "AUTH_LOGIN was not set by the validation step."
+            exit 1
+          fi
+          if [[ "${TARGET_OWNER}" == "${AUTH_LOGIN}" ]]; then
+            REQUEST_BODY=$(jq -cn \
+              --argjson default_branch_only "$( [[ "${DEFAULT_BRANCH_ONLY}" == "true" ]] && echo true || echo false )" \
+              '{default_branch_only: $default_branch_only}')
+          else
+            REQUEST_BODY=$(jq -cn \
+              --arg target_owner "${TARGET_OWNER}" \
+              --argjson default_branch_only "$( [[ "${DEFAULT_BRANCH_ONLY}" == "true" ]] && echo true || echo false )" \
+              '{organization: $target_owner, default_branch_only: $default_branch_only}')
+          fi
+          HTTP_STATUS=$(curl -sS -o /tmp/create-fork.json -w "%{http_code}" \
+            -X POST \
+            -H "${AUTH_HEADER}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${SOURCE_OWNER}/${SOURCE_REPO}/forks" \
+            -d "${REQUEST_BODY}")
+          if [[ "${HTTP_STATUS}" != "202" && "${HTTP_STATUS}" != "201" ]]; then
+            echo "Fork creation failed with status ${HTTP_STATUS}."
+            jq . /tmp/create-fork.json
+            exit 1
+          fi
+          FORK_FULL_NAME=$(jq -r '.full_name // empty' /tmp/create-fork.json)
+          FORK_URL=$(jq -r '.html_url // empty' /tmp/create-fork.json)
+          echo "http_status=${HTTP_STATUS}" >> "$GITHUB_OUTPUT"
+          echo "fork_full_name=${FORK_FULL_NAME}" >> "$GITHUB_OUTPUT"
+          echo "fork_url=${FORK_URL}" >> "$GITHUB_OUTPUT"
+          jq -n \
+            --arg source "${SOURCE_OWNER}/${SOURCE_REPO}" \
+            --arg target_owner "${TARGET_OWNER}" \
+            --arg status "${HTTP_STATUS}" \
+            --arg fork_full_name "${FORK_FULL_NAME}" \
+            --arg fork_url "${FORK_URL}" \
+            '{source:$source,target_owner:$target_owner,http_status:$status,fork_full_name:$fork_full_name,fork_url:$fork_url}' \
+            > /tmp/fork-result.json
+
+      - name: Summary
+        run: |
+          {
+            echo "### Fork request result"
+            echo "- Source: \`${{ inputs.source_owner }}/${{ inputs.source_repo }}\`"
+            echo "- Target owner: \`${{ inputs.target_owner }}\`"
+            echo "- HTTP status: \`${{ steps.create.outputs.http_status }}\`"
+            echo "- Fork: \`${{ steps.create.outputs.fork_full_name || 'pending' }}\`"
+            echo "- URL: ${{ steps.create.outputs.fork_url || 'pending' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload fork result artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fork-result
+          path: /tmp/fork-result.json
+          if-no-files-found: error
