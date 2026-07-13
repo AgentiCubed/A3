@@ -1,6 +1,7 @@
+---
 name: Fork Remote Instructions
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       fork_owner:

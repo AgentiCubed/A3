@@ -1,6 +1,7 @@
+---
 name: Create Fork
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       source_owner:
@@ -122,9 +123,11 @@ jobs:
           fi
           FORK_FULL_NAME=$(jq -r '.full_name // empty' /tmp/create-fork.json)
           FORK_URL=$(jq -r '.html_url // empty' /tmp/create-fork.json)
-          echo "http_status=${HTTP_STATUS}" >> "$GITHUB_OUTPUT"
-          echo "fork_full_name=${FORK_FULL_NAME}" >> "$GITHUB_OUTPUT"
-          echo "fork_url=${FORK_URL}" >> "$GITHUB_OUTPUT"
+          {
+            echo "http_status=${HTTP_STATUS}"
+            echo "fork_full_name=${FORK_FULL_NAME}"
+            echo "fork_url=${FORK_URL}"
+          } >> "$GITHUB_OUTPUT"
           jq -n \
             --arg source "${SOURCE_OWNER}/${SOURCE_REPO}" \
             --arg target_owner "${TARGET_OWNER}" \

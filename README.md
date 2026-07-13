@@ -131,9 +131,24 @@ This repo includes manual GitHub Actions workflows for controlled fork operation
 2. Add repository or org variable **`FORK_ALLOWED_TARGET_OWNERS`** with a comma-separated allowlist (example: `JamesTRichmond,AgentiCubed`).
 3. Configure environment **`fork-management`** with required reviewers to gate manual runs.
 
-### How to run
+### Workflow inputs
 
-1. Open **Actions** tab.
-2. Run **Create Fork** via **Run workflow**.
-3. Provide `source_owner`, `source_repo`, `target_owner`, and `default_branch_only`.
-4. Review the step summary and download artifact `fork-result` for the API result payload.
+#### Create Fork (`.github/workflows/create-fork.yml`)
+
+- `source_owner` (required, default: `AgentiCubed`)
+- `source_repo` (required, default: `agenticubed`)
+- `target_owner` (required)
+- `default_branch_only` (required, choice: `"true"` or `"false"`, default: `"true"`)
+
+Run it from **Actions** → **Create Fork** → **Run workflow**. After completion, review
+the step summary and download artifact `fork-result` for the API result payload.
+
+#### Fork Remote Instructions (`.github/workflows/fork-remote-instructions.yml`)
+
+- `fork_owner` (required)
+- `repo_name` (required, default: `agenticubed`)
+- `upstream_owner` (required, default: `AgentiCubed`)
+- `upstream_repo` (required, default: `agenticubed`)
+
+Run it from **Actions** → **Fork Remote Instructions** → **Run workflow** to print the
+local remote setup commands in the job summary.
