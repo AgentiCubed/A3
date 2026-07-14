@@ -65,7 +65,7 @@ Plan → Assign → Execute → Evaluate → Identify Gaps → Remediate → Re-
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js, TypeScript, React |
-| Backend | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2.0 |
+| Backend | Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0 |
 | Data | PostgreSQL 16, Redis 7 |
 | Workers | Celery behind a `WorkflowEngine` abstraction |
 | Infra | Docker, Docker Compose |
