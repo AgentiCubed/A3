@@ -94,6 +94,7 @@ pytest
 - [`docs/security-model.md`](docs/security-model.md) — RBAC, secrets, least-privilege tools
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
+- [`docs/public-showcase/`](docs/public-showcase/) — recruiter-safe public repo starter assets
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
 
 ## Status
