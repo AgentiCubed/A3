@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This Commentary accompanies the Agentic³ Constitution but is not part of the Constitution itself.
+This Commentary accompanies the AgentiCubed Constitution but is not part of the Constitution itself.
 
 It explains the intent behind constitutional provisions without creating, modifying, expanding, or restricting constitutional authority.
 

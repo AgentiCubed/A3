@@ -2,43 +2,75 @@
 
 ## Purpose
 
-This Decision Record defines the operational procedure for proposing, reviewing, ratifying, and recording constitutional amendments under Article XII of the AgentiCubed Constitution.
+This Decision Record operationalizes Article XII of the AgentiCubed Constitution. It defines the procedure for proposing, independently reviewing, ratifying, and preserving constitutional amendments.
 
-This document implements the Constitution but does not modify it.
+This document is subordinate to the Constitution. It does not modify, expand, suspend, or replace constitutional requirements.
 
 ---
 
-## Amendment Workflow
+## Amendment Proposal Requirements
 
-1. A proposed amendment shall identify:
-   - affected Articles;
-   - rationale;
-   - expected constitutional effect;
-   - compatibility with existing Articles.
+Every proposed amendment shall be context-complete and shall identify:
 
-2. The proposal undergoes constitutional review.
+- the constitutional deficiency;
+- the complete proposed change;
+- the authority, rights, or obligations affected;
+- why no subordinate instrument can adequately resolve the deficiency; and
+- the expected interpretive effect.
 
-3. Independent review verifies:
-   - terminology;
-   - cross-references;
-   - internal consistency;
-   - authority preservation;
-   - accountability preservation.
+The proposal shall also identify the Articles and Sections affected and explain compatibility with the Constitution as a whole.
 
-4. Required revisions are completed before ratification.
+---
 
-5. Ratification occurs only by the constitutional authority defined in the Constitution.
+## Independent Review
 
-6. Upon ratification:
-   - the Constitution version is incremented;
-   - Commentary is updated if necessary;
-   - a new Ratification Record is created.
+An amendment shall receive independent review by an entity that did not draft it.
+
+The proposal shall contain all context required for review without reliance on unavailable external context.
+
+Independent review shall verify at minimum:
+
+- terminology and defined-term consistency;
+- cross-references;
+- internal consistency;
+- authority and Delegation flow;
+- rights-to-duties correspondence;
+- Emergency limitations;
+- constitutional supremacy; and
+- absence of implementation leakage.
+
+Findings that affect constitutional authority, rights, obligations, or internal consistency shall be resolved before ratification.
+
+---
+
+## Ratification
+
+An amendment takes effect only through explicit ratification by the Principal holding ultimate constitutional authority for AgentiCubed.
+
+Agreement among Executors, Evaluators, advisers, reviewers, or automated systems does not constitute ratification.
+
+No amendment may take effect during an Emergency.
+
+---
+
+## Publication and Historical Continuity
+
+Upon ratification:
+
+- the amendment receives a stable identifier and citation;
+- the amendment text and ratification decision are durably recorded;
+- the rationale, prior text, review record, and disposition of findings are preserved;
+- repealed or superseded constitutional text retains its stable citation and is marked accordingly;
+- a new or updated Ratification Record is created; and
+- Commentary is updated only where needed to explain, but not alter, constitutional meaning.
+
+Correction, repeal, or supersession shall not erase the historical record.
 
 ---
 
 ## Non-Amendments
 
-The following do not require constitutional amendment:
+The following do not require constitutional amendment unless they alter constitutional authority, rights, obligations, or jurisdiction:
 
 - implementation changes;
 - repository restructuring;
@@ -46,19 +78,8 @@ The following do not require constitutional amendment:
 - tooling changes;
 - workflow improvements;
 - documentation improvements;
-- architectural evolution;
-- operational procedures governed by subordinate documents.
-
----
-
-## Record Keeping
-
-Every constitutional amendment shall produce:
-
-- an updated Constitution;
-- an updated Ratification Record;
-- updated Commentary where appropriate;
-- a permanent audit trail.
+- architectural evolution; and
+- operational procedures governed by subordinate instruments.
 
 ---
 
