@@ -262,7 +262,7 @@ When authority is insufficient, conflicting, expired, or ambiguous, the
 recipient shall Halt because continuation would exceed or risk exceeding its
 Boundary. Remediation, retries, or changed parameters remain within ordinary
 Delegation only when they do not expand scope, action class, risk, resources,
-or permissible outcomes.
+permissible outcomes, or any other Boundary dimension.
 
 # Article V — Separation of Decision, Execution, Verification, and Assurance
 
@@ -466,9 +466,10 @@ Persistent operation does not create persistent authority.
 
 Each retry is a new bounded attempt under the same or a narrower Boundary and
 an unexpired Delegation; otherwise it requires fresh Delegation. Retries shall
-be separately evidenced. A lost, unreachable, or expired Executor shall not
-retain authority indefinitely. Repeated failure shall lead to Halt or
-escalation, not indefinite looping, fabricated success, or Boundary expansion.
+be separately evidenced and remain subject to Article IV, Section 4. A lost,
+unreachable, or expired Executor shall not retain authority indefinitely.
+Repeated failure shall lead to Halt or escalation, not indefinite looping,
+fabricated success, or Boundary expansion.
 
 When identity, authority, provenance, or state integrity cannot be established,
 affected input or work shall be rejected, quarantined, or Halted.
@@ -738,8 +739,8 @@ prevails:
    consistently with the Constitution;
 3. an explicit Decision by that Principal within constitutional authority;
 4. the applicable Delegation and Boundary;
-5. applicable Foundational Concepts and ontology, solely as constraints on
-   subordinate architecture and work;
+5. applicable Foundational Concepts and ontology, solely as architectural
+   constraints on subordinate architecture and work;
 6. adopted principles, governance instruments, and acceptance conditions;
 7. patterns and implementations;
 8. continuation, completion, efficiency, or convenience.
