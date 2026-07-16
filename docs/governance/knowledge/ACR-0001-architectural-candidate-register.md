@@ -54,7 +54,7 @@ Knowledge should gain or lose authority through accumulated evidence, validation
 **Status:** Adopted  
 **Layer:** Foundational Concept
 
-AgenticCubed should preserve its evolving engineering character: principles, patterns, anti-patterns, heuristics, governance rules, verification practices, architectural preferences, and risk tolerances.
+AgentiCubed should preserve its evolving engineering character: principles, patterns, anti-patterns, heuristics, governance rules, verification practices, architectural preferences, and risk tolerances.
 
 **Promotion / retention rule**
 - future subsystem and governance designs should explicitly state whether they enrich, weaken, or leave unchanged the Engineering Genome;
