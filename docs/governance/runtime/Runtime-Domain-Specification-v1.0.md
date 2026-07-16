@@ -193,8 +193,9 @@ RuntimeEvent
 - source_uri
 - source_timestamp
 - received_timestamp
-- actor_id (nullable only when the source supplies no attributable human,
-  agent, or system actor)
+- actor_id (nullable only for event classes that legitimately have no
+  attributable human, agent, or system actor; quarantine a missing actor when
+  the event class requires one)
 - subject_entity_id
 - project_id / repository_id (when applicable)
 - correlation_id
@@ -237,7 +238,8 @@ WorkItem
 - risk_class
 - priority
 - dependencies[]
-- deadline / review_trigger
+- deadline (optional)
+- review_trigger (optional)
 - eligible_executor_capabilities[]
 - retry_policy
 - stop_conditions[]

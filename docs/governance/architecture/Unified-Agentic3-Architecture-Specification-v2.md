@@ -96,8 +96,8 @@ Implementation proceeds in separately authorized, reversible slices. Technology
 selection must preserve canonical identity, provenance, idempotency, state
 history, and authorization boundaries.
 
-## 16. Glossary & Entity Tax
+## 16. Glossary & Entity Taxonomy
 
-“Entity Tax” denotes the integrated entity taxonomy. The glossary references
-canonical definitions rather than duplicating them. Conflicts or missing terms
-are recorded for ontology review instead of silently resolved here.
+The glossary references canonical definitions rather than duplicating them.
+Conflicts or missing terms are recorded for ontology review instead of silently
+resolved here.
