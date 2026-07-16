@@ -65,6 +65,7 @@ jobs:
           echo "$BODY" | grep -q '"database":"ok"'
           echo "$BODY" | grep -q '"redis":"ok"'
           kill $SERVER_PID
+          wait $SERVER_PID || true
 
   frontend:
     runs-on: ubuntu-latest
