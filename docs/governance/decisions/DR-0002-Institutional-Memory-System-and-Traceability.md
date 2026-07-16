@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This Decision Record establishes the canonical AgenticCubed institutional memory system for architecture, governance, and engineering work.
+This Decision Record establishes the canonical AgentiCubed institutional memory system for architecture, governance, and engineering work.
 
 It replaces the earlier four-record system as a narrow experiment with a broader, durable memory architecture that preserves failures, reasoning, evolving beliefs, risks, assumptions, experiments, patterns, and unexpected successes as reviewable repository artifacts.
 
@@ -29,7 +29,7 @@ Issue #12 and its owner-approved comments also introduced project-wide concepts 
 
 ## Decision
 
-AgenticCubed adopts the following as the canonical institutional memory system:
+AgentiCubed adopts the following as the canonical institutional memory system:
 
 1. **Memory architecture** shall distinguish working memory, project memory, institutional memory, and evolution memory.
 2. **Knowledge record taxonomy** shall include FR, RM, IER, RL, TET, Pattern, Anti-pattern, Risk, Assumption, Experiment, and Unexpected Success Record, with existing Decision Record namespaces retained rather than duplicated.
