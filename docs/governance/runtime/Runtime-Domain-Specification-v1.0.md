@@ -238,8 +238,8 @@ WorkItem
 - risk_class
 - priority
 - dependencies[]
-- deadline (optional)
-- review_trigger (optional)
+- deadline (optional completion time bound)
+- review_trigger (optional condition that opens review or revalidation)
 - eligible_executor_capabilities[]
 - retry_policy
 - stop_conditions[]
@@ -318,12 +318,13 @@ decision, release/rollback, governance exception, reusable prevention record, or
 correction of inherited knowledge.
 
 The Memory Engine selects the minimum fitting record type: Failure Record (FR),
-Rumination (RM), Idea Evolution Record (IER), Reasoning Ledger (RL), a TET as
-defined by the canonical Memory architecture, ADR/decision, pattern,
-anti-pattern, risk, assumption, experiment, or unexpected-success record.
-Verification confirms evidence, Knowledge evaluates relationships and gravity,
-and Governance approves changes affecting higher layers. Runtime never promotes
-a record to institutional truth.
+Rumination (RM), Idea Evolution Record (IER), Reasoning Ledger (RL),
+ADR/decision, pattern, anti-pattern, risk, assumption, experiment, or
+unexpected-success record. `TET` remains an undefined candidate term and cannot
+be selected until the canonical Memory architecture defines it. Verification
+confirms evidence, Knowledge evaluates relationships and gravity, and Governance
+approves changes affecting higher layers. Runtime never promotes a record to
+institutional truth.
 
 Every accepted record links to its source event and at least one reuse,
 decision, pattern, risk, principle, candidate, implementation, or verification
