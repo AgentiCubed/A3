@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     artifact_store_backend: str = Field(default="local")
     artifact_store_path: str = Field(default="/var/artifacts")
 
+    # Live event stream — "memory" (single process) or "redis" (multi-process)
+    event_bus_backend: str = Field(default="memory")
+
     # Providers
     default_provider: str = Field(default="mock")
     anthropic_api_key: str = Field(default="")
