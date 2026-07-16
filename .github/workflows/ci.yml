@@ -62,7 +62,7 @@ jobs:
           done
           BODY=$(curl -sf http://localhost:8000/readyz)
           echo "$BODY"
-          echo "$BODY" | python -c "import json,sys; d=json.load(sys.stdin); assert d.get('database')=='ok',f'database not ok: {d}'; assert d.get('redis')=='ok',f'redis not ok: {d}'"
+          echo "$BODY" | python -c "import json,sys; d=json.load(sys.stdin); c=d.get('checks',{}); assert c.get('database')=='ok',f'database not ok: {d}'; assert c.get('redis')=='ok',f'redis not ok: {d}'"
           kill $SERVER_PID
           wait $SERVER_PID || true
 
@@ -86,6 +86,23 @@ jobs:
         run: npm run lint
       - name: Tests
         run: npm run test
+
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: E2E smoke (Playwright)
+        run: npx playwright test
 
   compose:
     runs-on: ubuntu-latest

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1.routers import agents, analytics, auth, orgs, projects
+from app.api.v1.routers import agents, analytics, auth, events, orgs, projects
 
 api_router = APIRouter()
 
@@ -15,6 +15,7 @@ api_router.include_router(orgs.router)
 api_router.include_router(projects.router)
 api_router.include_router(agents.router)
 api_router.include_router(analytics.router)
+api_router.include_router(events.router)
 
 
 @api_router.get("/meta", tags=["meta"])

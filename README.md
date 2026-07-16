@@ -98,6 +98,7 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 
 ## Documentation
 
+- [`docs/system-overview.md`](docs/system-overview.md) — visual, diagram-first tour of the whole platform
 - [`docs/architecture.md`](docs/architecture.md) — system architecture and module boundaries
 - [`docs/data-model.md`](docs/data-model.md) — entities and relationships
 - [`docs/execution-state-machine.md`](docs/execution-state-machine.md) — task execution lifecycle

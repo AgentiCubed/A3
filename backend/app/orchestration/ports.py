@@ -109,3 +109,55 @@ class ArtifactStore(Protocol):
 @runtime_checkable
 class Clock(Protocol):
     def now(self) -> datetime: ...
+
+
+# ── EventBus (live domain-event fan-out seam) ─────────────────────────────
+@dataclass(frozen=True)
+class DomainEvent:
+    """A material state change, shaped for streaming consumers.
+
+    Mirrors the audit-event vocabulary (action, entity_type, entity_id,
+    actor) so the live stream and the audit trail describe the same reality.
+    ``payload`` carries the already-redacted after-image; the stream is
+    advisory — the database remains the source of truth.
+    """
+
+    organization_id: UUID
+    action: str
+    entity_type: str
+    occurred_at: datetime
+    project_id: UUID | None = None
+    entity_id: UUID | None = None
+    actor_type: str | None = None
+    actor_id: UUID | None = None
+    payload: dict[str, Any] = field(default_factory=dict)
+
+    def to_json_dict(self) -> dict[str, Any]:
+        return {
+            "organization_id": str(self.organization_id),
+            "project_id": str(self.project_id) if self.project_id else None,
+            "action": self.action,
+            "entity_type": self.entity_type,
+            "entity_id": str(self.entity_id) if self.entity_id else None,
+            "actor_type": self.actor_type,
+            "actor_id": str(self.actor_id) if self.actor_id else None,
+            "occurred_at": self.occurred_at.isoformat(),
+            "payload": self.payload,
+        }
+
+
+@runtime_checkable
+class EventBus(Protocol):
+    """Publish/subscribe for live domain events. In-memory now, Redis in prod."""
+
+    async def publish(self, event: DomainEvent) -> None: ...
+
+    def subscribe(self, organization_id: UUID) -> EventSubscription: ...
+
+
+class EventSubscription(Protocol):
+    """A live event feed for one organization; async-iterable and closeable."""
+
+    def __aiter__(self) -> EventSubscription: ...
+    async def __anext__(self) -> DomainEvent: ...
+    async def close(self) -> None: ...

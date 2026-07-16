@@ -90,6 +90,7 @@ async def _transition(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="task.transition",
@@ -151,6 +152,7 @@ async def _create_approval(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="approval.requested",
@@ -321,6 +323,7 @@ async def execute_task(
         await record_audit(
             session,
             organization_id=task.organization_id,
+            project_id=task.project_id,
             actor_type=actor_type,
             actor_id=actor_id,
             action="remediation.selected",
@@ -414,6 +417,7 @@ async def _handle_failure(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="task.escalated",
@@ -481,6 +485,7 @@ async def reassign_task(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="task.reassigned",
