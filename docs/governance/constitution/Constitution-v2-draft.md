@@ -109,6 +109,10 @@ authorized Decision. Assurance does not itself grant authority.
 **Delegation** is an express grant of authority from a Principal to an
 identified recipient within a defined Boundary.
 
+A **subordinate instrument** is any governance, architecture, ontology,
+policy, standard, procedure, pattern, or implementation governed by this
+Constitution.
+
 A **Boundary** is an explicit limit on authority, including scope, duration,
 resources, permissions, action classes, conditions, or permissible outcomes.
 
@@ -457,6 +461,7 @@ Runtime shall not:
 Runtime authority shall use bounded duration or reviewable continuation.
 Persistent operation does not create persistent authority.
 
+Each retry is a new bounded attempt; it shall not extend expired authority.
 Retries shall be bounded and separately evidenced. A lost, unreachable, or
 expired Executor shall not retain authority indefinitely. Repeated failure
 shall lead to Halt or escalation, not indefinite looping, fabricated success,
@@ -730,7 +735,7 @@ prevails:
 3. an explicit Decision by that Principal within constitutional authority;
 4. the applicable Delegation and Boundary;
 5. applicable Foundational Concepts and ontology, solely as constraints on
-   subordinate design and Execution;
+   subordinate architecture and work;
 6. adopted principles, governance instruments, and acceptance conditions;
 7. patterns and implementations;
 8. continuation, completion, efficiency, or convenience.
