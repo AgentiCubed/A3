@@ -20,9 +20,10 @@
 Agentic³ exists to coordinate human and autonomous contributors through
 planned, bounded, reviewable, evidence-backed work.
 
-In this Constitution, **Agentic³** is the continuing architecture and governed
-system of **AgentiCubed**; use of the name does not create a new polity,
-Principal, or chain of authority.
+In this Constitution, **AgentiCubed** names the project and repository, while
+**Agentic³** names the architecture and governed engineering system within
+that same project. Use of either name does not create a new polity, Principal,
+or chain of authority.
 
 Its architecture may observe, remember, reason, propose, execute, verify,
 assure, and evolve across time. None of those capabilities is sovereign.
@@ -154,8 +155,9 @@ constrains subordinate architecture while remaining subordinate to this
 Constitution and competent Principal authority. It grants no affirmative
 authority.
 
-A **Candidate** is a proposal under a declared lifecycle that has not acquired
-the status or authority sought for it.
+A **Candidate** is a proposal seeking a specified future status through
+explicit review and Decision criteria; it has not acquired the status or
+authority sought for it.
 
 **Promotion** is an authorized transition to a higher declared status.
 
@@ -273,7 +275,7 @@ Where any part of Material work is delegated:
 
 * an Executor shall not be the sole Verifier of its own work;
 * a Verifier shall not alter intent or acceptance conditions;
-* an Assurer shall not manufacture Evidence, perform the Execution being
+* an Assurer shall not fabricate Evidence, perform the Execution being
   assured, or grant Principal authority;
 * no delegated entity shall both authorize and accept its own Material Action;
   and
@@ -581,8 +583,9 @@ Article and shall not present false precision as authority.
 ## Section 1 — Declared Status
 
 Every Material Candidate shall have a stable identity, declared status,
-objective, scope, sponsor or responsible authority, Evidence, uncertainty,
-promotion criteria, review authority, and reopening or retirement conditions.
+objective, scope, sponsor or responsible authority, Evidence, identified risks
+and unknowns, promotion criteria, review authority, and reopening or retirement
+conditions.
 
 Candidate existence, implementation, trial, favorable Evidence, or repeated
 use does not constitute adoption or Promotion.
