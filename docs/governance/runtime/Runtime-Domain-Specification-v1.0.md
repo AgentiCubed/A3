@@ -194,7 +194,7 @@ RuntimeEvent
 - source_timestamp
 - received_timestamp
 - actor_id (nullable only when the event schema declares a passive observation
-  or schedule tick actorless; quarantine a missing actor for every other class)
+  or schedule tick actor-less; quarantine a missing actor for every other class)
 - subject_entity_id
 - project_id / repository_id (when applicable)
 - correlation_id
@@ -237,8 +237,9 @@ WorkItem
 - risk_class
 - priority
 - dependencies[]
-- deadline (optional completion bound evaluated by policy; expiry causes a
-  recorded escalation or `EXPIRED` transition, never silent cancellation)
+- deadline (optional completion bound evaluated by policy; deadline expiry
+  causes a recorded escalation or `EXPIRED` transition, never silent
+  cancellation)
 - review_trigger (optional condition evaluated on each referenced event and
   schedule tick to open review or revalidation)
 - eligible_executor_capabilities[]
