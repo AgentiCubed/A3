@@ -18,7 +18,7 @@ release authority and cannot certify its own success.
 > The Runtime Domain may initiate and coordinate reversible workflows, but it
 > may not authorize or perform irreversible actions without an explicit
 > authorization artifact from the Governance Domain and, where required, an
-> Assurance decision.
+> `AssuranceDecision`.
 
 Irreversible actions include merge, protected-branch push, tag creation,
 deletion, or movement, release publication, history rewrite, branch deletion,
@@ -35,8 +35,8 @@ protection or ruleset changes, secret rotation, and destructive cleanup.
 - Track leases, retries, deadlines, dependencies, and stop conditions.
 - Synchronize authoritative state into project and institutional memory.
 - Emit telemetry, alerts, digests, and checkpoints.
-- Halt or quarantine work when authority, evidence, identity, or state is
-  insufficient.
+- Halt or quarantine work when authority, evidence, identity, schema validity,
+  or state is insufficient.
 - Preserve audit evidence for every state transition.
 
 ### Out of scope
@@ -193,7 +193,8 @@ RuntimeEvent
 - source_uri
 - source_timestamp
 - received_timestamp
-- actor_id (nullable only when genuinely unknown)
+- actor_id (nullable only when the source supplies no attributable human,
+  agent, or system actor)
 - subject_entity_id
 - project_id / repository_id (when applicable)
 - correlation_id
@@ -314,11 +315,13 @@ contradiction, repeated investigation, unexpected success, architecture
 decision, release/rollback, governance exception, reusable prevention record, or
 correction of inherited knowledge.
 
-The Memory Engine selects the minimum fitting record type: FR, RM, IER, RL, TET,
-ADR/decision, pattern, anti-pattern, risk, assumption, experiment, or
-unexpected-success record. Verification confirms evidence, Knowledge evaluates
-relationships and gravity, and Governance approves changes affecting higher
-layers. Runtime never promotes a record to institutional truth.
+The Memory Engine selects the minimum fitting record type: Failure Record (FR),
+Rumination (RM), Idea Evolution Record (IER), Reasoning Ledger (RL), a TET as
+defined by the canonical Memory architecture, ADR/decision, pattern,
+anti-pattern, risk, assumption, experiment, or unexpected-success record.
+Verification confirms evidence, Knowledge evaluates relationships and gravity,
+and Governance approves changes affecting higher layers. Runtime never promotes
+a record to institutional truth.
 
 Every accepted record links to its source event and at least one reuse,
 decision, pattern, risk, principle, candidate, implementation, or verification
@@ -345,9 +348,9 @@ version-preserving.
 ## 9. Queue and scheduling policy
 
 Priority is a reasoned tuple covering constitutional/governance urgency, safety,
-release blocking, dependency criticality, deadline cost, reversibility, evidence
-freshness, learning value, and operator priority. A numeric score may assist but
-cannot replace rationale.
+release blocking, dependency criticality, the cost of missing a deadline,
+reversibility, evidence freshness, learning value, and operator priority. A
+numeric score may assist but cannot replace rationale.
 
 Blocked high-priority work does not block unrelated ready work. Aging protects
 low-priority work from starvation. Governance/security alerts preempt only

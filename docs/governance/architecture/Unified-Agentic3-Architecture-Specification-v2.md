@@ -35,8 +35,8 @@ evidence as automatic promotion.
 
 ## 5. Ontology
 
-Integrate the canonical ontology vocabulary, entity tax, relationship semantics,
-identity rules, and versioning policy when available in this branch.
+Integrate the canonical ontology vocabulary, entity taxonomy, relationship
+semantics, identity rules, and versioning policy when available in this branch.
 
 ## 6. Executive, Intelligence, Assurance, and Runtime Domains
 
@@ -98,6 +98,6 @@ history, and authorization boundaries.
 
 ## 16. Glossary & Entity Tax
 
-The glossary references canonical definitions rather than duplicating them.
-Conflicts or missing terms are recorded for ontology review instead of silently
-resolved here.
+“Entity Tax” denotes the integrated entity taxonomy. The glossary references
+canonical definitions rather than duplicating them. Conflicts or missing terms
+are recorded for ontology review instead of silently resolved here.
