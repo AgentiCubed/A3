@@ -27,7 +27,7 @@ The following instruments govern AgentiCubed engineering in order of precedence:
 | 5 | **Procedures** (this Playbook) | `docs/governance/playbook/` |
 | 6 | **Templates** (this Playbook) | `docs/governance/playbook/` |
 | 7 | **Architecture Decision Records** | `docs/decisions/` |
-| 8 | **Knowledge Records** | `docs/governance/knowledge/` |
+| 8 | **Knowledge Records and Registers** | `docs/governance/knowledge/` |
 
 A lower layer may interpret and implement a higher layer. It may not contradict it.
 
@@ -40,7 +40,20 @@ A lower layer may interpret and implement a higher layer. It may not contradict 
 | [POL-0001 — Gate Workflow](POL-0001-gate-workflow.md) | Policy | Authorized gate-based operating model for all repository work |
 | [STD-0001 — Context-Complete Reviews](STD-0001-context-complete-reviews.md) | Standard | Minimum requirements for reviewable, reproducible review assignments |
 | [PROC-0001 — Git Workflow](PROC-0001-git-workflow.md) | Procedure | Branch naming, commit, PR, and merge procedures |
+| [TARP-0001 — Traceable Architecture Review Process](TARP-0001-traceable-architecture-review-process.md) | Procedure | Required review process for significant architectural decisions |
 | [TPL-0001 — Task Packet](TPL-0001-task-packet.md) | Template | Minimum packet for any delegated task or review assignment |
+
+---
+
+## Connected Artifacts
+
+The Playbook is designed to work with the governance knowledge system:
+
+- [AgentiCubed Institutional Knowledge System](../knowledge/README.md)
+- [Institutional Knowledge Record Templates](../knowledge/templates.md)
+- [Architectural Candidate Register](../knowledge/ACR-0001-architectural-candidate-register.md)
+
+Use TARP-0001 when architecture work needs durable traceability across those artifacts.
 
 ---
 
