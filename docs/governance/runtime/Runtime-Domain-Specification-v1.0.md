@@ -193,9 +193,8 @@ RuntimeEvent
 - source_uri
 - source_timestamp
 - received_timestamp
-- actor_id (nullable only for event classes that legitimately have no
-  attributable human, agent, or system actor; quarantine a missing actor when
-  the event class requires one)
+- actor_id (nullable only when the event schema declares a passive observation
+  or schedule tick actorless; quarantine a missing actor for every other class)
 - subject_entity_id
 - project_id / repository_id (when applicable)
 - correlation_id
@@ -238,8 +237,10 @@ WorkItem
 - risk_class
 - priority
 - dependencies[]
-- deadline (optional completion time bound)
-- review_trigger (optional condition that opens review or revalidation)
+- deadline (optional completion bound evaluated by policy; expiry causes a
+  recorded escalation or `EXPIRED` transition, never silent cancellation)
+- review_trigger (optional condition evaluated on each referenced event and
+  schedule tick to open review or revalidation)
 - eligible_executor_capabilities[]
 - retry_policy
 - stop_conditions[]
@@ -319,12 +320,11 @@ correction of inherited knowledge.
 
 The Memory Engine selects the minimum fitting record type: Failure Record (FR),
 Rumination (RM), Idea Evolution Record (IER), Reasoning Ledger (RL),
-ADR/decision, pattern, anti-pattern, risk, assumption, experiment, or
-unexpected-success record. `TET` remains an undefined candidate term and cannot
-be selected until the canonical Memory architecture defines it. Verification
-confirms evidence, Knowledge evaluates relationships and gravity, and Governance
-approves changes affecting higher layers. Runtime never promotes a record to
-institutional truth.
+Traceable Epistemic Transition capsule (TET), ADR/decision, pattern,
+anti-pattern, risk, assumption, experiment, or unexpected-success record.
+Verification confirms evidence, Knowledge evaluates relationships and gravity,
+and Governance approves changes affecting higher layers. Runtime never promotes
+a record to institutional truth.
 
 Every accepted record links to its source event and at least one reuse,
 decision, pattern, risk, principle, candidate, implementation, or verification
