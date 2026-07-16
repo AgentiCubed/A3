@@ -25,7 +25,7 @@ Architectural review uses the following hierarchy:
 
 No lower layer may contradict a higher layer without an explicit, evidence-backed supersession decision.
 
-The current foundational concepts are tracked in the [Architectural Candidate Register](../knowledge/ACR-0001-architectural-candidate-register.md).
+Architectural concepts and their current status are tracked in the [Architectural Candidate Register](../knowledge/ACR-0001-architectural-candidate-register.md).
 
 ---
 

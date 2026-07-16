@@ -174,6 +174,9 @@ Accepted | Accepted with Modification | Deferred | Rejected
 
 ## Review Date or Trigger
 When or under what condition the ledger must be revisited.
+
+## Linked Records
+Related FR, RM, IER, TET, ADR, issue, PR, or release.
 ```
 
 ## Traceable Epistemic Transition — `TET-NNNN`
