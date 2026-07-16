@@ -23,7 +23,8 @@ planned, bounded, reviewable, evidence-backed work.
 In this Constitution, **AgentiCubed** names the project and repository, while
 **Agentic³** names the architecture and governed engineering system within
 that same project. Use of either name does not create a new polity, Principal,
-or chain of authority.
+or chain of authority. References to project ownership or repository history
+use AgentiCubed; references to the governed architecture use Agentic³.
 
 Its architecture may observe, remember, reason, propose, execute, verify,
 assure, and evolve across time. None of those capabilities is sovereign.
@@ -158,7 +159,8 @@ A **Foundational Concept** is an explicitly adopted, project-wide concept that
 constrains subordinate architecture while remaining subordinate to this
 Constitution and competent Principal authority. It grants no affirmative
 authority. Knowledge Gravity and the Engineering Genome are Foundational
-Concepts.
+Concepts. Article XIII, Section 1 establishes their place in governing
+precedence.
 
 A **Candidate** is a proposal seeking a specified future status through
 explicit review and Decision criteria; it has not acquired the status or
@@ -462,11 +464,11 @@ Runtime shall not:
 Runtime authority shall use bounded duration or reviewable continuation.
 Persistent operation does not create persistent authority.
 
-Each retry is a new bounded attempt; it shall not extend expired authority.
-Retries shall be bounded and separately evidenced. A lost, unreachable, or
-expired Executor shall not retain authority indefinitely. Repeated failure
-shall lead to Halt or escalation, not indefinite looping, fabricated success,
-or Boundary expansion.
+Each retry is a new bounded attempt under the same or a narrower Boundary and
+an unexpired Delegation; otherwise it requires fresh Delegation. Retries shall
+be separately evidenced. A lost, unreachable, or expired Executor shall not
+retain authority indefinitely. Repeated failure shall lead to Halt or
+escalation, not indefinite looping, fabricated success, or Boundary expansion.
 
 When identity, authority, provenance, or state integrity cannot be established,
 affected input or work shall be rejected, quarantined, or Halted.
@@ -547,9 +549,10 @@ to preserve provenance, review contradictions, and avoid systemic
 misapplication.
 
 Changes in gravity shall be proposed, evidenced, independently reviewed when
-Material, and authorized under subordinate policy. Promotion to a Foundational
-Concept or other authority-affecting layer requires an explicit Principal
-Decision and cannot result from evidence accumulation alone.
+Material, and authorized under subordinate policy. Promotion of a Candidate to
+recognition as a Foundational Concept, or to another authority-affecting layer,
+requires an explicit Principal Decision and cannot result from evidence
+accumulation alone.
 
 ## Section 2 — Engineering Genome
 
@@ -745,7 +748,9 @@ A lower item shall not authorize violation of a higher item. A descriptive
 ontology or Foundational Concept shall not itself grant or enlarge authority.
 Where its constraint conflicts with a Delegation, the work shall Halt pending
 redesign or an explicit Decision by authority competent to supersede the
-constraint.
+constraint. A governance instrument may depart from a Foundational Concept only
+when it implements such an explicit competent Decision; the instrument alone
+does not supersede the Concept.
 
 ## Section 2 — Protective and Narrow Interpretation
 
