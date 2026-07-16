@@ -40,7 +40,7 @@ relationships.
 
 | Document | Contents |
 |---|---|
-| [ONTO-0001 — Entity Model](./ONTO-0001-entity-model.md) | Root entity model and all seven entity families |
+| [ONTO-0001 — Entity Model](./ONTO-0001-entity-model.md) | Root entity model and all eight entity families |
 | [ONTO-0002 — Relationship Vocabulary](./ONTO-0002-relationships.md) | Controlled relationships with source/target constraints and cardinality |
 | [ONTO-0003 — Integrity and Lifecycle](./ONTO-0003-integrity-lifecycle.md) | Graph integrity rules, lifecycle states, versioning, provenance, identity |
 | [ONTO-0004 — Knowledge and Genome](./ONTO-0004-knowledge-genome.md) | Knowledge Gravity metadata and Engineering Genome membership rules |

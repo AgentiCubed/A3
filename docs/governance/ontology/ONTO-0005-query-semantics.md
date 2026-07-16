@@ -28,6 +28,7 @@ Every canonical query has:
 | `starting_entity` | The entity type or identifier from which traversal begins. |
 | `traversal` | The relationship types and directions to follow. |
 | `filter` | Constraints on which entities to include (lifecycle state, entity type, date range, etc.). |
+| `as_of` | Temporal boundary used to select then-effective entity and relationship versions. |
 | `projection` | Which fields to include in the result. |
 | `result_shape` | Whether the result is a list, tree, chain, or graph. |
 | `excludes` | Entity types or lifecycle states to exclude from results by default. |
@@ -142,13 +143,14 @@ Unless explicitly overridden, all queries exclude:
 
 **Starting entity:** Pattern, AntiPattern, ArchitecturalPrinciple, FoundationalConcept  
 **Traversal:** Follow `INSTANTIATES` (reversed); follow `IMPLEMENTS` (reversed); follow `DERIVES_FROM` (reversed) one level  
-**Filter:** Active and validated entities  
+**Filter:** Active and validated entities; exclude self-reported reuse and require independent, inspectable context
 **Result shape:** List of reuse events with context  
 **Use cases:** Evaluating Knowledge Gravity; assessing whether a pattern has sufficient reuse to promote; identifying where a principle is under-applied
 
 **Required output fields:**
 - each reuse event (entity identifier, type, reuse context — issue, PR, subsystem)
 - reuse count per context type (governance, implementation, testing, verification)
+- failed reuse attempts and their evidence
 - total `reuse_count` from `knowledge_gravity.reuse_count`
 - whether the count satisfies promotion thresholds in `knowledge_gravity.promotion_threshold`
 
@@ -177,7 +179,7 @@ Unless explicitly overridden, all queries exclude:
 
 **Question:** Does this entity or proposed change contradict any Foundational Concept or constitutional article?
 
-**Starting entity:** Any entity (typically an ArchitecturalPrinciple, Pattern, Implementation, or proposed change)  
+**Starting entity:** Any entity (typically an ArchitecturalPrinciple, Pattern, Artifact, System entity, or proposed change)
 **Traversal:**  
 1. Follow `DERIVES_FROM` upward to `FoundationalConcept` and `Constitution`.  
 2. For each governing `FoundationalConcept`, check `CONTRADICTS` relationships targeting it.  
@@ -199,7 +201,7 @@ Unless explicitly overridden, all queries exclude:
 
 **Question:** Trace this implementation from its constitutional basis down to observable evidence.
 
-**Starting entity:** Implementation (CodeArtifact, ServiceComponent, Configuration, ArchitectureDecisionRecord)  
+**Starting entity:** CodeArtifact, ServiceComponent, ConfigurationArtifact, or ArchitectureDecisionRecord
 **Traversal:**  
 ```
 TRACES_TO → ArchitecturalPrinciple  
@@ -248,12 +250,12 @@ IMPLEMENTS → ArchitectureDecisionRecord
 
 ---
 
-### Q-011 — Knowledge Gravity Summary Query
+### Q-011 — Knowledge Gravity Review Query
 
-**Question:** What is the current Knowledge Gravity distribution across all knowledge entities?
+**Question:** Has this knowledge gained or lost justified influence, and what is the overall distribution?
 
-**Starting entity:** (none — scans all knowledge entities)  
-**Traversal:** Direct attribute read on `knowledge_gravity.gravity_level` for all entities with `knowledge_gravity` metadata  
+**Starting entity:** A knowledge entity, or none for a distribution review
+**Traversal:** Read `knowledge_gravity` and traverse supporting evidence, reuse, contradiction, failure, staleness, and supersession events
 **Filter:** Active and validated entities  
 **Result shape:** Aggregation: count by `gravity_level`; list of entities at or above `pattern` level  
 **Use cases:** Identifying high-authority knowledge; spotting knowledge entities overdue for review; governance health check
@@ -262,10 +264,51 @@ IMPLEMENTS → ArchitectureDecisionRecord
 - count of entities at each gravity level
 - list of `foundational` and `principle`-level entities with last validation date
 - list of entities with `review_due` in the past (overdue for review)
+- factors increasing and decreasing influence, confidence, and unresolved uncertainty
+- evidence-backed recommendation: `retain`, `promote`, `constrain`, `revalidate`, `demote`,
+  `supersede`, `retire`, or `request_more_evidence`
 
 ---
 
-## 4. Query Result Quality Requirements
+### Q-012 — Candidate Promotion Query
+
+**Question:** Has this Architectural Candidate earned an adopt, modify, or reject decision?
+
+**Starting entity:** ArchitecturalCandidate
+**Traversal:** Follow `APPLIED_IN`, `SUPPORTS`, `CONTRADICTS`, `DERIVES_FROM`, and `TRACES_TO`;
+resolve constitutional and Foundational Concept compatibility
+**Filter:** Independent applications only; all contradictory and failed application evidence;
+then-effective versions under `as_of`
+**Result shape:** Evidence graph plus recommendation
+
+**Required output fields:**
+- independent applications, reuse outcomes, benefits, costs, and failed applications
+- supporting and contradicting evidence with provenance
+- unresolved risks and constitutional or Foundational Concept conflicts
+- current candidate status and promotion-gate completion
+- recommendation and authority required; insufficient evidence returns `PARTIALLY_SUPPORTED` or
+  `UNKNOWN`, never automatic promotion
+
+---
+
+## 4. Query Result States and Explanation
+
+Every query returns one of `SUPPORTED`, `PARTIALLY_SUPPORTED`, `CONTRADICTED`, `CONFLICT`,
+`STALE`, `UNKNOWN`, or `NOT_APPLICABLE`. Confidence or ranking may supplement that state but may
+not convert `UNKNOWN` or `CONFLICT` into a positive claim.
+
+Every material result explains:
+
+- entities and versions traversed;
+- relationship types and directions used;
+- temporal and authority boundaries;
+- evidence included and excluded;
+- unresolved contradictions and exact missing links; and
+- the reason for the result state.
+
+Opaque retrieval is insufficient for Governance, Verification, or Assurance decisions.
+
+## 5. Query Result Quality Requirements
 
 For any canonical query result to be usable as evidence or authoritative input:
 

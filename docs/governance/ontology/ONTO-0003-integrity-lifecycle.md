@@ -18,7 +18,7 @@ referenced by identifier alone (without a resolvable record) is an integrity vio
 
 ### GI-002 — Authority Must Trace to a Principal
 
-Every entity's `authority` field must trace, through a chain of governance relationships, to a
+Every entity's `authority_refs` must trace, through a chain of governance relationships, to a
 `Principal`. A chain that terminates at a `PlaybookDocument` or `ArchitectureDecisionRecord`
 without a further link to a ratifying Principal is incomplete.
 
@@ -65,11 +65,11 @@ is not modified.
 A `VerificationRecord` must reference at least one `Evidence` entity via an `EVIDENCES`
 relationship. A `VerificationRecord` with no evidence references is not a valid verification.
 
-### GI-009 — Knowledge Claims Must Separate Fact, Interpretation, and Decision
+### GI-009 — Epistemic States Must Remain Distinct
 
-In any knowledge entity, the fields carrying facts, interpretations, hypotheses, and authority
-decisions must be distinct. A single prose block that conflates observation, interpretation,
-and decision is a model violation that must be corrected before the record is used as evidence.
+In any knowledge entity, the fields carrying facts, interpretations, hypotheses, evidence,
+confidence, and authority decisions must be distinct. A single prose block that conflates these
+states is a model violation that must be corrected before the record is used as evidence.
 
 ### GI-010 — Pattern Requires Multiple Application Events
 
@@ -88,6 +88,12 @@ entity. It may not be silently ignored.
 Entities designated append-only in ONTO-0001 — `AuditEvent`, `Evidence` families, governance
 entity bodies, temporal entities — must not be modified after creation. Corrections are added
 as new linked entities with `SUPERSEDES` relationships.
+
+### GI-013 — Durable Architectural Artifacts Must Not Be Orphaned
+
+Every durable architectural artifact must have at least one incoming or outgoing semantic
+relationship beyond storage metadata. An orphan is registered as informational debt and may not
+be treated as authoritative.
 
 ---
 
@@ -191,12 +197,13 @@ canonical name changes, the identifier remains stable; the new name is recorded 
 
 ### 4.3 Identity vs. Version
 
-An entity and its revised version are distinct entities with distinct identifiers. The revised
-entity `SUPERSEDES` the prior. The prior entity's identifier remains stable and referable.
+Entity identity persists across revisions. Each revision has a distinct `version_id`, while all
+versions retain the same stable `entity_id`. `current_version_id` identifies the current revision,
+and `version_history` preserves prior revisions as append-only records.
 
-This applies to governance documents (policies, standards), knowledge records, and all
-versioned entity types. It does not apply to project entities (tasks, organizations) where
-in-place updates are expected and audited via `AuditEvent`.
+A new entity with a new `entity_id` is created only when the successor is conceptually distinct,
+rather than a revision of the same entity. In that case the new entity `SUPERSEDES` the prior
+entity, and both identifiers remain stable and referable.
 
 ---
 
@@ -208,10 +215,18 @@ For versioned entity types:
 
 | Field | Description |
 |---|---|
+| `version_id` | Stable identifier unique to this revision. |
 | `version.number` | Semantic version (`major.minor.patch`) or sequence number. |
 | `version.status` | `draft`, `active`, `validated`, `superseded`, `retired`. |
 | `version.effective_date` | Date this version became authoritative. |
+| `version.parent_version_ids` | One or more parent versions from which this revision derives. |
+| `version.authored_by` | Actor responsible for the revision. |
+| `version.review_authority` | Governance reference authorizing review or adoption. |
+| `version.change_summary` | Summary and change classification for the revision. |
+| `version.evidence_refs` | Evidence supporting the revision. |
 | `version.superseded_by` | Reference to the version that superseded this one. |
+| `version.compatibility_status` | Compatibility with the Constitution and Foundational Concepts. |
+| `version.reopening_conditions` | Conditions that require the revision to be reconsidered. |
 
 ### 5.2 Version Numbering Rules
 
@@ -221,15 +236,30 @@ For versioned entity types:
   record use revision notation (`FR-0001 rev 2`).
 - Software artifact versions follow semantic versioning.
 
-### 5.3 Breaking Version Changes
+### 5.3 Change Classes
+
+Every version records the highest applicable change class:
+
+| Class | Meaning |
+|---|---|
+| `editorial` | Wording or formatting with no semantic change. |
+| `clarifying` | Resolves ambiguity without changing authority or intended behavior. |
+| `behavioral` | Changes expected system behavior. |
+| `architectural` | Changes boundaries, contracts, entities, or relationships. |
+| `governance` | Changes authority, obligations, gates, or permission semantics. |
+| `constitutional` | Changes constitutional authority through the amendment process. |
+
+An entity may not self-declare a lower class when evidence shows a higher-impact change.
+
+### 5.4 Breaking Version Changes
 
 A breaking change to a governance document or standard — one that changes acceptance
 conditions, authority delegation, or constitutional standing — requires a new entity with a
 new identifier (not a revision of the prior entity). The prior entity is superseded and
 preserved.
 
-Non-breaking clarifications and corrections may be recorded as revisions to the same entity,
-with the correction annotated rather than the prior text removed.
+Non-breaking clarifications and corrections create a new immutable version of the same entity.
+The correction is annotated and the prior version remains unchanged.
 
 ---
 
@@ -251,3 +281,20 @@ Provenance records the origin of an entity, not just its author.
   `version_history`; the original `provenance` field is not overwritten.
 - An entity without a valid `authority_basis` in its provenance has unknown authority status
   and must be flagged for review before use.
+
+---
+
+## 7. Authority and Temporal Resolution
+
+Authority is never inferred from document type, path, age, popularity, or confidence. Resolution
+follows active constitutional authority, ratified amendments, authorized governance decisions,
+active policies or standards, accepted architecture decisions, approved patterns or procedures,
+then implementation evidence. Every step still requires an explicit relationship.
+
+When active authority paths conflict, the result is `CONFLICT` until Governance records an
+authorized interpretation or supersession. Runtime components may report but may not resolve the
+conflict.
+
+Every query whose answer may change over time accepts an `as_of` boundary and resolves entities,
+relationship versions, authority, and validity intervals effective at that instant. Current state
+never overwrites historical state.
