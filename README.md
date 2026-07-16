@@ -105,6 +105,8 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
+- [`docs/governance/runtime/Runtime-Domain-Specification-v1.0.md`](docs/governance/runtime/Runtime-Domain-Specification-v1.0.md) — continuous Runtime Domain architecture baseline
+- [`docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md`](docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md) — canonical architecture integration skeleton
 
 ## Status
 
