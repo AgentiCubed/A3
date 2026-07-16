@@ -115,7 +115,8 @@ policy, standard, procedure, pattern, or implementation governed by this
 Constitution.
 
 A **Boundary** is an explicit limit on authority, including scope, duration,
-resources, permissions, action classes, conditions, or permissible outcomes.
+resources, permissions, categories of actions, conditions, or permissible
+outcomes.
 
 **Material** means capable of affecting constitutional authority, a
 Principal's rights, acceptance, security, privacy, safety, release state, or
@@ -225,7 +226,7 @@ Every Delegation shall identify:
 * the Principal from whom authority originates;
 * the recipient and permitted function;
 * the objective and applicable Boundary;
-* the action classes allowed and prohibited;
+* the categories of actions allowed and prohibited;
 * the duration, expiry, or review trigger;
 * applicable acceptance, Evidence, Halt, and escalation conditions; and
 * whether further Delegation is permitted.
@@ -261,8 +262,8 @@ capability, or expectation of completion creates no authority.
 When authority is insufficient, conflicting, expired, or ambiguous, the
 recipient shall Halt because continuation would exceed or risk exceeding its
 Boundary. Remediation, retries, or changed parameters remain within ordinary
-Delegation only when they do not expand scope, action class, risk, resources,
-permissible outcomes, or any other Boundary dimension.
+Delegation only when they do not expand scope, categories of actions, risk,
+resources, permissible outcomes, or any other Boundary dimension.
 
 # Article V — Separation of Decision, Execution, Verification, and Assurance
 
