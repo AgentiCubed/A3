@@ -88,11 +88,47 @@ pytest
 
 ## Demo
 
-Run the full closed-loop demonstration project (requires a running database):
+The end-to-end demonstration runs **host-side** (not inside a container). Postgres and Redis
+may run through Docker Compose; backend Python dependencies and a host Rscript installation
+are required.
+
+> **Note:** `docker compose exec api python -m app.seed.demo` is **not** a supported v1.0.x
+> path. The container image intentionally does not include pandas, matplotlib, or R for v1.0.x.
 
 ```bash
-make demo          # python -m app.seed.demo  — prints the closeout markdown
+# 1. Start infrastructure
+docker compose up -d db redis
+
+# 2. Create and activate a host virtualenv
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+
+# 3. Install backend dependencies (including dev and analysis extras)
+pip install -e ".[dev,analysis]"
+
+# 4. Apply migrations (loopback URLs — the compose db is exposed on localhost:5432)
+DATABASE_URL_SYNC="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" \
+  .venv/bin/alembic upgrade head
+
+# 5. Run the demo (artifacts are written outside the repository)
+DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" \
+DATABASE_URL_SYNC="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" \
+REDIS_URL="redis://localhost:6379/0" \
+CELERY_BROKER_URL="redis://localhost:6379/1" \
+ARTIFACT_STORE_PATH="/tmp/agenticubed-demo-artifacts" \
+  .venv/bin/python -m app.seed.demo
 ```
+
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` default to `agenticubed` in the
+`.env.example` template.
+
+`make demo` is a convenience shorthand only when the required environment is already
+configured (virtualenv active, env vars exported). A bare `make demo` on a fresh checkout
+is **not** sufficient — follow the steps above first.
+
+> **Host Rscript required:** the R analysis worker shells out to `Rscript`. Install R on your
+> host (e.g. `brew install r` or `sudo apt install r-base`) before running the demo.
 
 See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, what each step proves, and how to call the demo programmatically in tests.
 
