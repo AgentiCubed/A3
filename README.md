@@ -104,6 +104,8 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 - [`docs/security-model.md`](docs/security-model.md) — RBAC, secrets, least-privilege tools
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
+- [`docs/governance/playbook/`](docs/governance/playbook/) — governance playbook, standards, and procedures
+- [`docs/governance/knowledge/`](docs/governance/knowledge/) — institutional memory system, record templates, and knowledge records
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
 
 ## Status

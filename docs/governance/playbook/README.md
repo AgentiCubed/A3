@@ -39,6 +39,7 @@ A lower layer may interpret and implement a higher layer. It may not contradict 
 |---|---|---|
 | [POL-0001 — Gate Workflow](POL-0001-gate-workflow.md) | Policy | Authorized gate-based operating model for all repository work |
 | [STD-0001 — Context-Complete Reviews](STD-0001-context-complete-reviews.md) | Standard | Minimum requirements for reviewable, reproducible review assignments |
+| [STD-0002 — Traceable Architecture Reviews](STD-0002-traceable-architecture-reviews.md) | Standard | Required review packet and reasoning chain for significant architectural proposals |
 | [PROC-0001 — Git Workflow](PROC-0001-git-workflow.md) | Procedure | Branch naming, commit, PR, and merge procedures |
 | [TPL-0001 — Task Packet](TPL-0001-task-packet.md) | Template | Minimum packet for any delegated task or review assignment |
 
