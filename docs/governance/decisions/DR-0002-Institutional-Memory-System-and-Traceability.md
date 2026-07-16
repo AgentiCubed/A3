@@ -8,7 +8,7 @@ It replaces the earlier four-record system as a narrow experiment with a broader
 
 ## Context
 
-AgenticCubed design work has been progressing conversationally. Conversation is effective working memory but not durable engineering memory.
+AgentiCubed design work has been progressing conversationally. Conversation is effective working memory but not durable engineering memory.
 
 Without a formal repository-backed system, the project risks:
 
