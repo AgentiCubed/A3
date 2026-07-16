@@ -87,6 +87,23 @@ jobs:
       - name: Tests
         run: npm run test
 
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: E2E smoke (Playwright)
+        run: npx playwright test
+
   compose:
     runs-on: ubuntu-latest
     steps:
