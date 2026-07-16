@@ -130,7 +130,7 @@ promote them.
 | ID | Candidate | Status in this specification | Meaning and current evidence |
 |---|---|---|---|
 | AC-0003 | Architectural Contracts | Proposed candidate | Repeated subsystem descriptions benefit from explicit mission, inputs, outputs, dependencies, authority, constraints, evidence, and learning obligations. |
-| AC-0004 | Separation of Decision and Execution | Proposed Foundational Candidate | Distinct planning, authorization, execution, Verification, Assurance, and acceptance boundaries prevent self-authorization and self-certification. |
+| AC-0004 | Separation of Decision and Execution | Proposed foundational candidate | Distinct planning, authorization, execution, Verification, Assurance, and acceptance boundaries prevent self-authorization and self-certification. |
 | AC-0005 | Explicit Relationships | Proposed candidate | Traceability, provenance, authority, contradiction, impact, Knowledge Gravity, and Genome membership require typed semantic edges. |
 | AC-0006 | Semantic Inheritance | Proposed candidate | Shared identity, provenance, lifecycle, and governance metadata reduce duplication, but specialized obligations and governed exceptions must remain explicit. |
 
@@ -426,7 +426,7 @@ prior model → disturbing evidence → revised model → tested consequence
 
 The minimum fitting record type is used: Failure Record (FR), Rumination (RM),
 Idea Evolution Record (IER), Reasoning Ledger (RL), Traceable Epistemic
-Transition capsule (TET), Decision Record, Pattern, Anti-pattern, Risk,
+Transition capsule (TET), Decision Record, Pattern, anti-pattern, Risk,
 Assumption, Experiment, or Unexpected Success Record. Existing governance and
 architecture Decision Record namespaces are not duplicated.
 
