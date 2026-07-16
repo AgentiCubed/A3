@@ -157,7 +157,8 @@ expresses Agentic³'s engineering character.
 A **Foundational Concept** is an explicitly adopted, project-wide concept that
 constrains subordinate architecture while remaining subordinate to this
 Constitution and competent Principal authority. It grants no affirmative
-authority.
+authority. Knowledge Gravity and the Engineering Genome are Foundational
+Concepts.
 
 A **Candidate** is a proposal seeking a specified future status through
 explicit review and Decision criteria; it has not acquired the status or
