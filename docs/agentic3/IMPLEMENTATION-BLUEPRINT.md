@@ -247,12 +247,13 @@ policy, `allow|deny|halt|escalate`, exact scope, expiry, preconditions,
 prohibited actions, required evidence, and signed provenance.
 
 `VerificationRecordV1` contains target, immutable criteria version, independent
-verifier, `pass|fail|unknown`, criterion results, evidence references,
+verifier, `pass | fail | unknown`, criterion results, evidence references,
 environment, tool versions, and timestamp.
 
-`AssuranceDecisionV1` contains target action, `ready|not_ready|more_evidence_required`,
-the evaluated evidence set, unresolved risks, confidence statement, validity
-window, and reopening conditions. `ready` is not an authorization.
+`AssuranceDecisionV1` contains target action,
+`ready | not_ready | more_evidence_required`, the evaluated evidence set,
+unresolved risks, confidence statement, validity window, and reopening
+conditions. `ready` is not an authorization.
 
 ### 4.4 State machine
 
