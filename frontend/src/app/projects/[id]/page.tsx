@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AgentTable } from "@/components/AgentTable";
 import { DependencyDiagram } from "@/components/DependencyDiagram";
 import { GanttChart } from "@/components/GanttChart";
+import { LiveActivity } from "@/components/LiveActivity";
 import { MetricCard } from "@/components/MetricCard";
 import { RiskMatrix } from "@/components/RiskMatrix";
 import { Wordmark } from "@/components/Wordmark";
@@ -107,6 +108,10 @@ export default async function ProjectDashboard({
         <section>
           <h2 style={{ fontSize: 18 }}>Risk matrix</h2>
           <RiskMatrix matrix={dash.risk_matrix} />
+        </section>
+        <section style={{ flex: "1 1 280px" }}>
+          <h2 style={{ fontSize: 18 }}>Live activity</h2>
+          <LiveActivity projectId={id} />
         </section>
       </div>
 
