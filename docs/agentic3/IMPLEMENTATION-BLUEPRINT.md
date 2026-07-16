@@ -358,10 +358,11 @@ The first adapter uses the existing PostgreSQL boundary:
 Current Project, Task, TaskExecution, Evaluation, Approval, Artifact, and
 AuditEvent rows remain systems of record during migration. Agentic³ entities
 reference them by stable typed reference. Existing UUID primary keys remain;
-canonical IDs such as `FR-NNNN` are separately unique in their namespace and
+canonical IDs such as `FR-NNNN`—where `NNNN` is a zero-padded four-digit
+sequence, for example `FR-0001`—are separately unique in their namespace and
 tenant. A graph database, vector database, and event broker are not needed to
-implement ontology traversal, provenance, contradiction, or impact analysis
-at initial scale.
+implement ontology traversal, provenance, contradiction, or impact analysis at
+initial scale.
 
 ### 5.2 Integrity and retention
 
@@ -463,9 +464,10 @@ memory preserves before/after belief and authority changes; it is a history
 rule, not a separate silo.
 
 The canonical durable types are Failure Record (FR), Rumination (RM), Idea
-Evolution Record (IER), Reasoning Ledger (RL), Traceable Epistemic Transition
-(TET), Decision/ADR, Pattern, Anti-pattern, Risk, Assumption, Experiment, and
-Unexpected Success Record. Lifecycle is
+Evolution Record (IER, the canonical three-letter namespace), Reasoning Ledger
+(RL), Traceable Epistemic Transition (TET), Decision/ADR, Pattern,
+Anti-pattern, Risk, Assumption, Experiment, and Unexpected Success Record.
+Lifecycle is
 `Draft → Active → Validated → Superseded | Retired`. Runtime may propose
 capture; the Memory Engine selects the smallest fitting type and preserves
 provenance. No automated process creates a Pattern from one event or promotes
