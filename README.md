@@ -86,6 +86,16 @@ uvicorn app.main:app --reload
 pytest
 ```
 
+## Demo
+
+Run the full closed-loop demonstration project (requires a running database):
+
+```bash
+make demo          # python -m app.seed.demo  — prints the closeout markdown
+```
+
+See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, what each step proves, and how to call the demo programmatically in tests.
+
 ## Documentation
 
 - [`docs/architecture.md`](docs/architecture.md) — system architecture and module boundaries
