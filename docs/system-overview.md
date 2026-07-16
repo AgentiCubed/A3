@@ -107,14 +107,16 @@ flowchart LR
         p2["WorkflowEngine"]
         p3["ArtifactStore"]
         p4["Clock"]
+        p5["EventBus"]
     end
 
-    d --> p1 & p2 & p3 & p4
+    d --> p1 & p2 & p3 & p4 & p5
 
     p1 --> a1["MockProvider · AnthropicAdapter"]
     p2 --> a2["CeleryWorkflowEngine<br/><small>→ Temporal later</small>"]
     p3 --> a3["LocalFsArtifactStore<br/><small>→ S3 later</small>"]
     p4 --> a4["SystemClock · FrozenClock (tests)"]
+    p5 --> a5["InMemoryEventBus · RedisEventBus<br/><small>feeds the live SSE stream</small>"]
 ```
 
 | Port | Purpose | MVP adapter(s) | Future swap |
@@ -123,6 +125,7 @@ flowchart LR
 | `WorkflowEngine` | Enqueue/track durable task execution | `CeleryWorkflowEngine` | `TemporalWorkflowEngine` |
 | `ArtifactStore` | Persist project artifacts | `LocalFsArtifactStore` | `S3ArtifactStore` |
 | `Clock` | Time source (testable) | `SystemClock` | `FrozenClock` |
+| `EventBus` | Live domain-event fan-out (SSE feed) | `InMemoryEventBus`, `RedisEventBus` | NATS / Kafka |
 
 ---
 
