@@ -358,11 +358,11 @@ The first adapter uses the existing PostgreSQL boundary:
 Current Project, Task, TaskExecution, Evaluation, Approval, Artifact, and
 AuditEvent rows remain systems of record during migration. Agentic³ entities
 reference them by stable typed reference. Existing UUID primary keys remain;
-canonical IDs such as `FR-NNNN`—where `NNNN` is a zero-padded four-digit
-sequence, for example `FR-0001`—are separately unique in their namespace and
+canonical IDs such as `FR-NNNN` (`NNNN` is exactly a zero-padded four-digit
+sequence, such as `FR-0001`) are separately unique in their namespace and
 tenant. A graph database, vector database, and event broker are not needed to
-implement ontology traversal, provenance, contradiction, or impact analysis at
-initial scale.
+implement ontology traversal, provenance, contradiction, or impact analysis
+at initial scale.
 
 ### 5.2 Integrity and retention
 
@@ -472,6 +472,10 @@ Lifecycle is
 capture; the Memory Engine selects the smallest fitting type and preserves
 provenance. No automated process creates a Pattern from one event or promotes
 a memory to institutional truth.
+
+`IER` intentionally remains the approved three-letter stable identifier from
+the canonical memory taxonomy; normalizing it to a two-letter abbreviation
+would break existing and future record references.
 
 The repository remains the human-reviewable canonical representation for
 governance and knowledge documents. Database records index and link those
