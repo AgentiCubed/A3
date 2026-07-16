@@ -193,9 +193,7 @@ RuntimeEvent
 - source_uri
 - source_timestamp
 - received_timestamp
-- actor_id (nullable only when the event schema declares a passive observation
-  or schedule tick without an actor; quarantine a missing actor for every other
-  class)
+- actor_id (nullable under the actor rules below)
 - subject_entity_id
 - project_id / repository_id (when applicable)
 - correlation_id
@@ -218,6 +216,15 @@ Event classes are `observed.*`, `proposed.*`, `authorized.*`, `dispatched.*`,
 Events are immutable observations. A correction is a new event linked by
 `corrects` or `supersedes`; the original is never erased.
 
+### Event actor rules
+
+- An event schema may permit a null `actor_id` only for a passive observation or
+  schedule tick that has no attributable actor.
+- Every other event class requires an attributable human, agent, or system
+  actor.
+- An event missing an actor required by its schema is quarantined rather than
+  normalized with a null actor.
+
 ## 4. Work item model
 
 ```text
@@ -238,9 +245,7 @@ WorkItem
 - risk_class
 - priority
 - dependencies[]
-- deadline (optional completion bound, independent of the authorization validity
-  window; reaching it causes a policy-defined, recorded escalation or `EXPIRED`
-  transition, never silent cancellation)
+- deadline (optional; governed by the temporal rules below)
 - review_trigger (optional condition evaluated on each referenced event and
   schedule tick to open review or revalidation)
 - eligible_executor_capabilities[]
@@ -254,6 +259,16 @@ WorkItem
 
 A `WorkItem` is not authorization. It is dispatchable only after all authority
 requirements are satisfied.
+
+### Work item temporal rules
+
+- A `deadline` is a completion bound, independent of an authorization artifact's
+  validity window.
+- Reaching a deadline invokes the applicable policy and produces a recorded
+  escalation or `EXPIRED` transition.
+- Deadline expiry never causes silent cancellation or grants authority.
+- A `review_trigger` is evaluated on each referenced event and schedule tick to
+  open review or revalidation.
 
 ## 5. State machine
 
