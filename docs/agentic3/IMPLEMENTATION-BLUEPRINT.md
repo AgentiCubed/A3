@@ -431,6 +431,13 @@ retry lowers priority and escalates. Supported schedule classes are one-time,
 interval, calendar, event-, dependency-, review-, and expiry-driven, plus
 manual continuation after authorization.
 
+The approved queue-policy version supplies deterministic comparison rules;
+Runtime does not invent weights. Governance and safety constraints are hard
+precedence, readiness is required, and the remaining dimensions are compared
+in the policy's recorded order with age then stable Work Item ID as tie
+breakers. A numeric model may be proposed only after measured evidence and
+cannot override those constraints.
+
 ## 7. Ontology, Memory, and Knowledge implementation
 
 ### 7.1 Ontology
@@ -584,7 +591,9 @@ reversible without requiring a later phase.
 
 **Build:** Merge or explicitly reconcile v2, ontology, memory, and Runtime
 sources; record contract examples, authority matrix, action classification,
-source precedence, retention policy, and implementation ADRs.
+source precedence, retention policy, implementation ADRs, and a
+Principal-ratified reversible-work standing policy as a versioned governance
+decision under `docs/governance/decisions/`.
 
 **Acceptance:** No conflicting engine definition; all candidate/adopted statuses
 are explicit; every contract has an owner and version; TARP review complete;
@@ -620,7 +629,10 @@ starvation, dependency, cancellation, expiry, quarantine, and adapter outage
 tests pass; no irreversible action can be represented as pre-authorized.
 Dispatch names a pre-approved, reversible standing policy as its authorization
 basis. Runtime cannot create or broaden that policy, and discretionary or
-irreversible work remains undispatchable until Phase 3 Governance exists.
+irreversible work remains undispatchable until Phase 3 Governance exists. At
+deployment, an operator registers the Phase 0 governance decision's stable ID,
+version, digest, scope, and expiry; the dispatcher verifies that artifact
+through a read-only policy adapter before issuing a lease.
 
 **Release:** One reversible work class and tenant; existing task execution
 remains authoritative until shadow parity is demonstrated.
