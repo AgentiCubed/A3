@@ -62,9 +62,9 @@ jobs:
           done
           BODY=$(curl -sf http://localhost:8000/readyz)
           echo "$BODY"
-          echo "$BODY" | grep -q '"database":"ok"'
-          echo "$BODY" | grep -q '"redis":"ok"'
+          echo "$BODY" | python -c "import json,sys; d=json.load(sys.stdin); assert d.get('database')=='ok',f'database not ok: {d}'; assert d.get('redis')=='ok',f'redis not ok: {d}'"
           kill $SERVER_PID
+          wait $SERVER_PID || true
 
   frontend:
     runs-on: ubuntu-latest
