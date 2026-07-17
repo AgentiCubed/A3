@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     # Live event stream — "memory" (single process) or "redis" (multi-process)
     event_bus_backend: str = Field(default="memory")
 
+    # Task dispatch — "inline" executes in the API request (dev/tests);
+    # "celery" queues to the worker via the WorkflowEngine port (compose/prod).
+    workflow_engine_backend: str = Field(default="inline")
+
     # Providers
     default_provider: str = Field(default="mock")
     anthropic_api_key: str = Field(default="")

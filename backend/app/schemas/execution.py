@@ -20,6 +20,19 @@ class DispatchRequest(BaseModel):
     max_remediations: int = Field(default=1, ge=0, le=5)
 
 
+class DispatchAcceptedResponse(BaseModel):
+    """Async dispatch (WORKFLOW_ENGINE_BACKEND=celery): queued, not yet run.
+
+    The final outcome is not known at response time — poll the executions
+    endpoint or subscribe to the project's SSE event stream.
+    """
+
+    task_id: uuid.UUID
+    status: ExecutionState  # QUEUED
+    engine: str
+    engine_handle: str
+
+
 class DispatchResultResponse(BaseModel):
     final_state: ExecutionState
     attempts: int

@@ -40,6 +40,10 @@ class NotExecutable(Exception):
     """The assigned agent is not an AI agent (human tasks complete out-of-band)."""
 
 
+class AlreadyQueued(Exception):
+    """The task is already QUEUED; re-dispatch would enqueue a duplicate message."""
+
+
 @dataclass
 class EvaluationConfig:
     """How to evaluate a successful execution and remediate failures."""
@@ -131,6 +135,71 @@ async def transition_task(
     await _transition(session, task, to, actor_id=actor_id, actor_type=actor_type, reason=reason)
 
 
+async def _require_executable(session: AsyncSession, task: Task) -> Agent:
+    """The task must have an assigned AI agent to be dispatchable."""
+    if task.assigned_agent_id is None:
+        raise NotAssigned()
+    agent = await session.get(Agent, task.assigned_agent_id)
+    if agent is None:
+        raise NotAssigned()
+    if agent.kind != AgentKind.AI:
+        raise NotExecutable()
+    return agent
+
+
+def build_dispatch_params(
+    *,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+    max_attempts: int,
+    timeout_s: float,
+    evaluation: EvaluationConfig | None,
+) -> dict:
+    """Serialize dispatch options into the JSON-safe dict the worker accepts.
+
+    The inverse lives in ``app.workers.tasks._parse_dispatch_params``; the two
+    are covered by a round-trip test so they cannot drift apart silently.
+    """
+    params: dict = {
+        "actor_id": str(actor_id) if actor_id else None,
+        "actor_type": actor_type.value,
+        "max_attempts": max_attempts,
+        "timeout_s": timeout_s,
+    }
+    if evaluation is not None:
+        params["evaluation"] = {
+            "rubric_specs": evaluation.rubric_specs,
+            "evaluator_agent_id": (
+                str(evaluation.evaluator_agent_id) if evaluation.evaluator_agent_id else None
+            ),
+            "max_remediations": evaluation.max_remediations,
+        }
+    return params
+
+
+async def queue_task(
+    session: AsyncSession,
+    *,
+    task: Task,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+) -> None:
+    """Validate and move a task to QUEUED for asynchronous (worker) dispatch.
+
+    Runs the same dispatchability checks as ``execute_task`` so an
+    unassigned/non-AI task is rejected at the API instead of failing silently
+    in the worker. A task that is *already* QUEUED is rejected here — since
+    ``_move_to_queued`` treats QUEUED as a no-op, re-dispatch would otherwise
+    enqueue a second worker message and run the task concurrently. (The
+    worker's own re-entry through QUEUED is unaffected: it calls
+    ``_move_to_queued`` directly, not this function.)
+    """
+    if task.status == ExecutionState.QUEUED:
+        raise AlreadyQueued()
+    await _require_executable(session, task)
+    await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
+
+
 async def _create_approval(
     session: AsyncSession,
     *,
@@ -179,13 +248,7 @@ async def execute_task(
     With ``evaluation`` a successful run is graded; a failing verdict triggers the
     remediation policy, which either re-executes inline or escalates to a human.
     """
-    if task.assigned_agent_id is None:
-        raise NotAssigned()
-    agent = await session.get(Agent, task.assigned_agent_id)
-    if agent is None:
-        raise NotAssigned()
-    if agent.kind != AgentKind.AI:
-        raise NotExecutable()
+    agent = await _require_executable(session, task)
 
     adapter = get_adapter(agent.provider)
     credential_ref = (agent.config or {}).get("api_key_ref")
