@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     # into a successor task's prompt (WS-3).
     handoff_budget_chars: int = Field(default=8000, ge=0)
 
+    # Agent tool runtime — per-attempt budgets for the tool loop (the time
+    # budget is the attempt's timeout_s, which wraps the whole loop).
+    tool_max_iterations: int = Field(default=4, ge=1)
+    tool_max_calls: int = Field(default=8, ge=1)
+
     # Providers
     default_provider: str = Field(default="mock")
     anthropic_api_key: str = Field(default="")
