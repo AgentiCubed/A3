@@ -59,6 +59,10 @@ class Settings(BaseSettings):
     # Dependency-aware scheduling — max tasks in flight per project.
     scheduler_max_parallel: int = Field(default=3, ge=1)
 
+    # Predecessor-output handoff — total chars of prerequisite output injected
+    # into a successor task's prompt (WS-3).
+    handoff_budget_chars: int = Field(default=8000, ge=0)
+
     # Providers
     default_provider: str = Field(default="mock")
     anthropic_api_key: str = Field(default="")

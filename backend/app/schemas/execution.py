@@ -86,6 +86,8 @@ class ExecutionResponse(BaseModel):
     agent_id: uuid.UUID | None
     attempt_number: int
     state: ExecutionState
+    # What was fed in: prompt size plus any predecessor-output handoff (WS-3).
+    input_context: dict | None
     output: str | None
     error: str | None
     provider: str | None

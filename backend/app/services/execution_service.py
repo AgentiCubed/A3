@@ -18,11 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
+from app.core.config import get_settings
 from app.core.enums import AgentKind, RiskLevel, Verdict
 from app.core.roles import ActorType
 from app.models.agent import Agent
 from app.models.approval import Approval
-from app.models.task import Task
+from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
@@ -77,6 +78,92 @@ def build_prompt(task: Task, extra_context: str | None = None) -> str:
     if extra_context:
         parts.append(extra_context)
     return "\n\n".join(parts)
+
+
+# ── Predecessor-output handoff (WS-3) ─────────────────────────────────────
+@dataclass(frozen=True)
+class HandoffItem:
+    """One predecessor's contribution to a successor's prompt."""
+
+    task_id: uuid.UUID
+    task_title: str
+    execution_id: uuid.UUID
+    output: str
+    truncated: bool
+
+
+async def collect_predecessor_context(session: AsyncSession, task: Task) -> list[HandoffItem]:
+    """Latest successful execution output per COMPLETED predecessor.
+
+    Outputs are consumed in dependency-creation order against a single total
+    character budget (``HANDOFF_BUDGET_CHARS``): each output is truncated to
+    the budget remaining, and once the budget is exhausted later predecessors
+    are dropped. Predecessors that are not COMPLETED, or completed without an
+    execution output (e.g. human tasks), contribute nothing.
+    """
+    deps = (
+        (
+            await session.execute(
+                select(TaskDependency)
+                .where(TaskDependency.successor_task_id == task.id)
+                .order_by(TaskDependency.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    budget = get_settings().handoff_budget_chars
+    items: list[HandoffItem] = []
+    for dep in deps:
+        if budget <= 0:
+            break
+        predecessor = await session.get(Task, dep.predecessor_task_id)
+        if predecessor is None or predecessor.status != ExecutionState.COMPLETED:
+            continue
+        execution = (
+            (
+                await session.execute(
+                    select(TaskExecution)
+                    .where(
+                        TaskExecution.task_id == predecessor.id,
+                        TaskExecution.state == ExecutionState.COMPLETED,
+                    )
+                    .order_by(TaskExecution.attempt_number.desc())
+                )
+            )
+            .scalars()
+            .first()
+        )
+        if execution is None or not execution.output:
+            continue
+        truncated = len(execution.output) > budget
+        output = execution.output[:budget] if truncated else execution.output
+        budget -= len(output)
+        items.append(
+            HandoffItem(
+                task_id=predecessor.id,
+                task_title=predecessor.title,
+                execution_id=execution.id,
+                output=output,
+                truncated=truncated,
+            )
+        )
+    return items
+
+
+def format_handoff(items: list[HandoffItem]) -> str | None:
+    if not items:
+        return None
+    sections = ["Output from completed prerequisite tasks:"]
+    for item in items:
+        marker = " (truncated)" if item.truncated else ""
+        sections.append(f"### {item.task_title}{marker}\n{item.output}")
+    return "\n\n".join(sections)
+
+
+def _join_context(*parts: str | None) -> str | None:
+    joined = [p for p in parts if p]
+    return "\n\n".join(joined) if joined else None
 
 
 async def _transition(
@@ -258,6 +345,20 @@ async def execute_task(
     remediations = 0
     extra_context: str | None = None
 
+    # WS-3: completed predecessors' outputs ride into every attempt's prompt;
+    # what was injected is recorded on the execution row for audit.
+    handoff_items = await collect_predecessor_context(session, task)
+    handoff_text = format_handoff(handoff_items)
+    handoff_meta = [
+        {
+            "task_id": str(i.task_id),
+            "execution_id": str(i.execution_id),
+            "chars": len(i.output),
+            "truncated": i.truncated,
+        }
+        for i in handoff_items
+    ] or None
+
     await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 
     while True:
@@ -266,7 +367,7 @@ async def execute_task(
             session, task, ExecutionState.RUNNING, actor_id=actor_id, actor_type=actor_type
         )
         started = _now()
-        prompt = build_prompt(task, extra_context)
+        prompt = build_prompt(task, _join_context(handoff_text, extra_context))
         request = AgentRunRequest(prompt=prompt, model=agent.model, credential_ref=credential_ref)
         try:
             result = await asyncio.wait_for(adapter.run(request), timeout=timeout_s)
@@ -282,6 +383,8 @@ async def execute_task(
                     output=None,
                     error=f"timeout after {timeout_s}s",
                     provider=agent.provider,
+                    prompt_chars=len(prompt),
+                    handoff=handoff_meta,
                 )
             )
             outcome = await _handle_failure(
@@ -302,6 +405,8 @@ async def execute_task(
                     output=None,
                     error=f"{type(exc).__name__}: {exc}",
                     provider=agent.provider,
+                    prompt_chars=len(prompt),
+                    handoff=handoff_meta,
                 )
             )
             outcome = await _handle_failure(
@@ -322,6 +427,8 @@ async def execute_task(
             output=result.output,
             error=None,
             provider=result.provider,
+            prompt_chars=len(prompt),
+            handoff=handoff_meta,
             tokens_used=result.tokens_used,
             cost_estimate=result.cost_estimate,
         )
@@ -502,16 +609,21 @@ async def _record(
     output: str | None,
     error: str | None,
     provider: str | None,
+    prompt_chars: int,
+    handoff: list[dict] | None = None,
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
 ) -> uuid.UUID:
+    input_context: dict = {"prompt_chars": prompt_chars}
+    if handoff:
+        input_context["handoff"] = handoff
     execution = TaskExecution(
         organization_id=task.organization_id,
         task_id=task.id,
         agent_id=agent.id,
         attempt_number=attempt,
         state=state,
-        input_context={"prompt_chars": len(build_prompt(task))},
+        input_context=input_context,
         output=output,
         error=error,
         provider=provider,
