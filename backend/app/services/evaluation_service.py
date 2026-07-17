@@ -7,7 +7,10 @@ Evaluation and its criteria are immutable.
 
 from __future__ import annotations
 
+import json
+import re
 import uuid
+from dataclasses import dataclass, field
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,20 +41,70 @@ def combine_verdicts(deterministic: Verdict, agent: Verdict) -> Verdict:
     return deterministic if _VERDICT_ORDER[deterministic] <= _VERDICT_ORDER[agent] else agent
 
 
-def agent_structured_verdict(output: str) -> tuple[Verdict, float]:
-    """Deterministic stand-in for a structured LLM judge.
+# The structured contract the evaluator agent must answer with (WS-4 / issue
+# 0004). Adapters that support native structured output can enforce it; for the
+# rest the prompt instructs it and ``parse_evaluator_verdict`` fails closed.
+VERDICT_CONTRACT = "verdict_json_v1"
 
-    Real structured judging needs a provider tool/schema and a calibrated model;
-    until then this gives the evaluator agent an *influential* verdict (it can
-    downgrade) without coupling tests to a live model (assumption A15). A mock
-    structured evaluator with a provider schema is the upgrade path.
+_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+
+
+@dataclass(frozen=True)
+class AgentVerdict:
+    """Parsed evaluator-agent response. ``malformed`` means we failed closed."""
+
+    verdict: Verdict
+    score: float | None
+    critique: str
+    gaps: list[str] = field(default_factory=list)
+    malformed: bool = False
+
+
+def _fail_closed(reason: str) -> AgentVerdict:
+    return AgentVerdict(
+        verdict=Verdict.NEEDS_REVISION,
+        score=None,
+        critique=f"evaluator response rejected ({reason}); failing closed",
+        malformed=True,
+    )
+
+
+def parse_evaluator_verdict(raw: str) -> AgentVerdict:
+    """Fail-closed parser for the evaluator's JSON verdict contract.
+
+    Accepts a bare JSON object, optionally wrapped in a ``` fence. Anything
+    else — prose, wrong types, unknown verdict, out-of-range score — yields
+    NEEDS_REVISION with ``malformed=True``. A broken or lying judge can force
+    human review, but it can never silently PASS work (security-model §6).
     """
-    text = (output or "").strip()
-    if not text:
-        return Verdict.FAIL, 0.0
-    if len(text) < 16:
-        return Verdict.NEEDS_REVISION, 0.5
-    return Verdict.PASS, 1.0
+    text = (raw or "").strip()
+    fenced = _FENCE_RE.search(text)
+    if fenced:
+        text = fenced.group(1)
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return _fail_closed("not valid JSON")
+    if not isinstance(data, dict):
+        return _fail_closed("not a JSON object")
+    try:
+        verdict = Verdict(data.get("verdict"))
+    except ValueError:
+        return _fail_closed("unknown verdict value")
+    score = data.get("score")
+    if score is not None:
+        if not isinstance(score, (int, float)) or isinstance(score, bool) or not 0 <= score <= 1:
+            return _fail_closed("score out of range")
+        score = float(score)
+    critique = data.get("critique")
+    if critique is not None and not isinstance(critique, str):
+        return _fail_closed("critique not a string")
+    gaps = data.get("gaps")
+    if gaps is None:
+        gaps = []
+    if not isinstance(gaps, list) or any(not isinstance(g, str) for g in gaps):
+        return _fail_closed("gaps not a list of strings")
+    return AgentVerdict(verdict=verdict, score=score, critique=critique or "", gaps=gaps)
 
 
 def _review_prompt(output: str, specs: list[dict]) -> str:
@@ -61,7 +114,10 @@ def _review_prompt(output: str, specs: list[dict]) -> str:
     return (
         "You are an independent evaluator. Review the following output against "
         f"these criteria: {criteria}.\n\n--- OUTPUT ---\n{output}\n--- END ---\n"
-        "Give a brief critique and note any gaps."
+        "Respond with ONLY a JSON object of the form "
+        '{"verdict": "pass" | "needs_revision" | "fail", "score": <number 0..1>, '
+        '"critique": "<short critique>", "gaps": ["<gap>", ...]}. '
+        "No text outside the JSON object."
     )
 
 
@@ -82,6 +138,8 @@ async def evaluate_execution(
     final_verdict = outcome.verdict
     summary = f"Deterministic rubric: {outcome.verdict.value} (score={outcome.score:.2f})"
 
+    agent_gaps: list[str] = []
+    agent_malformed: bool | None = None
     if evaluator_agent is not None:
         if evaluator_agent.id == execution.agent_id:
             raise EvaluatorConflict()  # executor must not grade itself
@@ -89,28 +147,29 @@ async def evaluate_execution(
         evaluator_agent_id = evaluator_agent.id
         adapter = get_adapter(evaluator_agent.provider)
         cred = (evaluator_agent.config or {}).get("api_key_ref")
-        critique = ""
         try:
             result = await adapter.run(
                 AgentRunRequest(
                     prompt=_review_prompt(execution.output or "", rubric_specs),
                     model=evaluator_agent.model,
                     credential_ref=cred,
+                    params={"expected_format": VERDICT_CONTRACT},
                 )
             )
-            critique = result.output
-        except (
-            Exception
-        ) as exc:  # noqa: BLE001 - critique is best-effort; the verdict still combines
-            critique = f"(evaluator agent error: {type(exc).__name__})"
-
-        agent_v, _ = agent_structured_verdict(execution.output or "")
-        final_verdict = combine_verdicts(outcome.verdict, agent_v)
+            agent_verdict = parse_evaluator_verdict(result.output)
+        except Exception as exc:  # noqa: BLE001 - an unreachable judge fails closed
+            agent_verdict = _fail_closed(f"evaluator agent error: {type(exc).__name__}")
+        agent_gaps = agent_verdict.gaps
+        agent_malformed = agent_verdict.malformed
+        malformed_note = " [failed closed]" if agent_verdict.malformed else ""
+        final_verdict = combine_verdicts(outcome.verdict, agent_verdict.verdict)
         summary = (
-            f"Evaluator '{evaluator_agent.name}' verdict={agent_v.value}; "
-            f"deterministic={outcome.verdict.value}; combined={final_verdict.value}. {critique}"
+            f"Evaluator '{evaluator_agent.name}' verdict={agent_verdict.verdict.value}"
+            f"{malformed_note}; deterministic={outcome.verdict.value}; "
+            f"combined={final_verdict.value}. {agent_verdict.critique}"
         )
 
+    combined_gaps = list(outcome.gaps or []) + agent_gaps
     evaluation = Evaluation(
         organization_id=execution.organization_id,
         task_execution_id=execution.id,
@@ -119,7 +178,7 @@ async def evaluate_execution(
         verdict=final_verdict,
         score=outcome.score,
         summary=summary,
-        gaps=outcome.gaps,
+        gaps=combined_gaps or None,
     )
     session.add(evaluation)
     await session.flush()
@@ -149,6 +208,9 @@ async def evaluate_execution(
             "verdict": final_verdict.value,
             "score": outcome.score,
             "kind": evaluator_kind.value,
+            # None for deterministic-only evaluations; True means the agent's
+            # response violated the contract and the verdict failed closed.
+            "agent_malformed": agent_malformed,
         },
     )
     return evaluation

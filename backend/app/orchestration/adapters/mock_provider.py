@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import re
 
 from app.orchestration.ports import AgentRunRequest, AgentRunResult
 
 _SLEEP_RE = re.compile(r"\[\[SLEEP:([0-9]+(?:\.[0-9]+)?)\]\]")
+_REVIEWED_OUTPUT_RE = re.compile(r"--- OUTPUT ---\n(.*)\n--- END ---", re.DOTALL)
 
 
 class MockProviderError(RuntimeError):
@@ -38,7 +40,10 @@ class MockProvider:
             raise MockProviderError("simulated execution failure")
 
         digest = hashlib.sha256(f"{request.system or ''}\n{prompt}".encode()).hexdigest()
-        output = f"[mock:{request.model or 'default'}] response::{digest[:16]}"
+        if request.params.get("expected_format") == "verdict_json_v1":
+            output = self._structured_verdict(prompt)
+        else:
+            output = f"[mock:{request.model or 'default'}] response::{digest[:16]}"
         tokens = max(1, len(prompt) // 4)
         return AgentRunResult(
             output=output,
@@ -47,3 +52,24 @@ class MockProvider:
             provider=self.name,
             raw_id=digest[:32],
         )
+
+    @staticmethod
+    def _structured_verdict(prompt: str) -> str:
+        """Deterministic evaluator answer honoring the verdict_json_v1 contract.
+
+        Judges the text between the review markers with a fixed rule (empty →
+        fail, very short → needs_revision, else pass) so evaluation tests stay
+        reproducible without a live model. ``[[MALFORMED]]`` in the reviewed
+        output forces a contract-violating prose reply, for fail-closed tests.
+        """
+        match = _REVIEWED_OUTPUT_RE.search(prompt)
+        reviewed = (match.group(1) if match else "").strip()
+        if "[[MALFORMED]]" in reviewed:
+            return "Looks great overall, ship it!"
+        if not reviewed:
+            verdict, score, critique = "fail", 0.0, "reviewed output is empty"
+        elif len(reviewed) < 16:
+            verdict, score, critique = "needs_revision", 0.5, "reviewed output is very short"
+        else:
+            verdict, score, critique = "pass", 1.0, "reviewed output looks complete"
+        return json.dumps({"verdict": verdict, "score": score, "critique": critique, "gaps": []})
