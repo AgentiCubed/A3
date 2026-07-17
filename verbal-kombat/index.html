@@ -37,7 +37,8 @@
     line-height:1.5;
     overflow-x:hidden;
   }
-  /* CRT scanlines over everything except the transcript */
+  /* CRT scanlines over everything except the transcript (show() adds .off there) */
+  .crt.off::after{display:none}
   .crt::after{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:90;
     background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.18) 2px 4px);
@@ -557,7 +558,12 @@ const S = {
 const $ = id=>document.getElementById(id);
 const rand=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
-function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$(id).classList.add("on");window.scrollTo(0,0)}
+function show(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));
+  $(id).classList.add("on");
+  document.querySelector(".crt").classList.toggle("off",id==="s-transcript");
+  window.scrollTo(0,0);
+}
 
 /* ---------------- roster / select ---------------- */
 function fighterList(){return ROSTER.concat(S.custom)}
@@ -568,10 +574,10 @@ function renderRoster(){
     b.className="fcard";b.dataset.id=f.id;
     if(S.p1===f)b.classList.add("pick1");
     if(S.p2===f)b.classList.add("pick2");
-    b.innerHTML=`<span class="glyph">${f.glyph}</span>
-      <span class="fname">${f.name}</span>
-      <span class="ftag">${f.tag}</span>
-      <span class="fcat">${f.cat}</span>
+    b.innerHTML=`<span class="glyph">${esc(f.glyph)}</span>
+      <span class="fname">${esc(f.name)}</span>
+      <span class="ftag">${esc(f.tag)}</span>
+      <span class="fcat">${esc(f.cat)}</span>
       <span class="pickslot">${S.p1===f?"FIGHTER 1":S.p2===f?"FIGHTER 2":""}</span>`;
     b.addEventListener("click",()=>pickFighter(f));
     r.appendChild(b);
@@ -808,8 +814,6 @@ function renderPips(){
   const p=$("pips");p.innerHTML="";
   for(let i=0;i<3;i++){
     const d=document.createElement("span");d.className="pip";
-    const seq=[];
-    // reconstruct win sequence from counts is lossy; just fill by count
     p.appendChild(d);
   }
   const pips=p.children;let k=0;
@@ -837,7 +841,7 @@ function addLog(f,text,kind,flagTxt){
   S.log.push({round:S.round,speaker:f.name,side:f===S.p1?1:2,text,kind,flag:flagTxt});
   const t=$("ticker");const d=document.createElement("div");
   d.className="tline p"+(f===S.p1?1:2);
-  d.innerHTML=`<span class="spk">${f.name}:</span>${esc(text)}<span class="flag ${kind==="foul"?"foul":"solid"}">[${flagTxt}]</span>`;
+  d.innerHTML=`<span class="spk">${esc(f.name)}:</span>${esc(text)}<span class="flag ${kind==="foul"?"foul":"solid"}">[${esc(flagTxt)}]</span>`;
   t.appendChild(d);trimTicker();
 }
 function sysLog(text){
