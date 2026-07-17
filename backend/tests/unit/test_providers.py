@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.core.secrets import CredentialNotConfigured
-from app.orchestration.adapters.anthropic_provider import AnthropicProvider
+from app.orchestration.adapters.anthropic_provider import AnthropicProvider, _estimate_cost
 from app.orchestration.adapters.mock_provider import MockProvider
 from app.orchestration.adapters.registry import (
     UnknownProvider,
@@ -40,3 +40,20 @@ async def test_anthropic_resolves_credential_before_network(monkeypatch):
     provider = AnthropicProvider()
     with pytest.raises(CredentialNotConfigured):
         await provider.run(AgentRunRequest(prompt="hi"))
+
+
+def test_estimate_cost_known_model():
+    # 1 000 000 input + 1 000 000 output tokens for claude-sonnet-4-6 → $18
+    cost = _estimate_cost("claude-sonnet-4-6", 1_000_000, 1_000_000)
+    assert abs(cost - 18.0) < 0.0001
+
+
+def test_estimate_cost_unknown_model_falls_back():
+    # Unknown model falls back to default sonnet-4-6 rates.
+    cost_known = _estimate_cost("claude-sonnet-4-6", 100_000, 50_000)
+    cost_unknown = _estimate_cost("claude-future-model", 100_000, 50_000)
+    assert cost_known == cost_unknown
+
+
+def test_estimate_cost_zero_tokens():
+    assert _estimate_cost("claude-haiku-3-5", 0, 0) == 0.0

@@ -26,13 +26,13 @@ missing context they were supposed to have.
 | Amendment A-0001 (halt on insufficient/ambiguous authority) | [`../governance/constitution/Amendment-A-0001.md`](../governance/constitution/Amendment-A-0001.md) | Ratified |
 | Amendment procedure | [`../governance/decisions/DR-0001-Constitutional-Amendment-Procedure.md`](../governance/decisions/DR-0001-Constitutional-Amendment-Procedure.md) | Adopted |
 | Institutional memory system (issue #12) | [`../governance/knowledge/`](../governance/knowledge/) (README, record types, templates, transmission) | Landed; issue closed complete |
-| AC-0001 Knowledge Gravity | **none** | **Not landed — exists only in issue text. Must land as an artifact before any §here that cites it can finalize.** |
-| AC-0002 Engineering Genome | **none** | **Not landed — same condition as AC-0001.** |
+| AC-0001 Knowledge Gravity | [`concepts/AC-0001-knowledge-gravity.md`](concepts/AC-0001-knowledge-gravity.md) | Proposed — awaiting Principal review and adoption decision |
+| AC-0002 Engineering Genome | [`concepts/AC-0002-engineering-genome.md`](concepts/AC-0002-engineering-genome.md) | Proposed — awaiting Principal review and adoption decision |
 | AC-0003 Architectural Contracts | **none** | Candidate — must land with candidate status explicit |
 | AC-0004 Separation of Decision and Execution | **none** | Candidate — note: the *shipped platform* already enforces executor/evaluator separation (ADR-0004); the candidate generalizes it |
 | AC-0005 Explicit Relationships | **none** | Candidate — adopt/modify/reject decision owned by #16 |
 | AC-0006 Semantic Inheritance | **none** | Candidate — adopt/modify/reject decision owned by #16 |
-| TARP-0001 traceability | **none** | **Not landed — the traceability chain (Constitution → Foundational Concepts → Ontology → Principles → Patterns → Implementations) is cited by #16/#17/#19 but exists in no artifact.** |
+| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | Proposed — awaiting Principal review and adoption decision |
 | Ontology & semantic graph | issue #16 (open) | **[BLOCKED: #16]** |
 | Runtime Domain & continuous operation | issue #17 (open) | **[BLOCKED: #17]** |
 
@@ -389,10 +389,12 @@ ideas at the moment of enthusiasm.
   belongs in the Constitution, that is an Art. XII amendment with its own
   procedure.
 
-**Current registry:** AC-0001 and AC-0002 are cited as foundational concepts
-but have not landed even as proposals; AC-0003…AC-0006 are named candidates
-awaiting artifacts. None can enter state 2 until state 1 is satisfied
-(§0.1, §10 item 1).
+**Current registry:** AC-0001 and AC-0002 have landed as lifecycle-state-1
+proposals (`concepts/AC-0001-knowledge-gravity.md`,
+`concepts/AC-0002-engineering-genome.md`); they may not enter state 2 until
+the Principal reviews and records an adoption decision. AC-0003…AC-0006 are
+named candidates awaiting artifacts. TARP-0001 has landed as a proposal
+(`TARP-0001-traceability-protocol.md`); it may not take effect until adopted.
 
 ## 8. Traceability
 
@@ -401,8 +403,9 @@ Architectural Principles → Patterns → Implementations. Every durable
 architectural statement must be traceable along explicit relationships
 (issue #16 acceptance criterion).*
 
-**[BLOCKED: TARP-0001 has no repository artifact — see §0.1. Landing it is a
-prerequisite of issue #19's own acceptance criteria.]**
+**[UNBLOCKED — TARP-0001 proposal landed: see `TARP-0001-traceability-protocol.md`.
+The chain and rules are proposed; they require Principal adoption before
+taking effect. §3/§4 remain blocked on #16/#17 closure.]**
 
 ## 9. Safety
 
@@ -456,8 +459,9 @@ the posture is buildable, not the posture itself.
 
 *Sequencing to v2-final:*
 
-1. Land the missing foundational artifacts (AC-0001, AC-0002, TARP-0001,
-   candidate texts AC-0003…AC-0006) — unblocks §3.7, §3.8, §7, §8
+1. ~~Land the missing foundational artifacts (AC-0001, AC-0002, TARP-0001,
+   candidate texts AC-0003…AC-0006)~~ — **AC-0001, AC-0002, TARP-0001 proposals
+   landed; AC-0003…AC-0006 still need artifacts** — unblocks §3.7, §3.8, §7, §8
 2. Close issue #16 (ontology) — unblocks §3, §4.3
 3. Close issue #17 (Runtime Domain) — unblocks §4.2, §5.5, §6
 4. ~~Fill §1, §2, §5.1–5.4, §5.6, §7, §9~~ — **done** (this revision)

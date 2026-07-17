@@ -58,6 +58,9 @@ async def generate_closeout(
         select(AuditEvent).where(
             AuditEvent.organization_id == org_id,
             AuditEvent.action.in_(_REMEDIATION_ACTIONS),
+            AuditEvent.entity_id.in_(
+                {t.id for t in tasks} | {e.id for e in executions}
+            ),
         ),
     )
 

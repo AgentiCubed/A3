@@ -72,6 +72,7 @@ cp .env.example .env
 docker compose up --build          # starts db, redis, api, worker, frontend
 # API docs:        http://localhost:8000/docs
 # Health:          http://localhost:8000/healthz
+# Metrics:         http://localhost:8000/metrics  (Prometheus)
 # Frontend:        http://localhost:3000
 ```
 
