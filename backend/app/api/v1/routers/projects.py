@@ -302,6 +302,11 @@ async def dispatch_task(
             await execution_service.queue_task(
                 session, task=task, actor_id=user.id, actor_type=ActorType.USER
             )
+        except execution_service.AlreadyQueued as exc:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "task is already queued; re-dispatch would run it twice",
+            ) from exc
         except execution_service.NotAssigned as exc:
             raise HTTPException(
                 status.HTTP_422_UNPROCESSABLE_ENTITY, "task has no assigned agent"

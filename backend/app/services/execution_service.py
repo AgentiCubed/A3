@@ -40,6 +40,10 @@ class NotExecutable(Exception):
     """The assigned agent is not an AI agent (human tasks complete out-of-band)."""
 
 
+class AlreadyQueued(Exception):
+    """The task is already QUEUED; re-dispatch would enqueue a duplicate message."""
+
+
 @dataclass
 class EvaluationConfig:
     """How to evaluate a successful execution and remediate failures."""
@@ -184,9 +188,14 @@ async def queue_task(
 
     Runs the same dispatchability checks as ``execute_task`` so an
     unassigned/non-AI task is rejected at the API instead of failing silently
-    in the worker. The worker's own ``_move_to_queued`` is a no-op when the
-    task is already QUEUED.
+    in the worker. A task that is *already* QUEUED is rejected here — since
+    ``_move_to_queued`` treats QUEUED as a no-op, re-dispatch would otherwise
+    enqueue a second worker message and run the task concurrently. (The
+    worker's own re-entry through QUEUED is unaffected: it calls
+    ``_move_to_queued`` directly, not this function.)
     """
+    if task.status == ExecutionState.QUEUED:
+        raise AlreadyQueued()
     await _require_executable(session, task)
     await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 

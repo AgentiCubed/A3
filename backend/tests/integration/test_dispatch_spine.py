@@ -169,6 +169,30 @@ def test_dispatch_rejects_evaluator_equal_to_executor(client, monkeypatch):
     assert engine.calls == []
 
 
+def test_redispatch_of_queued_task_rejected_without_second_message(client, monkeypatch):
+    """Dispatching an already-QUEUED task must not enqueue a duplicate."""
+    engine = _CapturingEngine()
+    monkeypatch.setattr("app.api.v1.routers.projects.get_workflow_engine", lambda: engine)
+
+    headers = _auth(client)
+    pid = _project(client, headers)
+    task_id = _task(client, headers, pid)
+    agent_id = _agent(client, headers)
+    _assign(client, headers, pid, task_id, agent_id)
+
+    first = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch", json={}, headers=headers
+    )
+    assert first.status_code == 200
+    assert first.json()["status"] == "queued"
+
+    second = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch", json={}, headers=headers
+    )
+    assert second.status_code == 409
+    assert len(engine.calls) == 1  # exactly one message ever enqueued
+
+
 class _FailingEngine:
     """WorkflowEngine double whose broker is unreachable."""
 
