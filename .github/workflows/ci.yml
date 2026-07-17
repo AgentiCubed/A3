@@ -30,6 +30,8 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://agenticubed:agenticubed@localhost:5432/agenticubed
       DATABASE_URL_SYNC: postgresql+psycopg://agenticubed:agenticubed@localhost:5432/agenticubed
       REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/2
     defaults:
       run:
         working-directory: backend
@@ -52,6 +54,11 @@ jobs:
         run: .venv/bin/alembic upgrade head
       - name: Tests
         run: .venv/bin/python -m pytest -q
+      - name: Celery spine smoke (real broker + worker process)
+        env:
+          CELERY_BROKER_SMOKE: "1"
+          WORKFLOW_ENGINE_BACKEND: celery
+        run: .venv/bin/python -m pytest tests/integration/test_celery_broker_smoke.py -q
       - name: Readiness smoke test (db + redis)
         run: |
           .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 &
