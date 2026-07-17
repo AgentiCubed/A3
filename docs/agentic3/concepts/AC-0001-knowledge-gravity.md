@@ -2,8 +2,10 @@
 
 **Type:** Foundational Concept (Architectural Candidate)
 **Status:** Proposed — reconstructed from issue-text usage; awaiting Principal
-review and an explicit adoption decision under the candidate lifecycle
-(ARCHITECTURE-v2 §7)
+review and an explicit adoption decision. This document assumes the
+ARCHITECTURE-v2 §7 candidate lifecycle governs Foundational Concepts — that
+applicability is itself a **proposed governance decision** (GD-P1, recorded
+in ARCHITECTURE-v2 §7), not an established rule.
 **Drafted by:** delegated agent (Executor); per Constitution Art. XII §2 by
 analogy and STD-0001, the drafter must not be the sole reviewer
 
@@ -28,14 +30,23 @@ Every definitional claim below is reconstructed from the following evidence:
 - Issue #19 (acceptance criteria): "Knowledge Gravity and Engineering Genome
   apply across every subsystem."
 
-Anything beyond those sources is marked **[interpretation]**.
+Every rule and definitional claim below carries one of three labels:
+
+- **[supported: …]** — restates the cited issue text; no new decision.
+- **[reconstructed]** — inferred from constitutional principles or issue
+  context; holds only if the inference is right, and the review may correct
+  it.
+- **[proposed]** — a **new decision this document introduces**; it has no
+  force until the Principal explicitly adopts it.
 
 ## Definition
 
 **Knowledge Gravity** is metadata carried by knowledge entities (records,
 patterns, decisions, principles) expressing how much justified weight the
-institution currently assigns them. Weight is earned and lost through four —
-and only four — update sources:
+institution currently assigns them **[reconstructed** — issue #16 uses the
+term without defining it; this sentence is the reconstruction under
+review**]**. Weight is earned and lost through four named update sources
+**[supported: #16 acceptance criteria]**:
 
 1. **Evidence** — verified outcomes that support or contradict the knowledge;
 2. **Reuse** — the knowledge being applied again, with its outcome recorded;
@@ -49,24 +60,31 @@ auditable* instead of implicit in who remembers what.
 
 ## Rules
 
-1. **Bounded update vocabulary.** Gravity changes only through the four
-   sources above. No update from popularity, recency alone, author identity,
-   citation count without outcomes, or manual adjustment without evidence —
-   the "arbitrary scoring theater" failure mode issue #16 names.
-2. **Gravity is not authority.** High-gravity knowledge informs decisions;
-   it never makes them, and it never outranks a Delegation, an acceptance
-   condition, or a Principal decision (Constitution Art. VIII §1).
-   A heavily-reused pattern is still not a policy (ARCHITECTURE-v2 §5.2).
-3. **Traceable updates.** Every gravity change records its source event
-   (which evidence, which reuse, which contradiction, which supersession),
-   so a reviewer can reconstruct why the weight is what it is — the same
-   traceability the Reasoning Ledger demands of confidence changes.
-4. **Universal scope.** Gravity metadata applies to knowledge entities in
-   every subsystem (issue #19), not only to the knowledge engine's records.
-5. **Ontology owns the representation.** The concrete metadata schema and
-   update semantics belong to the ontology workstream (issue #16, scope
-   item 7). This document defines what gravity *means*; #16 defines how it
-   is *stored and computed*.
+1. **Bounded update vocabulary** **[proposed]**. Gravity changes *only*
+   through the four sources above — no update from popularity, recency
+   alone, author identity, citation count without outcomes, or manual
+   adjustment without evidence. Issue #16 names the four sources and warns
+   against "arbitrary scoring theater"; the **exclusivity** ("only these
+   four") is a new rule this document proposes as the enforceable form of
+   that warning. It is a decision for the Principal, not a fact of #16.
+2. **Gravity is not authority** **[reconstructed]**. High-gravity knowledge
+   informs decisions; it never makes them, and it never outranks a
+   Delegation, an acceptance condition, or a Principal decision. Inferred
+   from Constitution Art. VIII §1 precedence applied to gravity — the
+   application, not the precedence, is the inference. A heavily-reused
+   pattern is still not a policy (ARCHITECTURE-v2 §5.2).
+3. **Traceable updates** **[reconstructed]**. Every gravity change records
+   its source event (which evidence, which reuse, which contradiction,
+   which supersession) so a reviewer can reconstruct why the weight is what
+   it is. Inferred by analogy to the Reasoning Ledger's traceability of
+   confidence changes; #16 does not state it.
+4. **Universal scope** **[supported: #19 acceptance criteria]**. Gravity
+   metadata applies to knowledge entities in every subsystem, not only to
+   the knowledge engine's records.
+5. **Ontology owns the representation** **[supported: #16 scope item 7]**.
+   The concrete metadata schema and update semantics belong to the ontology
+   workstream. This document defines what gravity *means*; #16 defines how
+   it is *stored and computed*.
 
 ## What this is NOT
 

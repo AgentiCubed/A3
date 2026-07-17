@@ -44,28 +44,38 @@ TARP-0001 fixes a six-layer chain of architectural authority and derivation:
 6. Implementations         (the shipped platform and future systems)
 ```
 
+Label legend: **[supported: …]** restates cited issue text;
+**[reconstructed]** is inferred and correctable at review; **[proposed]** is
+a new decision with no force until the Principal adopts it.
+
 ## Rules
 
-1. **Downward derivation.** Every durable architectural statement at layer N
-   must trace to authority at some layer above it. A pattern that traces to
-   no principle, or a principle that traces to no concept or constitutional
-   ground, is an orphan — a defect to resolve, not a curiosity.
-2. **Upward protection.** No lower layer may contradict a higher layer; a
-   conflict is resolved in the higher layer's favor or by explicitly
-   changing the higher layer through its own procedure (Constitution
-   Art. XI, Art. XII; candidate lifecycle for layers 2 and 4).
-3. **Review follows the chain.** Reviewing an artifact under TARP-0001 means
-   walking its trace: identify the layer, verify its upward links exist and
-   still hold, and verify the artifact is context-complete for that walk
-   (STD-0001). Issue #16's ontology work is itself reviewed this way.
-4. **Traceability is explicit.** Links between layers are recorded
-   relationships, not inferred resemblance — the same rule the ontology
-   (#16) will formalize as its relationship vocabulary, and the reason
-   candidate AC-0005 "Explicit Relationships" exists.
-5. **Implementations are evidence, not authority.** Layer 6 feeds evidence
-   upward (a pattern proven in the platform strengthens its principle's
-   case) but never confers adoption downward-in-reverse
-   (ARCHITECTURE-v2 §0.2, §7).
+1. **Downward derivation** **[reconstructed]**, with a **[proposed]** edge.
+   Every durable architectural statement at layer N must trace to authority
+   at some layer above it — inferred from #16's use of the chain for review
+   and its acceptance criterion that "every durable architectural statement
+   can be traced through explicit relationships." The classification of an
+   untraceable statement as a **defect to resolve** (an "orphan") is a new
+   proposed rule, not #16 text.
+2. **Upward protection** **[reconstructed]**. No lower layer may contradict
+   a higher layer; conflicts resolve in the higher layer's favor or by
+   changing the higher layer through its own procedure. Inferred from
+   Constitution Art. XI (supremacy) and Art. XII (amendment) extended down
+   the chain — the extension below the constitutional layer is the
+   inference.
+3. **Review follows the chain** **[supported: #16 Verification]** in its
+   core — #16 states "Review through TARP-0001: Constitution → … →
+   Implementations." The tie-in to STD-0001 context-complete review is
+   **[reconstructed]**.
+4. **Traceability is explicit** **[reconstructed]**. Links between layers
+   are recorded relationships, not inferred resemblance — drawn from #16's
+   acceptance criteria and relationship-vocabulary scope. Note: this rule
+   parallels candidate AC-0005 "Explicit Relationships," which is
+   **undecided**; this protocol must not be read as pre-adopting AC-0005,
+   and if AC-0005 is rejected this rule reopens.
+5. **Implementations are evidence, not authority** **[reconstructed]** from
+   ARCHITECTURE-v2 §0.2/§7 (themselves merged draft, not ratified doctrine).
+   Layer 6 feeds evidence upward but never confers adoption in reverse.
 
 ## Current state of the chain (at landing)
 

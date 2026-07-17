@@ -2,8 +2,10 @@
 
 **Type:** Foundational Concept (Architectural Candidate)
 **Status:** Proposed — reconstructed from issue-text usage; awaiting Principal
-review and an explicit adoption decision under the candidate lifecycle
-(ARCHITECTURE-v2 §7)
+review and an explicit adoption decision. This document assumes the
+ARCHITECTURE-v2 §7 candidate lifecycle governs Foundational Concepts — that
+applicability is itself a **proposed governance decision** (GD-P1, recorded
+in ARCHITECTURE-v2 §7), not an established rule.
 **Drafted by:** delegated agent (Executor); the drafter must not be the sole
 reviewer (STD-0001)
 
@@ -24,7 +26,11 @@ Evidence base for the reconstruction:
 - Issue #19 (acceptance criteria): "Knowledge Gravity and Engineering Genome
   apply across every subsystem."
 
-Anything beyond those sources is marked **[interpretation]**.
+Every rule below carries one of three labels: **[supported: …]** (restates
+cited issue text), **[reconstructed]** (inferred; review may correct it), or
+**[proposed]** (a new decision this document introduces; no force until the
+Principal adopts it). Prose marked **[interpretation]** is explanatory
+framing, weaker than a rule.
 
 ## Definition
 
@@ -42,25 +48,32 @@ drift.
 
 ## Rules
 
-1. **Membership is explicit.** An element is in the genome only through a
-   recorded membership decision. Resemblance, habit, or wide usage do not
-   confer membership — the same anti-drift rule as the candidate lifecycle
-   (ARCHITECTURE-v2 §7) and Knowledge Gravity (AC-0001 rule 1).
-2. **Membership is versioned.** The genome has identifiable states over
-   time; any element's membership history (added, revised, removed, by which
-   decision) is reconstructible.
-3. **Membership is reversible.** Removal is always possible and never erases
-   history (Constitution Art. XII §4 by analogy; knowledge README,
-   Maintenance).
-4. **Adoption is governance.** Entry to the genome follows the candidate
-   lifecycle (ARCHITECTURE-v2 §7): proposed → evaluated repeatedly →
-   decided under authority traceable to a Principal. The evolution engine
-   (§5.6) stewards this; it does not decide it.
-5. **Universal expression.** Genome elements apply across every subsystem
-   (issue #19). A subsystem that cannot satisfy a genome element is a
-   finding to surface, not an exemption to assume.
-6. **Ontology owns the representation.** How membership, versioning, and
-   evolution are modeled belongs to issue #16 (scope item 8).
+1. **Membership is explicit** **[supported: #16 acceptance criteria]**, and
+   **[reconstructed]** in its elaboration: resemblance, habit, or wide usage
+   do not confer membership. #16 states the explicitness; the anti-drift
+   elaboration is inferred from it (and parallels AC-0001 rule 1, which is
+   itself proposed, not established).
+2. **Membership is versioned** **[supported: #16 acceptance criteria]**.
+   The genome has identifiable states over time; any element's membership
+   history (added, revised, removed, by which decision) is reconstructible.
+3. **Membership is reversible** **[supported: #16 acceptance criteria]**;
+   the addition that removal **never erases history** is
+   **[reconstructed]** by analogy to Constitution Art. XII §4 and the
+   knowledge system's append-only maintenance rule.
+4. **Adoption is governance** **[proposed]**. Entry to the genome follows
+   the candidate lifecycle (ARCHITECTURE-v2 §7): proposed → evaluated
+   repeatedly → decided under authority traceable to a Principal, stewarded
+   but not decided by the evolution engine (§5.6). This rule depends on the
+   proposed governance decision **GD-P1** (does §7 govern Foundational
+   Concepts and genome entries?) and has no force until that decision is
+   made.
+5. **Universal expression** **[supported: #19 acceptance criteria]** in its
+   first clause — genome elements apply across every subsystem. The second
+   clause — a subsystem that cannot satisfy an element is a finding to
+   surface, not an exemption to assume — is **[reconstructed]**.
+6. **Ontology owns the representation** **[supported: #16 scope item 8]**.
+   How membership, versioning, and evolution are modeled belongs to the
+   ontology workstream.
 
 ## Relationship to Knowledge Gravity (AC-0001)
 

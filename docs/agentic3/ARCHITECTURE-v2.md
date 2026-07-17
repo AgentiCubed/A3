@@ -389,10 +389,23 @@ ideas at the moment of enthusiasm.
   belongs in the Constitution, that is an Art. XII amendment with its own
   procedure.
 
-**Current registry:** AC-0001 and AC-0002 are cited as foundational concepts
-but have not landed even as proposals; AC-0003…AC-0006 are named candidates
-awaiting artifacts. None can enter state 2 until state 1 is satisfied
-(§0.1, §10 item 1).
+**Proposed governance decision GD-P1 — applicability to Foundational
+Concepts.** This section was written for Architectural Candidates (chain
+layer 4). Whether the same lifecycle formally governs **Foundational
+Concepts** (chain layer 2 — AC-0001, AC-0002) has never been decided; the
+landed concept proposals *assume* it does, and flag that assumption. The
+proposal: **the §7 lifecycle governs layer-2 Foundational Concepts and
+Engineering Genome membership exactly as it governs layer-4 candidates.**
+Alternatives the Principal may prefer: a stricter procedure for layer 2
+(closer to Art. XII amendment discipline, since concepts sit directly under
+the Constitution), or a distinct lightweight track. Until decided, no
+lifecycle claim about a Foundational Concept is enforceable. Decision owner:
+the Principal (Art. III).
+
+**Current registry:** AC-0001 and AC-0002 have landed as proposals (state 1;
+see §0.1) with every rule labeled supported/reconstructed/proposed;
+AC-0003…AC-0006 remain named candidates awaiting artifacts and cannot enter
+state 2 until state 1 is satisfied (§10 item 1).
 
 ## 8. Traceability
 
