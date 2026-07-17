@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { AgentPerformanceChart } from "@/components/AgentPerformanceChart";
 import { AgentTable } from "@/components/AgentTable";
 import { DependencyDiagram } from "@/components/DependencyDiagram";
 import { GanttChart } from "@/components/GanttChart";
@@ -103,6 +104,7 @@ export default async function ProjectDashboard({
       <div style={{ display: "flex", gap: 32, flexWrap: "wrap", marginTop: 32 }}>
         <section style={{ flex: "1 1 360px" }}>
           <h2 style={{ fontSize: 18 }}>Agent performance</h2>
+          <AgentPerformanceChart rows={dash.agent_metrics} />
           <AgentTable rows={dash.agent_metrics} />
         </section>
         <section>

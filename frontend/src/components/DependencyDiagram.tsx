@@ -1,11 +1,11 @@
 import type { ProjectGraph } from "@/lib/api";
 import { mermaidFromGraph } from "@/lib/metrics";
+import { MermaidDiagram } from "./MermaidDiagram";
 
 /**
- * Dependency view. Renders the Mermaid flowchart source (paste into any Mermaid
- * renderer) plus an at-a-glance edge list with critical nodes highlighted.
- * Mermaid source generation is pure + unit-tested; see ADR-0005 for why we emit
- * Mermaid text rather than bundling a heavy client renderer in the MVP.
+ * Dependency view. Renders the Mermaid flowchart live via the MermaidDiagram
+ * client component (dynamic import — browser only) plus an at-a-glance edge
+ * list with critical nodes highlighted. See ADR-0005 for history.
  */
 export function DependencyDiagram({ graph }: { graph: ProjectGraph }) {
   if (graph.nodes.length === 0) {
@@ -30,24 +30,9 @@ export function DependencyDiagram({ graph }: { graph: ProjectGraph }) {
           );
         })}
       </ul>
-      <details style={{ marginTop: 8 }}>
-        <summary style={{ cursor: "pointer", color: "#9fb0c0", fontSize: 12 }}>
-          Mermaid source
-        </summary>
-        <pre
-          className="mermaid"
-          style={{
-            background: "#0d1117",
-            border: "1px solid #30363d",
-            borderRadius: 6,
-            padding: 12,
-            fontSize: 12,
-            overflowX: "auto",
-          }}
-        >
-          {mermaid}
-        </pre>
-      </details>
+      <div style={{ marginTop: 12 }}>
+        <MermaidDiagram source={mermaid} />
+      </div>
     </div>
   );
 }

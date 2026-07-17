@@ -27,13 +27,13 @@ _API_VERSION = "2023-06-01"
 # Cost per token in USD for each model (input_cost, output_cost).
 # Rates from Anthropic public pricing; update when pricing changes.
 _RATE_CARD: dict[str, tuple[float, float]] = {
-    "claude-opus-4-5":        (15.00 / 1_000_000, 75.00 / 1_000_000),
-    "claude-opus-4":          (15.00 / 1_000_000, 75.00 / 1_000_000),
-    "claude-sonnet-4-6":      (3.00  / 1_000_000, 15.00 / 1_000_000),
-    "claude-sonnet-4-5":      (3.00  / 1_000_000, 15.00 / 1_000_000),
-    "claude-sonnet-3-7":      (3.00  / 1_000_000, 15.00 / 1_000_000),
-    "claude-haiku-3-5":       (0.80  / 1_000_000,  4.00 / 1_000_000),
-    "claude-haiku-3":         (0.25  / 1_000_000,  1.25 / 1_000_000),
+    "claude-opus-4-5": (15.00 / 1_000_000, 75.00 / 1_000_000),
+    "claude-opus-4": (15.00 / 1_000_000, 75.00 / 1_000_000),
+    "claude-sonnet-4-6": (3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-sonnet-4-5": (3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-sonnet-3-7": (3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-haiku-3-5": (0.80 / 1_000_000, 4.00 / 1_000_000),
+    "claude-haiku-3": (0.25 / 1_000_000, 1.25 / 1_000_000),
 }
 
 
