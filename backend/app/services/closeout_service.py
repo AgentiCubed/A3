@@ -23,9 +23,17 @@ from app.models.project import Project
 from app.models.risk import Decision, Risk
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
-from app.services import analytics_service, task_service
+from app.services import acceptance_service, analytics_service, task_service
 
 _REMEDIATION_ACTIONS = ("remediation.selected", "task.escalated", "task.reassigned")
+
+
+class AcceptanceNotMet(Exception):
+    """Closing was refused: acceptance criteria fail and were not acknowledged."""
+
+    def __init__(self, report: acceptance_service.AcceptanceReport):
+        self.report = report
+        super().__init__("acceptance criteria unmet")
 
 
 async def _scalars(session: AsyncSession, stmt):
@@ -65,6 +73,11 @@ async def generate_closeout(
         session, org_id=org_id, project_id=project_id
     )
     failures = [e for e in executions if e.state.value == "failed"]
+    acceptance = (
+        (await acceptance_service.evaluate_project_acceptance(session, project=project)).to_dict()
+        if project
+        else {"evaluated": False, "satisfied": True, "results": []}
+    )
 
     report = {
         "project_id": str(project_id),
@@ -87,6 +100,7 @@ async def generate_closeout(
         ],
         "decisions": [{"title": d.title, "decision": d.decision} for d in decisions],
         "timeline": dashboard["timeline"],
+        "acceptance": acceptance,
     }
     report["markdown"] = _markdown(report)
     return report
@@ -122,6 +136,14 @@ def _markdown(r: dict) -> str:
     lines += [f"- {x['title']} (severity {x['severity']})" for x in r["open_risks"]] or ["- (none)"]
     lines += ["", "## Decisions"]
     lines += [f"- {d['title']}: {d['decision']}" for d in r["decisions"]] or ["- (none)"]
+    lines += ["", "## Acceptance criteria"]
+    acc = r.get("acceptance", {})
+    if not acc.get("evaluated"):
+        lines.append("- (none defined)")
+    else:
+        for c in acc.get("results", []):
+            mark = "met" if c["passed"] else f"UNMET — {c['notes']}"
+            lines.append(f"- [{c['kind']}] {c['key']}: {mark}")
     return "\n".join(lines)
 
 
@@ -131,18 +153,38 @@ async def close_project(
     project: Project,
     actor_id: uuid.UUID | None,
     actor_type: ActorType = ActorType.USER,
+    acknowledge_unmet_criteria: bool = False,
 ) -> Project:
+    """Close the project — gated by its acceptance criteria (WS-4b).
+
+    While any criterion fails, closing raises AcceptanceNotMet unless the
+    caller explicitly acknowledges the unmet criteria (deliberate abandonment).
+    The acknowledgment and the unmet list are recorded in the audit event, so
+    a project can never be silently completed with criteria unsatisfied.
+    """
+    report = await acceptance_service.evaluate_project_acceptance(session, project=project)
+    unmet = [r.key for r in report.unmet]
+    if unmet and not acknowledge_unmet_criteria:
+        raise AcceptanceNotMet(report)
+
     before = project.status.value
     project.status = ProjectStatus.CLOSED
     await record_audit(
         session,
         organization_id=project.organization_id,
+        project_id=project.id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="project.closed",
         entity_type="Project",
         entity_id=project.id,
         before={"status": before},
-        after={"status": ProjectStatus.CLOSED.value},
+        after={
+            "status": ProjectStatus.CLOSED.value,
+            "acceptance_evaluated": report.evaluated,
+            "acceptance_satisfied": report.satisfied,
+            "unmet_criteria": unmet,
+            "unmet_acknowledged": bool(unmet),
+        },
     )
     return project

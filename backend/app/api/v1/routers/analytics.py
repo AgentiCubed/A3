@@ -10,10 +10,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.deps import CurrentUser, DbSession, require
+from app.core.audit import record_audit
 from app.core.rbac import Action
+from app.core.roles import ActorType
 from app.models.user import User
 from app.schemas.artifact import ArtifactResponse
+from app.schemas.project import ProjectCloseRequest
 from app.services import (
+    acceptance_service,
     analytics_service,
     artifact_service,
     closeout_service,
@@ -73,14 +77,57 @@ async def closeout(project_id: uuid.UUID, session: DbSession, user: CurrentUser)
     )
 
 
+@router.get("/{project_id}/acceptance")
+async def acceptance_report(project_id: uuid.UUID, session: DbSession, user: CurrentUser) -> dict:
+    """Live acceptance-criteria status — what still stands between here and closed."""
+    project = await _project(session, user, project_id)
+    report = await acceptance_service.evaluate_project_acceptance(session, project=project)
+    return report.to_dict()
+
+
 @router.post("/{project_id}/close")
 async def close_project(
     project_id: uuid.UUID,
     session: DbSession,
     user: Annotated[User, Depends(require(Action.PROJECT_EDIT))],
+    req: ProjectCloseRequest | None = None,
 ) -> dict:
+    """Close the project — refused while acceptance criteria fail (WS-4b).
+
+    A 409 lists the unmet criteria. Passing acknowledge_unmet_criteria=true
+    closes anyway (deliberate abandonment) and records the acknowledgment.
+    """
     project = await _project(session, user, project_id)
-    await closeout_service.close_project(session, project=project, actor_id=user.id)
+    try:
+        await closeout_service.close_project(
+            session,
+            project=project,
+            actor_id=user.id,
+            acknowledge_unmet_criteria=bool(req and req.acknowledge_unmet_criteria),
+        )
+    except closeout_service.AcceptanceNotMet as exc:
+        # Persist the refusal before answering: the audit trail must show the
+        # gate firing even though the request fails.
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"unmet_criteria": [r.key for r in exc.report.unmet]},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {
+                "error": "acceptance_criteria_unmet",
+                "unmet": [r.to_dict() for r in exc.report.unmet],
+                "hint": "resolve the criteria or pass acknowledge_unmet_criteria=true",
+            },
+        ) from exc
     report = await closeout_service.generate_closeout(
         session, org_id=user.organization_id, project_id=project_id, generated_at=datetime.now(UTC)
     )
