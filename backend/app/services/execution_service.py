@@ -96,10 +96,14 @@ async def collect_predecessor_context(session: AsyncSession, task: Task) -> list
     """Latest successful execution output per COMPLETED predecessor.
 
     Outputs are consumed in dependency-creation order against a single total
-    character budget (``HANDOFF_BUDGET_CHARS``): each output is truncated to
-    the budget remaining, and once the budget is exhausted later predecessors
-    are dropped. Predecessors that are not COMPLETED, or completed without an
+    character budget (the ``handoff_budget_chars`` setting, env
+    ``HANDOFF_BUDGET_CHARS``): each output is truncated to the budget
+    remaining, and once the budget is exhausted later predecessors are
+    dropped. Predecessors that are not COMPLETED, or completed without an
     execution output (e.g. human tasks), contribute nothing.
+
+    Three fixed queries regardless of predecessor count: dependencies, their
+    tasks, and their successful executions (latest-per-task picked in Python).
     """
     deps = (
         (
@@ -112,29 +116,42 @@ async def collect_predecessor_context(session: AsyncSession, task: Task) -> list
         .scalars()
         .all()
     )
+    if not deps:
+        return []
+    predecessor_ids = [d.predecessor_task_id for d in deps]
+    predecessors = {
+        t.id: t
+        for t in (await session.execute(select(Task).where(Task.id.in_(predecessor_ids))))
+        .scalars()
+        .all()
+        if t.status == ExecutionState.COMPLETED
+    }
+    latest_success: dict[uuid.UUID, TaskExecution] = {}
+    executions = (
+        (
+            await session.execute(
+                select(TaskExecution)
+                .where(
+                    TaskExecution.task_id.in_(predecessor_ids),
+                    TaskExecution.state == ExecutionState.COMPLETED,
+                )
+                .order_by(TaskExecution.attempt_number)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for execution in executions:  # ascending attempts: the last one seen wins
+        latest_success[execution.task_id] = execution
+
     budget = get_settings().handoff_budget_chars
     items: list[HandoffItem] = []
     for dep in deps:
         if budget <= 0:
             break
-        predecessor = await session.get(Task, dep.predecessor_task_id)
-        if predecessor is None or predecessor.status != ExecutionState.COMPLETED:
-            continue
-        execution = (
-            (
-                await session.execute(
-                    select(TaskExecution)
-                    .where(
-                        TaskExecution.task_id == predecessor.id,
-                        TaskExecution.state == ExecutionState.COMPLETED,
-                    )
-                    .order_by(TaskExecution.attempt_number.desc())
-                )
-            )
-            .scalars()
-            .first()
-        )
-        if execution is None or not execution.output:
+        predecessor = predecessors.get(dep.predecessor_task_id)
+        execution = latest_success.get(dep.predecessor_task_id)
+        if predecessor is None or execution is None or not execution.output:
             continue
         truncated = len(execution.output) > budget
         output = execution.output[:budget] if truncated else execution.output
