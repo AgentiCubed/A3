@@ -26,13 +26,13 @@ missing context they were supposed to have.
 | Amendment A-0001 (halt on insufficient/ambiguous authority) | [`../governance/constitution/Amendment-A-0001.md`](../governance/constitution/Amendment-A-0001.md) | Ratified |
 | Amendment procedure | [`../governance/decisions/DR-0001-Constitutional-Amendment-Procedure.md`](../governance/decisions/DR-0001-Constitutional-Amendment-Procedure.md) | Adopted |
 | Institutional memory system (issue #12) | [`../governance/knowledge/`](../governance/knowledge/) (README, record types, templates, transmission) | Landed; issue closed complete |
-| AC-0001 Knowledge Gravity | [`concepts/AC-0001-knowledge-gravity.md`](concepts/AC-0001-knowledge-gravity.md) | Proposed — awaiting Principal review and adoption decision |
-| AC-0002 Engineering Genome | [`concepts/AC-0002-engineering-genome.md`](concepts/AC-0002-engineering-genome.md) | Proposed — awaiting Principal review and adoption decision |
+| AC-0001 Knowledge Gravity | [`concepts/AC-0001-knowledge-gravity.md`](concepts/AC-0001-knowledge-gravity.md) | Proposed — landed as a reconstruction from issue-text usage; Principal adoption decision pending (§7 state 1) |
+| AC-0002 Engineering Genome | [`concepts/AC-0002-engineering-genome.md`](concepts/AC-0002-engineering-genome.md) | Proposed — same condition as AC-0001 |
 | AC-0003 Architectural Contracts | **none** | Candidate — must land with candidate status explicit |
 | AC-0004 Separation of Decision and Execution | **none** | Candidate — note: the *shipped platform* already enforces executor/evaluator separation (ADR-0004); the candidate generalizes it |
 | AC-0005 Explicit Relationships | **none** | Candidate — adopt/modify/reject decision owned by #16 |
 | AC-0006 Semantic Inheritance | **none** | Candidate — adopt/modify/reject decision owned by #16 |
-| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | Proposed — awaiting Principal review and adoption decision |
+| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | Proposed — chain and review rules landed; acronym expansion and the still-unlanded **Upward Compatibility Rule** flagged inside |
 | Ontology & semantic graph | issue #16 (open) | **[BLOCKED: #16]** |
 | Runtime Domain & continuous operation | issue #17 (open) | **[BLOCKED: #17]** |
 
@@ -175,10 +175,10 @@ Fixed subsection shape (mirrors issue #16 required outputs):
 - 3.4 Identity, versioning, provenance, authority semantics
 - 3.5 Lifecycle states and transition constraints
 - 3.6 Graph integrity rules
-- 3.7 Knowledge Gravity metadata and update rules *(also blocked on AC-0001
-  landing)*
-- 3.8 Engineering Genome membership and evolution *(also blocked on AC-0002
-  landing)*
+- 3.7 Knowledge Gravity metadata and update rules *(AC-0001 landed as a
+  proposal; also awaiting its adoption decision)*
+- 3.8 Engineering Genome membership and evolution *(AC-0002 landed as a
+  proposal; also awaiting its adoption decision)*
 - 3.9 Query semantics (provenance, impact, contradiction, authority, reuse)
 - 3.10 AC-0005 / AC-0006 adopt–modify–reject decisions
 
@@ -389,12 +389,23 @@ ideas at the moment of enthusiasm.
   belongs in the Constitution, that is an Art. XII amendment with its own
   procedure.
 
-**Current registry:** AC-0001 and AC-0002 have landed as lifecycle-state-1
-proposals (`concepts/AC-0001-knowledge-gravity.md`,
-`concepts/AC-0002-engineering-genome.md`); they may not enter state 2 until
-the Principal reviews and records an adoption decision. AC-0003…AC-0006 are
-named candidates awaiting artifacts. TARP-0001 has landed as a proposal
-(`TARP-0001-traceability-protocol.md`); it may not take effect until adopted.
+**Proposed governance decision GD-P1 — applicability to Foundational
+Concepts.** This section was written for Architectural Candidates (chain
+layer 4). Whether the same lifecycle formally governs **Foundational
+Concepts** (chain layer 2 — AC-0001, AC-0002) has never been decided; the
+landed concept proposals *assume* it does, and flag that assumption. The
+proposal: **the §7 lifecycle governs layer-2 Foundational Concepts and
+Engineering Genome membership exactly as it governs layer-4 candidates.**
+Alternatives the Principal may prefer: a stricter procedure for layer 2
+(closer to Art. XII amendment discipline, since concepts sit directly under
+the Constitution), or a distinct lightweight track. Until decided, no
+lifecycle claim about a Foundational Concept is enforceable. Decision owner:
+the Principal (Art. III).
+
+**Current registry:** AC-0001 and AC-0002 have landed as proposals (state 1;
+see §0.1) with every rule labeled supported/reconstructed/proposed;
+AC-0003…AC-0006 remain named candidates awaiting artifacts and cannot enter
+state 2 until state 1 is satisfied (§10 item 1).
 
 ## 8. Traceability
 
@@ -403,9 +414,11 @@ Architectural Principles → Patterns → Implementations. Every durable
 architectural statement must be traceable along explicit relationships
 (issue #16 acceptance criterion).*
 
-**[UNBLOCKED — TARP-0001 proposal landed: see `TARP-0001-traceability-protocol.md`.
-The chain and rules are proposed; they require Principal adoption before
-taking effect. §3/§4 remain blocked on #16/#17 closure.]**
+**[PARTIALLY UNBLOCKED: TARP-0001 landed as a proposed protocol
+([`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md))
+defining the chain and review rules. This section finalizes after (a) the
+Principal's adoption decision on that proposal and (b) issue #16 fixes the
+relationship semantics a "trace" is made of.]**
 
 ## 9. Safety
 
@@ -459,9 +472,10 @@ the posture is buildable, not the posture itself.
 
 *Sequencing to v2-final:*
 
-1. ~~Land the missing foundational artifacts (AC-0001, AC-0002, TARP-0001,
-   candidate texts AC-0003…AC-0006)~~ — **AC-0001, AC-0002, TARP-0001 proposals
-   landed; AC-0003…AC-0006 still need artifacts** — unblocks §3.7, §3.8, §7, §8
+1. Land the missing foundational artifacts — **partially done**: AC-0001,
+   AC-0002, and TARP-0001 landed as proposals (adoption decisions pending);
+   candidate texts AC-0003…AC-0006 and the Upward Compatibility Rule still
+   unlanded
 2. Close issue #16 (ontology) — unblocks §3, §4.3
 3. Close issue #17 (Runtime Domain) — unblocks §4.2, §5.5, §6
 4. ~~Fill §1, §2, §5.1–5.4, §5.6, §7, §9~~ — **done** (this revision)
@@ -470,10 +484,13 @@ the posture is buildable, not the posture itself.
 
 ## 11. Open risks and reopening conditions
 
-- **R1 — Concept drift before landing:** Knowledge Gravity / Engineering
-  Genome are cited across issues but defined nowhere durable; every citation
-  is currently unverifiable. *Reopen §3/§7/§8 if the landed definitions differ
-  from issue-text usage.*
+- **R1 — Reconstruction risk (updated):** Knowledge Gravity, Engineering
+  Genome, and TARP-0001 now exist as landed *reconstructions* from issue-text
+  usage, awaiting Principal adoption decisions. The original drift risk is
+  narrowed but not closed: the reconstructions may not match the Principal's
+  intent, and issue #17 already treats AC-0001/0002 as "approved" without a
+  recorded decision. *Reopen §3/§7/§8 if the adoption review corrects the
+  reconstructions; resolve the approval-status discrepancy at that review.*
 - **R2 — Platform/spec conflation:** the shipped platform's seams look like
   the candidate principles; treating shipped code as proof of adoption would
   promote candidates without governance. *Reopen §0.2 if any engine section
