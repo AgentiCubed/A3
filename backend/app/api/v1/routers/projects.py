@@ -24,10 +24,12 @@ from app.models.project import (
 )
 from app.models.risk import Decision, Risk
 from app.models.user import User
+from app.orchestration.engines import get_workflow_engine
 from app.orchestration.state_machine.machine import IllegalTransition
 from app.schemas.agent import AssignRequest
 from app.schemas.approval import ApprovalDecision, ApprovalResponse
 from app.schemas.execution import (
+    DispatchAcceptedResponse,
     DispatchRequest,
     DispatchResultResponse,
     EvaluationResponse,
@@ -257,7 +259,10 @@ async def assign_task_agent(
 
 
 # ── Execution (dispatch, history, reassignment) ───────────────────────────
-@router.post("/{project_id}/tasks/{task_id}/dispatch", response_model=DispatchResultResponse)
+@router.post(
+    "/{project_id}/tasks/{task_id}/dispatch",
+    response_model=DispatchResultResponse | DispatchAcceptedResponse,
+)
 async def dispatch_task(
     project_id: uuid.UUID,
     task_id: uuid.UUID,
@@ -265,6 +270,13 @@ async def dispatch_task(
     session: DbSession,
     user: TaskEditor,
 ):
+    """Dispatch a task to its assigned agent.
+
+    With WORKFLOW_ENGINE_BACKEND=celery (compose/prod) the task is queued
+    through the WorkflowEngine port and this returns immediately with
+    DispatchAcceptedResponse — the worker executes it. In inline mode
+    (dev/tests) execution runs in-request and the full result is returned.
+    """
     project = await _load_project(session, user, project_id)
     tasks = await task_service.list_tasks(session, project.id)
     task = next((t for t in tasks if t.id == task_id), None)
@@ -272,11 +284,50 @@ async def dispatch_task(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
     evaluation_cfg = None
     if req.rubric is not None or req.evaluator_agent_id is not None:
+        if req.evaluator_agent_id is not None and req.evaluator_agent_id == task.assigned_agent_id:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "evaluator agent must differ from the executor (executor/evaluator separation)",
+            )
         evaluation_cfg = execution_service.EvaluationConfig(
             rubric_specs=req.rubric or [],
             evaluator_agent_id=req.evaluator_agent_id,
             max_remediations=req.max_remediations,
         )
+
+    engine = get_workflow_engine()
+    if engine is not None:
+        try:
+            await execution_service.queue_task(
+                session, task=task, actor_id=user.id, actor_type=ActorType.USER
+            )
+        except execution_service.NotAssigned as exc:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "task has no assigned agent"
+            ) from exc
+        except execution_service.NotExecutable as exc:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned agent is not an AI agent"
+            ) from exc
+        except IllegalTransition as exc:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+        # Commit BEFORE submitting so the worker sees the QUEUED state.
+        await session.commit()
+        params = execution_service.build_dispatch_params(
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+            evaluation=evaluation_cfg,
+        )
+        handle = engine.submit_execution(task.id, params)
+        return DispatchAcceptedResponse(
+            task_id=task.id,
+            status=task.status,
+            engine=engine.name,
+            engine_handle=handle,
+        )
+
     try:
         result = await execution_service.execute_task(
             session,

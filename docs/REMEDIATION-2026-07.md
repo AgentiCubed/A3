@@ -93,6 +93,19 @@ documents outrun our enforcement.
   execution completes and the execution row is written by the worker path;
   CI includes one real end-to-end dispatch through Celery against Redis
   (the CI services already exist).
+- **Status: DELIVERED.** Proof, per the §7 standing rule:
+  `tests/integration/test_dispatch_spine.py` (hermetic acceptance: dispatch
+  returns with the task QUEUED and zero execution rows; the worker
+  entrypoint then completes it with the exact captured params) and
+  `tests/integration/test_celery_broker_smoke.py` + the CI "Celery spine
+  smoke" step (HTTP dispatch → real Redis → real worker subprocess → real
+  Postgres → polled completion). Compose api now sets
+  `WORKFLOW_ENGINE_BACKEND=celery`; inline remains the dev/test default,
+  returning the full result as before. Found-and-fixed along the way: the
+  deployed worker never registered `execution.run` at boot (`celery_app`
+  lacked `include=["app.workers.tasks"]`), so the pre-existing worker
+  container could never have executed a task message — a candidate Failure
+  Record for the knowledge system.
 
 ### WS-2 — Dependency-aware scheduler
 *Clears claim 4. Turns one-shot dispatch into a loop.*

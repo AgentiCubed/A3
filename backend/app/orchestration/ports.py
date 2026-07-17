@@ -84,10 +84,16 @@ class EngineStatus:
 
 @runtime_checkable
 class WorkflowEngine(Protocol):
-    """Submit and track durable task execution. Celery now, Temporal later."""
+    """Submit and track durable task execution. Celery now, Temporal later.
 
-    def submit_execution(self, execution_id: UUID) -> str: ...
-    def signal_cancel(self, execution_id: UUID) -> None: ...
+    ``work_id`` identifies the schedulable unit — the **Task** id in the MVP
+    (execution-attempt rows are created by the worker as it runs). ``params``
+    carries the JSON-safe dispatch options (attempts, timeout, evaluation
+    config, actor) so the worker runs with the caller's exact intent.
+    """
+
+    def submit_execution(self, work_id: UUID, params: dict[str, Any] | None = None) -> str: ...
+    def signal_cancel(self, handle: str) -> None: ...
     def get_status(self, handle: str) -> EngineStatus: ...
 
 

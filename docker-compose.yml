@@ -34,6 +34,7 @@ services:
       POSTGRES_HOST: db
       REDIS_URL: redis://redis:6379/0
       EVENT_BUS_BACKEND: redis
+      WORKFLOW_ENGINE_BACKEND: celery
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
