@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>VERBAL KOMBAT — Debate Decider</title>
+</head>
+<body>
+<!-- ARTIFACT-BODY-START -->
+<style>
+  :root{
+    --ink:#0B0503;          /* ember black ground */
+    --blood:#FF3B2F;        /* accent */
+    --blood-dim:#8f1f18;
+    --gold:#F5A623;         /* health / titles */
+    --gold-dim:#7a5412;
+    --jade:#3ECF8E;         /* verified fact */
+    --violet:#C05CFF;       /* fallacy */
+    --bone:#EFE6CF;         /* parchment */
+    --smoke:#c9b9a6;        /* warm grey text on dark */
+    --smoke-dim:#7d7061;
+    --panel:#170c08;
+    --panel-2:#221108;
+    --disp:'Haettenschweiler','Impact','Arial Narrow',system-ui,sans-serif;
+    --mono:ui-monospace,'Cascadia Mono','Menlo','Courier New',monospace;
+    --serif:'Iowan Old Style',Georgia,'Times New Roman',serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none !important}
+  html,body{height:100%}
+  body{
+    background:var(--ink);
+    color:var(--smoke);
+    font-family:var(--mono);
+    font-size:15px;
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+  /* CRT scanlines over everything except the transcript */
+  .crt::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:90;
+    background:repeating-linear-gradient(to bottom,transparent 0 2px,rgba(0,0,0,.18) 2px 4px);
+    mix-blend-mode:multiply;
+  }
+  .screen{display:none;min-height:100vh;flex-direction:column}
+  .screen.on{display:flex}
+  .wrap{width:min(1060px,94vw);margin:0 auto;flex:1;display:flex;flex-direction:column}
+
+  h1,h2,h3,.disp{font-family:var(--disp);font-weight:400;letter-spacing:.04em;text-wrap:balance}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  input[type=text]{
+    width:100%;background:var(--panel);border:1px solid var(--gold-dim);color:var(--bone);
+    font-family:var(--mono);font-size:15px;padding:.65em .8em;border-radius:2px;
+  }
+  input[type=text]::placeholder{color:var(--smoke-dim)}
+  .label{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:.4em}
+
+  .btn{
+    font-family:var(--disp);font-size:clamp(18px,2.2vw,24px);letter-spacing:.08em;text-transform:uppercase;
+    padding:.5em 1.4em;border:2px solid var(--blood);color:var(--bone);background:linear-gradient(180deg,#3a120c,#1c0805);
+    border-radius:3px;transition:transform .07s ease,box-shadow .07s ease;
+  }
+  .btn:hover{box-shadow:0 0 18px rgba(255,59,47,.45);transform:translateY(-1px)}
+  .btn:active{transform:translateY(1px)}
+  .btn[disabled]{opacity:.35;cursor:not-allowed;box-shadow:none;transform:none}
+  .btn.gold{border-color:var(--gold);background:linear-gradient(180deg,#3a2a0c,#1c1205)}
+  .btn.ghost{border-color:var(--smoke-dim);background:transparent;font-size:15px;font-family:var(--mono);letter-spacing:.12em;padding:.6em 1.1em}
+
+  /* ---------- TITLE ---------- */
+  #s-title{justify-content:center;align-items:center;text-align:center;gap:2.2rem;padding:6vh 1rem}
+  .logo{
+    font-family:var(--disp);font-size:clamp(56px,11vw,150px);line-height:.9;text-transform:uppercase;
+    color:var(--blood);
+    text-shadow:0 0 6px rgba(255,59,47,.6),0 0 40px rgba(255,59,47,.28),4px 4px 0 #2a0300;
+  }
+  .logo em{font-style:normal;color:var(--gold);text-shadow:0 0 6px rgba(245,166,35,.6),0 0 40px rgba(245,166,35,.25),4px 4px 0 #241300}
+  .tagline{font-family:var(--mono);letter-spacing:.34em;text-transform:uppercase;font-size:clamp(11px,1.6vw,14px);color:var(--smoke)}
+  .coin{animation:blink 1.2s steps(2,start) infinite;font-size:13px;letter-spacing:.28em;color:var(--gold)}
+  @keyframes blink{50%{opacity:0}}
+  .title-rules{max-width:52ch;font-size:13px;color:var(--smoke-dim)}
+  .title-rules b{color:var(--jade);font-weight:400}
+  .title-rules i{font-style:normal;color:var(--violet)}
+
+  /* ---------- SELECT ---------- */
+  .bar{padding:1.1rem 0;display:flex;align-items:baseline;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  .bar h2{font-size:clamp(26px,4vw,44px);text-transform:uppercase;color:var(--gold)}
+  .bar .sub{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--smoke-dim)}
+  .roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding-bottom:1rem}
+  .fcard{
+    border:1px solid #35190d;background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    padding:.9rem .6rem;text-align:center;border-radius:3px;display:flex;flex-direction:column;gap:.3rem;align-items:center;
+    transition:border-color .1s,box-shadow .1s;
+  }
+  .fcard:hover{border-color:var(--gold)}
+  .fcard.pick1{border-color:var(--blood);box-shadow:0 0 0 1px var(--blood),0 0 16px rgba(255,59,47,.35)}
+  .fcard.pick2{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 16px rgba(245,166,35,.35)}
+  .fcard .glyph{font-size:34px;line-height:1;filter:drop-shadow(0 3px 3px rgba(0,0,0,.6))}
+  .fcard .fname{font-family:var(--disp);font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:var(--bone)}
+  .fcard .ftag{font-size:10.5px;color:var(--smoke-dim);letter-spacing:.05em}
+  .fcard .fcat{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-dim);margin-top:.15rem}
+  .pickslot{font-size:10px;letter-spacing:.2em;height:14px}
+  .pick1 .pickslot{color:var(--blood)}
+  .pick2 .pickslot{color:var(--gold)}
+  .customrow{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;padding:1rem;border:1px dashed #35190d;border-radius:3px;margin-bottom:1rem}
+  .selfoot{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 0 2rem;flex-wrap:wrap}
+
+  /* ---------- SETUP ---------- */
+  #s-setup .wrap{justify-content:center;max-width:760px;gap:1.2rem;padding:3rem 0}
+  .vsline{display:flex;align-items:center;justify-content:center;gap:1.2rem;font-family:var(--disp);font-size:clamp(22px,3.4vw,36px);text-transform:uppercase}
+  .vsline .p1{color:var(--blood)} .vsline .p2{color:var(--gold)}
+  .vsline .vs{color:var(--smoke-dim);font-size:.6em}
+  .stancegrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:640px){.stancegrid{grid-template-columns:1fr}.customrow{grid-template-columns:1fr}}
+  .suggest{display:flex;gap:8px;flex-wrap:wrap}
+  .suggest button{font-size:11.5px;border:1px solid #3a2a14;color:var(--smoke);padding:.35em .7em;border-radius:20px}
+  .suggest button:hover{border-color:var(--gold);color:var(--gold)}
+  .setupfoot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  .modew{display:flex;gap:8px}
+  .modew button{font-size:12px;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--smoke-dim);padding:.5em .9em;border-radius:2px;color:var(--smoke-dim)}
+  .modew button.sel{border-color:var(--jade);color:var(--jade)}
+
+  /* ---------- ARENA ---------- */
+  #s-arena .wrap{padding:1rem 0 1.5rem;gap:.8rem}
+  .hud{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center}
+  .hpside{display:flex;flex-direction:column;gap:4px}
+  .hpname{font-family:var(--disp);font-size:clamp(14px,2vw,20px);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between;gap:.5rem}
+  .hpside.right .hpname{flex-direction:row-reverse}
+  .hpname .who1{color:var(--blood)} .hpname .who2{color:var(--gold)}
+  .cred{font-size:10px;letter-spacing:.18em;color:var(--smoke-dim);align-self:center}
+  .hpbar{height:20px;border:2px solid #000;outline:1px solid #4a2c12;background:#2a0703;position:relative;overflow:hidden}
+  .hpfill{position:absolute;inset:0;background:linear-gradient(180deg,#ffd76b,var(--gold) 45%,#b96f10);transition:width .35s cubic-bezier(.2,.8,.3,1)}
+  .hpside.right .hpfill{right:0;left:auto}
+  .hpbar .chip{position:absolute;inset:0;background:linear-gradient(180deg,#ff8d84,var(--blood) 45%,#7e120a);transition:width .9s ease .25s;opacity:.55}
+  .hpside.right .chip{right:0;left:auto}
+  .meterbar{height:6px;background:#1b1208;border:1px solid #000;position:relative;overflow:hidden}
+  .meterfill{position:absolute;inset:0;background:var(--violet);transition:width .3s}
+  .hpside.right .meterfill{right:0;left:auto}
+  .meterbar.full .meterfill{background:linear-gradient(90deg,var(--violet),#fff,var(--violet));animation:pulse .5s linear infinite alternate}
+  @keyframes pulse{to{filter:brightness(1.6)}}
+  .roundpips{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:86px}
+  .roundpips .rlabel{font-family:var(--disp);font-size:22px;color:var(--bone);letter-spacing:.1em}
+  .pips{display:flex;gap:6px}
+  .pip{width:12px;height:12px;border-radius:50%;border:1px solid var(--smoke-dim);background:transparent}
+  .pip.w1{background:var(--blood);border-color:var(--blood)}
+  .pip.w2{background:var(--gold);border-color:var(--gold)}
+  .timer{font-size:10px;letter-spacing:.3em;color:var(--smoke-dim)}
+
+  .stage{
+    position:relative;border:1px solid #35190d;border-radius:4px;min-height:300px;
+    background:
+      radial-gradient(ellipse 90% 55% at 50% 108%,#4a1c07 0%,transparent 60%),
+      radial-gradient(ellipse 60% 40% at 50% -10%,#2a1206 0%,transparent 70%),
+      linear-gradient(180deg,#120704 0%,#1b0a04 70%,#241005 100%);
+    display:grid;grid-template-columns:1fr 1fr;align-items:end;overflow:hidden;
+  }
+  .stage::before{content:"";position:absolute;left:0;right:0;bottom:0;height:26%;
+    background:repeating-linear-gradient(90deg,transparent 0 46px,rgba(0,0,0,.25) 46px 48px),linear-gradient(180deg,#2b1305,#1a0a03);
+    border-top:1px solid #4a2410}
+  .fighter{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:end;padding:1.4rem 0 2.2rem;z-index:2}
+  .fglyph{font-size:clamp(64px,11vw,110px);line-height:1;filter:drop-shadow(0 14px 10px rgba(0,0,0,.7))}
+  .fighter .fstance{max-width:26ch;text-align:center;font-size:11px;color:var(--smoke-dim);margin-top:.6rem;line-height:1.4}
+  .fighter.hit .fglyph{animation:reel .38s ease}
+  .fighter.attack .fglyph{animation:lunge .3s ease}
+  .fighter.p2side.attack .fglyph{animation:lungeR .3s ease}
+  .fighter.ko .fglyph{transform:rotate(90deg) translateX(18px);opacity:.55;transition:transform .5s,opacity .5s}
+  @keyframes reel{30%{transform:translateX(0) rotate(0)}55%{transform:translateX(14px) rotate(9deg)}100%{transform:none}}
+  .p1side.hit .fglyph{animation-name:reelL}
+  @keyframes reelL{55%{transform:translateX(-14px) rotate(-9deg)}100%{transform:none}}
+  @keyframes lunge{50%{transform:translateX(26px)}}
+  @keyframes lungeR{50%{transform:translateX(-26px)}}
+  .stage.shake{animation:shake .3s linear}
+  @keyframes shake{25%{transform:translate(4px,-3px)}50%{transform:translate(-4px,3px)}75%{transform:translate(3px,2px)}}
+
+  .dmgfloat{position:absolute;top:26%;font-family:var(--disp);font-size:34px;pointer-events:none;animation:rise 1s ease forwards;z-index:5}
+  .dmgfloat.solid{color:var(--jade);text-shadow:0 0 12px rgba(62,207,142,.7)}
+  .dmgfloat.foul{color:var(--violet);text-shadow:0 0 12px rgba(192,92,255,.7)}
+  @keyframes rise{to{transform:translateY(-46px);opacity:0}}
+
+  .announce{
+    position:absolute;left:0;right:0;top:34%;text-align:center;z-index:6;pointer-events:none;
+    font-family:var(--disp);font-size:clamp(30px,6vw,64px);text-transform:uppercase;letter-spacing:.06em;
+    color:var(--blood);text-shadow:0 0 10px rgba(255,59,47,.7),3px 3px 0 #200200;opacity:0;
+  }
+  .announce.show{animation:slam .8s ease forwards}
+  .announce.goldtxt{color:var(--gold);text-shadow:0 0 10px rgba(245,166,35,.7),3px 3px 0 #201200}
+  @keyframes slam{0%{opacity:0;transform:scale(2.4)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+
+  .verdictflag{
+    align-self:center;font-size:11px;letter-spacing:.26em;text-transform:uppercase;height:18px;text-align:center;
+  }
+  .verdictflag.solid{color:var(--jade)} .verdictflag.foul{color:var(--violet)}
+
+  .ticker{
+    border:1px solid #35190d;background:rgba(10,4,2,.82);border-radius:4px;padding:.9rem 1.1rem;min-height:120px;
+    display:flex;flex-direction:column;gap:.55rem;justify-content:flex-end;
+  }
+  .tline{font-size:13.5px;max-width:78ch}
+  .tline .spk{font-family:var(--disp);letter-spacing:.08em;font-size:14px;margin-right:.5em;text-transform:uppercase}
+  .tline.p1 .spk{color:var(--blood)} .tline.p2 .spk{color:var(--gold)}
+  .tline.sys{color:var(--smoke-dim);font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .tline .flag{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;margin-left:.6em}
+  .tline .flag.solid{color:var(--jade)} .tline .flag.foul{color:var(--violet)}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:stretch}
+  .movebtn{
+    flex:1 1 150px;max-width:230px;border:2px solid #4a2c12;background:linear-gradient(180deg,#241105,#150803);
+    padding:.7rem .8rem;border-radius:3px;text-align:left;display:flex;flex-direction:column;gap:2px;
+    transition:border-color .1s,box-shadow .1s;
+  }
+  .movebtn:hover:not([disabled]){border-color:var(--gold);box-shadow:0 0 14px rgba(245,166,35,.25)}
+  .movebtn[disabled]{opacity:.4;cursor:not-allowed}
+  .movebtn .mn{font-family:var(--disp);font-size:19px;text-transform:uppercase;letter-spacing:.05em;color:var(--bone)}
+  .movebtn .md{font-size:10.5px;color:var(--smoke-dim);letter-spacing:.04em}
+  .movebtn .mr{font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+  .movebtn[data-risk=low] .mr{color:var(--jade)}
+  .movebtn[data-risk=med] .mr{color:var(--gold)}
+  .movebtn[data-risk=high] .mr{color:var(--blood)}
+  .movebtn.special{border-color:var(--violet)}
+  .movebtn.special .mn{color:var(--violet)}
+  .movebtn.special:hover:not([disabled]){box-shadow:0 0 14px rgba(192,92,255,.35)}
+  .cpuhint{align-self:center;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--smoke-dim);padding:.4rem 0}
+  .finishwrap{display:flex;justify-content:center;padding:.4rem 0}
+
+  /* ---------- TRANSCRIPT ---------- */
+  #s-transcript{background:#151009}
+  #s-transcript .wrap{padding:3rem 0 4rem;max-width:820px}
+  .doc{
+    background:linear-gradient(180deg,#f6efdc,var(--bone) 12%,#e6d9ba 100%);
+    color:#2b2117;font-family:var(--serif);padding:clamp(1.6rem,5vw,3.5rem);border-radius:2px;
+    box-shadow:0 30px 60px rgba(0,0,0,.6);
+  }
+  .doc header{text-align:center;border-bottom:3px double #2b2117;padding-bottom:1.2rem;margin-bottom:1.4rem}
+  .doc .docword{font-family:var(--disp);font-size:clamp(30px,5vw,46px);letter-spacing:.12em;text-transform:uppercase;color:#7e120a}
+  .doc .docsub{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#6b5a41;margin-top:.3rem}
+  .doc dl{display:grid;grid-template-columns:auto 1fr;gap:.25rem 1rem;font-size:14.5px;margin:1rem 0 1.4rem}
+  .doc dt{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:#6b5a41;align-self:baseline;padding-top:.2em}
+  .doc dd{font-weight:600}
+  .doc h3{font-size:13px;letter-spacing:.26em;text-transform:uppercase;border-bottom:1px solid #b9a67f;padding-bottom:.35rem;margin:1.6rem 0 .8rem;color:#5a3d1f;font-family:var(--serif);font-weight:700}
+  .doc .oplead{font-size:17px;line-height:1.55;font-style:italic}
+  .doc ul{list-style:none;display:flex;flex-direction:column;gap:.45rem;font-size:14.5px}
+  .doc ul li{padding-left:1.2rem;position:relative;max-width:65ch}
+  .doc ul li::before{content:"▸";position:absolute;left:0;color:#7e120a}
+  .doc .dissent li::before{color:#6b5a41}
+  .doc .exchange{font-size:13.5px;max-width:68ch;margin-bottom:.5rem}
+  .doc .exchange b{font-variant:small-caps;letter-spacing:.03em}
+  .doc .exchange .xflag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-left:.4em}
+  .doc .exchange .xflag.solid{color:#1d7a4f} .doc .exchange .xflag.foul{color:#7a3b9e}
+  .doc .exchange.sysx{color:#8a765a;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;margin:.7rem 0 .5rem}
+  .doc footer{margin-top:2rem;border-top:1px solid #b9a67f;padding-top:.8rem;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a765a;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+  .docactions{display:flex;gap:10px;justify-content:center;padding:1.6rem 0;flex-wrap:wrap}
+
+  @media print{
+    body{background:#fff}
+    .crt::after{display:none}
+    .screen{display:none !important}
+    #s-transcript{display:block !important;background:#fff}
+    .doc{box-shadow:none;background:#fff}
+    .docactions{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+    .coin{animation:none}
+  }
+</style>
+
+<div class="crt"></div>
+
+<!-- TITLE -->
+<section class="screen on" id="s-title">
+  <div class="logo">Verbal<br><em>Kombat</em></div>
+  <div class="tagline">Settle it in the arena of ideas</div>
+  <p class="title-rules">Two minds. One question. Three rounds.
+    <b>Facts and sound logic land as hits.</b> <i>Fallacies get blocked — and cost you credibility.</i>
+    The loser eats a rhetorical fatality; the argument of record is printed for history.</p>
+  <button class="btn" id="btn-start">Insert Opinion</button>
+  <div class="coin">◉ press start · no coins required</div>
+</section>
+
+<!-- SELECT -->
+<section class="screen" id="s-select">
+  <div class="wrap">
+    <div class="bar">
+      <h2>Choose Your Fighters</h2>
+      <span class="sub" id="pickstate">Pick Fighter 1</span>
+    </div>
+    <div class="roster" id="roster"></div>
+    <div class="customrow">
+      <div><div class="label">Summon anyone (custom fighter)</div>
+        <input type="text" id="cust-name" placeholder="e.g. Beyoncé, Aristotle, your uncle Dave…"></div>
+      <div><div class="label">Their title (optional)</div>
+        <input type="text" id="cust-tag" placeholder="e.g. Queen of the charts"></div>
+      <button class="btn ghost" id="btn-cust">Add to roster</button>
+    </div>
+    <div class="selfoot">
+      <button class="btn ghost" id="btn-clearpicks">Clear picks</button>
+      <button class="btn gold" id="btn-toSetup" disabled>Set the stakes →</button>
+    </div>
+  </div>
+</section>
+
+<!-- SETUP -->
+<section class="screen" id="s-setup">
+  <div class="wrap">
+    <div class="vsline"><span class="p1" id="su-n1"></span><span class="vs">VS</span><span class="p2" id="su-n2"></span></div>
+    <div>
+      <div class="label">The question on the table</div>
+      <input type="text" id="topic" placeholder="e.g. What is the best restaurant in LA?">
+    </div>
+    <div class="suggest" id="suggest"></div>
+    <div class="stancegrid">
+      <div><div class="label" id="st1-label">Fighter 1's position</div>
+        <input type="text" id="stance1" placeholder="e.g. In-N-Out. Obviously."></div>
+      <div><div class="label" id="st2-label">Fighter 2's position</div>
+        <input type="text" id="stance2" placeholder="e.g. A hidden taco truck on Venice Blvd."></div>
+    </div>
+    <div class="setupfoot">
+      <div class="modew" role="group" aria-label="Who controls fighter 1">
+        <button id="mode-play" class="sel">You control Fighter 1</button>
+        <button id="mode-watch">Spectate (CPU vs CPU)</button>
+      </div>
+      <button class="btn" id="btn-fight">FIGHT →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ARENA -->
+<section class="screen" id="s-arena">
+  <div class="wrap">
+    <div class="hud">
+      <div class="hpside">
+        <div class="hpname"><span class="who1" id="hud-n1"></span><span class="cred" id="cred1"></span></div>
+        <div class="hpbar"><div class="chip" id="chip1"></div><div class="hpfill" id="hp1"></div></div>
+        <div class="meterbar" id="mwrap1"><div class="meterfill" id="meter1"></div></div>
+      </div>
+      <div class="roundpips">
+        <div class="rlabel" id="roundlabel">ROUND 1</div>
+        <div class="pips" id="pips"></div>
+        <div class="timer">DEBATE IN PROGRESS</div>
+      </div>
+      <div class="hpside right">
+        <div class="hpname"><span class="who2" id="hud-n2"></span><span class="cred" id="cred2"></span></div>
+        <div class="hpbar"><div class="chip" id="chip2"></div><div class="hpfill" id="hp2"></div></div>
+        <div class="meterbar" id="mwrap2"><div class="meterfill" id="meter2"></div></div>
+      </div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="announce" id="announce"></div>
+      <div class="fighter p1side" id="fig1"><div class="fglyph" id="glyph1"></div><div class="fstance" id="fs1"></div></div>
+      <div class="fighter p2side" id="fig2"><div class="fglyph" id="glyph2"></div><div class="fstance" id="fs2"></div></div>
+    </div>
+
+    <div class="verdictflag" id="vflag"></div>
+    <div class="ticker" id="ticker" aria-live="polite"></div>
+
+    <div class="controls" id="controls"></div>
+    <div class="cpuhint" id="cpuhint" hidden>opponent is thinking…</div>
+    <div class="finishwrap" id="finishwrap" hidden>
+      <button class="btn" id="btn-fatality">EXECUTE FATALITY</button>
+    </div>
+    <div class="finishwrap" id="donewrap" hidden>
+      <button class="btn gold" id="btn-transcript">View the official transcript →</button>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSCRIPT -->
+<section class="screen" id="s-transcript">
+  <div class="wrap">
+    <div class="doc" id="doc"></div>
+    <div class="docactions">
+      <button class="btn ghost" id="btn-print">Print</button>
+      <button class="btn ghost" id="btn-download">Download .txt</button>
+      <button class="btn ghost" id="btn-rematch">Rematch</button>
+      <button class="btn gold" id="btn-newfight">New fighters</button>
+    </div>
+  </div>
+</section>
+
+<script>
+"use strict";
+/* ============================================================
+   VERBAL KOMBAT — debate decider, arcade rules
+   Hits = facts & sound logic. Misses = named logical fallacies.
+   ============================================================ */
+
+const ROSTER = [
+  {id:"socrates", name:"Socrates", tag:"The Gadfly of Athens", cat:"Philosophy", glyph:"🏛️",
+   logic:9, charisma:6, aggro:3,
+   lex:{authority:"forty years of relentless questioning in the agora", realm:"first principles"},
+   zingers:["I would refute you, but you are doing such a fine job of it yourself.",
+            "The only thing you know is nothing — and unlike me, you did not do it on purpose."],
+   special:{name:"SOCRATIC METHOD", line:t=>`Define your terms. Now define THOSE terms. Notice how, four questions deep, your entire position on ${t} rests on a word you cannot explain?`},
+   fatality:{name:"THE UNANSWERABLE QUESTION", line:(t,s)=>`One final question: if you are so certain, why can you not answer? …No? Then the record shall show: ${s}. The unexamined take was not worth having.`}},
+
+  {id:"nietzsche", name:"Nietzsche", tag:"Prophet of the Hammer", cat:"Philosophy", glyph:"⚡",
+   logic:7, charisma:7, aggro:9,
+   lex:{authority:"a decade of staring into the abyss until it filed a restraining order", realm:"the will to power"},
+   zingers:["Your argument is not even wrong — it is merely comfortable.",
+            "You call that a conviction? Convictions are prisons, and yours doesn't even lock."],
+   special:{name:"ABYSS GAZE", line:t=>`You gazed into ${t} and blinked. I gazed back until it apologized. That which does not refute me makes my argument stronger.`},
+   fatality:{name:"GOD IS DEAD (AND SO IS YOUR ARGUMENT)", line:(t,s)=>`Your position is dead. It remains dead. And you have killed it — with your own premises. Thus spoke the record: ${s}.`}},
+
+  {id:"einstein", name:"Einstein", tag:"The Relativity Heavyweight", cat:"Science", glyph:"🌌",
+   logic:10, charisma:6, aggro:3,
+   lex:{authority:"the entire observable universe, which I checked", realm:"spacetime"},
+   zingers:["Your argument travels slower than light and still arrives before your evidence.",
+            "Everything should be made as simple as possible — your take went further."],
+   special:{name:"THOUGHT EXPERIMENT", line:t=>`Imagine riding a beam of light alongside your claim about ${t}. From that frame, one thing becomes obvious: it never gets anywhere.`},
+   fatality:{name:"RELATIVITY CHECK", line:(t,s)=>`Time dilates, mass bends light, and yet your position could not survive one reference frame shift. E = mc², and the conclusion equals: ${s}.`}},
+
+  {id:"curie", name:"Marie Curie", tag:"Two Nobels, Zero Patience", cat:"Science", glyph:"☢️",
+   logic:9, charisma:5, aggro:5,
+   lex:{authority:"two Nobel Prizes in two different sciences", realm:"the laboratory"},
+   zingers:["I isolated radium from a ton of rock. Isolating the flaw in your take was faster.",
+            "Nothing in life is to be feared, only understood — you appear to have chosen fear."],
+   special:{name:"DOUBLE NOBEL SLAM", line:t=>`Physics AND Chemistry agree with me on ${t}. When two entire sciences co-sign your opponent, the polite move is to concede.`},
+   fatality:{name:"RADIOACTIVE REBUTTAL", line:(t,s)=>`Your argument has a half-life, and it just expired. The decay products confirm: ${s}. Handle the truth with lead gloves.`}},
+
+  {id:"lovelace", name:"Ada Lovelace", tag:"The First Programmer", cat:"Technology", glyph:"⚙️",
+   logic:9, charisma:6, aggro:4,
+   lex:{authority:"the Analytical Engine, which I programmed before computers existed", realm:"pure algorithm"},
+   zingers:["I wrote the first program in history; you cannot even execute a syllogism.",
+            "Your reasoning has a bug in line one. Line one is your opinion."],
+   special:{name:"ANALYTICAL ENGINE", line:t=>`I have compiled your position on ${t}. Output: three unhandled contradictions and a stack overflow of wishful thinking.`},
+   fatality:{name:"INFINITE LOOP", line:(t,s)=>`while (you.argue) { you.lose(); } — the machine halts on a single true statement: ${s}. End of program.`}},
+
+  {id:"suntzu", name:"Sun Tzu", tag:"The Strategist", cat:"Strategy", glyph:"🏯",
+   logic:8, charisma:6, aggro:6,
+   lex:{authority:"two thousand years of generals quoting me correctly and CEOs quoting me badly", realm:"the battlefield"},
+   zingers:["You took the field without knowing yourself OR your enemy. The outcome was scheduled.",
+            "Appear weak when you are strong. You have mastered exactly half of this."],
+   special:{name:"ART OF WAR", line:t=>`Every debate is won before it is argued. While you rehearsed slogans about ${t}, I occupied the high ground, the definitions, and your best example.`},
+   fatality:{name:"WIN WITHOUT FIGHTING", line:(t,s)=>`The supreme art is to subdue the opponent without fighting. You defeated yourself; I merely took notes. History records: ${s}.`}},
+
+  {id:"cleopatra", name:"Cleopatra", tag:"The Last Pharaoh", cat:"Power", glyph:"🐍",
+   logic:7, charisma:10, aggro:7,
+   lex:{authority:"an empire I ran in nine languages", realm:"the throne room"},
+   zingers:["I have negotiated with Rome itself. You are not Rome. You are barely a suburb.",
+            "Empires have crumbled for less than the argument you just attempted."],
+   special:{name:"ASP DIPLOMACY", line:t=>`I charmed Caesar and outmaneuvered Octavian, so believe me when I say your position on ${t} is the least defensible territory I have ever seen.`},
+   fatality:{name:"EMPIRE COLLAPSE", line:(t,s)=>`Kingdoms fall in one of two ways: invasion, or arguing with a pharaoh. Carve it into the obelisk: ${s}. Dynasty closed.`}},
+
+  {id:"shakespeare", name:"Shakespeare", tag:"The Bard of Beatdowns", cat:"Arts", glyph:"🎭",
+   logic:7, charisma:9, aggro:6,
+   lex:{authority:"thirty-seven plays and the English language itself", realm:"the Globe"},
+   zingers:["Thou speakest an infinite deal of nothing — and at length, which is worse.",
+            "I would call thee a knave, but the audience deserves fresher material than thy argument got."],
+   special:{name:"IAMBIC ONSLAUGHT", line:t=>`Shall I compare thy take on ${t} to a summer's day? No — summer days are internally consistent.`},
+   fatality:{name:"EXIT, PURSUED BY A BEAR", line:(t,s)=>`All the world's a stage, and thy part is ended. The final act, as written: ${s}. [Exit opponent, pursued by a bear.]`}},
+
+  {id:"kanye", name:"Kanye", tag:"The Interrupter", cat:"Pop Culture", glyph:"🎤",
+   logic:5, charisma:10, aggro:9,
+   lex:{authority:"multiple classic albums and unshakable self-belief", realm:"the culture"},
+   zingers:["You got bars? I got discographies.",
+            "My confidence in this take is the most factual thing in the building."],
+   special:{name:"808s & HEARTBREAK", line:t=>`I poured my whole heart into ${t} and auto-tuned the pain. You can't fact-check a feeling this loud.`},
+   fatality:{name:"IMMA LET YOU FINISH", line:(t,s)=>`Yo, I'm really happy for you, and Imma let you finish — but this is one of the most settled debates OF ALL TIME. Of all time: ${s}.`}},
+
+  {id:"zuck", name:"Zuckerberg", tag:"The Algorithm", cat:"Technology", glyph:"🤖",
+   logic:8, charisma:3, aggro:5,
+   lex:{authority:"an A/B test across three billion users", realm:"the feed"},
+   zingers:["I ran your argument past the engagement metrics. It got zero likes. Even from bots.",
+            "Your take failed code review. The reviewer was a toaster."],
+   special:{name:"ALGORITHM STORM", line:t=>`We tested 4,096 variants of the truth about ${t}. Yours ranked below 'lizard rumor (denied)'. Shipping the winner now.`},
+   fatality:{name:"ACCOUNT DELETED", line:(t,s)=>`Your position violated the community standards of logic. Appeal denied. The timeline now displays one pinned post: ${s}.`}},
+
+  {id:"ramsay", name:"Gordon Ramsay", tag:"The Kitchen Enforcer", cat:"Food", glyph:"🔪",
+   logic:6, charisma:8, aggro:10,
+   lex:{authority:"more Michelin stars than you have working premises", realm:"the pass"},
+   zingers:["Your argument is so undercooked it just asked for a blanket.",
+            "Finally, some good rhetoric — oh wait, that was mine."],
+   special:{name:"IDIOT SANDWICH", line:t=>`What are you? An idiot sandwich. And your take on ${t}? That's the soggy bread, mate.`},
+   fatality:{name:"IT'S RAW", line:(t,s)=>`IT'S RAW! Your whole position — RAW! Send it back! The verdict is plated, seasoned, and served: ${s}. Now get out of my kitchen.`}},
+
+  {id:"serena", name:"Serena Williams", tag:"23 Grand Slams of Truth", cat:"Sports", glyph:"🎾",
+   logic:7, charisma:8, aggro:8,
+   lex:{authority:"twenty-three Grand Slam titles and match-point nerves", realm:"championship point"},
+   zingers:["That argument came over the net at 40 mph. I return serves three times faster.",
+            "You brought a warm-up rally to a championship point."],
+   special:{name:"ACE SERVE", line:t=>`128 miles per hour, right down the T of your take on ${t}. Don't move — you weren't going to reach it anyway.`},
+   fatality:{name:"MATCH POINT", line:(t,s)=>`Game. Set. Match. The umpire's card reads: ${s}. You may challenge the call, but the replay only makes it worse.`}},
+];
+
+const TOPIC_SUGGESTIONS = [
+  "What is the best restaurant in LA?",
+  "Is a hot dog a sandwich?",
+  "Should pineapple go on pizza?",
+  "Is free will an illusion?",
+  "Cats or dogs?",
+  "Is cereal a soup?",
+  "Was the moon landing humanity's greatest achievement?",
+  "Is it acceptable to recline your seat on a plane?",
+];
+
+const FALLACIES = [
+  {n:"AD HOMINEM", d:"attacks the debater, not the debate"},
+  {n:"STRAWMAN", d:"rebuts an argument nobody made"},
+  {n:"SLIPPERY SLOPE", d:"one step and civilization ends, apparently"},
+  {n:"WHATABOUTISM", d:"changes the subject under pressure"},
+  {n:"APPEAL TO EMOTION", d:"feelings deployed as footnotes"},
+  {n:"CIRCULAR REASONING", d:"true because it is true because it is"},
+  {n:"FALSE DILEMMA", d:"pretends only two options exist"},
+  {n:"BANDWAGON", d:"everyone believes it, therefore… nothing"},
+];
+
+/* Shared argument skeletons; f = fighter, o = opponent, t = topic */
+const SKELETONS = {
+  jab: [
+    (f,o,t)=>`The record is public: on the question of ${t}, the evidence lines up behind me. I cite ${f.lex.authority}.`,
+    (f,o,t)=>`Point of fact — ${f.stance} That isn't a mood, it's a measurement, verified in ${f.lex.realm}.`,
+    (f,o,t)=>`Exhibit A: ${f.stance} Cross-examine it all you like; it was true before either of us walked in.`,
+    (f,o,t)=>`Let the data speak. On ${t}, every serious source points one way — mine. ${o.name} is arguing with a scoreboard.`,
+  ],
+  hook: [
+    (f,o,t)=>`Follow the chain: if we agree on what ${t} actually requires, and we test both positions against it, only one survives. Premise, premise, conclusion — mine.`,
+    (f,o,t)=>`${o.name}'s position assumes its own conclusion. Remove the assumption and the whole case folds like a camp chair. Mine stands on ${f.lex.realm}.`,
+    (f,o,t)=>`By ${o.name}'s own logic, applied consistently, we arrive somewhere ${o.name} refuses to go. A principle you won't follow is a principle you don't hold.`,
+    (f,o,t)=>`Reductio: assume the opposite of my position. Contradiction in three steps. Therefore — ${f.stance}`,
+  ],
+  zing: [
+    (f,o,t)=>f.zingers[0],
+    (f,o,t)=>f.zingers[1],
+    (f,o,t)=>`Everything ${o.name} knows about ${t} could fit in a footnote — of a pamphlet — that nobody printed.`,
+  ],
+  foul: {
+    "AD HOMINEM":(f,o,t)=>`Oh yeah? Well ${o.name} has a stupid face and probably bad taste in everything, including ${t}.`,
+    "STRAWMAN":(f,o,t)=>`So ${o.name} basically wants to BAN ${t} entirely?? That's what I heard, and I refuse to stand for it!`,
+    "SLIPPERY SLOPE":(f,o,t)=>`First you accept ${o.name}'s take, next thing you know society COLLAPSES and we're bartering with bottle caps!`,
+    "WHATABOUTISM":(f,o,t)=>`Sure, but what about that OTHER thing?! Why is nobody talking about the other thing?!`,
+    "APPEAL TO EMOTION":(f,o,t)=>`Think of how this makes everyone FEEL! Are we really going to let facts decide something this emotional?!`,
+    "CIRCULAR REASONING":(f,o,t)=>`I'm right about ${t} because my position is the correct one, which proves I'm right!`,
+    "FALSE DILEMMA":(f,o,t)=>`Either you agree with me completely about ${t}, or you hate everything good in this world. Choose!`,
+    "BANDWAGON":(f,o,t)=>`Literally EVERYONE agrees with me on this. Ask anyone! (Do not ask anyone.)`,
+  },
+};
+
+const MOVES = {
+  jab:   {key:"jab",  name:"Jab · Evidence",     desc:"A cited fact. Safe, modest damage.",        dmg:[7,12],  risk:.10, meter:18},
+  hook:  {key:"hook", name:"Hook · Logic Chain", desc:"A syllogism to the ribs. Solid damage.",    dmg:[12,18], risk:.26, meter:26},
+  zing:  {key:"zing", name:"Haymaker · Zinger",  desc:"Go for the highlight reel. High risk.",     dmg:[19,28], risk:.46, meter:34},
+  spec:  {key:"spec", name:"SPECIAL MOVE",       desc:"Signature technique. Needs full meter.",    dmg:[27,38], risk:0,   meter:0},
+};
+
+/* ---------------- state ---------------- */
+const S = {
+  p1:null, p2:null, picking:1, custom:[],
+  topic:"", mode:"play",
+  round:1, wins:[0,0], hp:[100,100], meter:[0,0], cred:[100,100],
+  turn:0, busy:false, over:false,
+  log:[],           // {round, speaker, text, kind, flag}
+  usedLines:new Set(),
+};
+
+const $ = id=>document.getElementById(id);
+const rand=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("on"));$(id).classList.add("on");window.scrollTo(0,0)}
+
+/* ---------------- roster / select ---------------- */
+function fighterList(){return ROSTER.concat(S.custom)}
+function renderRoster(){
+  const r=$("roster");r.innerHTML="";
+  fighterList().forEach(f=>{
+    const b=document.createElement("button");
+    b.className="fcard";b.dataset.id=f.id;
+    if(S.p1===f)b.classList.add("pick1");
+    if(S.p2===f)b.classList.add("pick2");
+    b.innerHTML=`<span class="glyph">${f.glyph}</span>
+      <span class="fname">${f.name}</span>
+      <span class="ftag">${f.tag}</span>
+      <span class="fcat">${f.cat}</span>
+      <span class="pickslot">${S.p1===f?"FIGHTER 1":S.p2===f?"FIGHTER 2":""}</span>`;
+    b.addEventListener("click",()=>pickFighter(f));
+    r.appendChild(b);
+  });
+  $("pickstate").textContent = !S.p1 ? "Pick Fighter 1" : !S.p2 ? "Pick Fighter 2" : "Ready. Set the stakes →";
+  $("btn-toSetup").disabled = !(S.p1&&S.p2);
+}
+function pickFighter(f){
+  if(S.p1===f){S.p1=null}
+  else if(S.p2===f){S.p2=null}
+  else if(!S.p1)S.p1=f;
+  else if(!S.p2)S.p2=f;
+  else S.p2=f;
+  renderRoster();
+}
+function makeCustom(name,tag){
+  const base=pick(ROSTER);
+  return {id:"cust"+(S.custom.length+1),name,tag:tag||"Wildcard Challenger",cat:"Custom",glyph:"🥊",
+    logic:rand(5,9),charisma:rand(5,9),aggro:rand(4,9),
+    lex:{authority:`${name}'s undefeated record in group chats`,realm:"sheer audacity"},
+    zingers:[`${name} has forgotten more about this than you'll ever pretend to know.`,
+             `That the best you got? ${name} has heard tougher pushback from a voicemail.`],
+    special:{name:"WILDCARD GAMBIT",line:t=>`Nobody prepared for ${name} because nobody could. Here is the take on ${t} that ends the seminar.`},
+    fatality:{name:"MIC DROP",line:(t,s)=>`${name} drops the mic from a regulation height of ten thousand feet. It lands on one sentence: ${s}.`}};
+}
+
+/* ---------------- setup ---------------- */
+function toSetup(){
+  $("su-n1").textContent=S.p1.name;$("su-n2").textContent=S.p2.name;
+  $("st1-label").textContent=`${S.p1.name}'s position`;
+  $("st2-label").textContent=`${S.p2.name}'s position`;
+  const sg=$("suggest");sg.innerHTML="";
+  TOPIC_SUGGESTIONS.forEach(t=>{const b=document.createElement("button");b.textContent=t;
+    b.addEventListener("click",()=>{$("topic").value=t});sg.appendChild(b)});
+  show("s-setup");
+}
+
+/* ---------------- fight ---------------- */
+function startFight(){
+  S.topic=($("topic").value.trim()||"the matter at hand").replace(/[?!.]+$/,"");
+  S.p1.stance=finishStance($("stance1").value.trim()||`${S.p1.name} is simply correct about this.`);
+  S.p2.stance=finishStance($("stance2").value.trim()||`${S.p2.name}'s answer is the only sane one.`);
+  S.round=1;S.wins=[0,0];S.turn=0;S.over=false;S.log=[];S.usedLines.clear();
+  S.cred=[100,100];
+  $("hud-n1").textContent=S.p1.name;$("hud-n2").textContent=S.p2.name;
+  $("glyph1").textContent=S.p1.glyph;$("glyph2").textContent=S.p2.glyph;
+  $("fs1").textContent="“"+S.p1.stance+"”";$("fs2").textContent="“"+S.p2.stance+"”";
+  $("finishwrap").hidden=true;$("donewrap").hidden=true;
+  $("ticker").innerHTML="";
+  sysLog(`THE QUESTION: ${S.topic}?`);
+  sysLog(`${S.p1.name.toUpperCase()} argues: ${S.p1.stance} — ${S.p2.name.toUpperCase()} argues: ${S.p2.stance}`);
+  show("s-arena");
+  startRound();
+}
+const finishStance=s=>/[.!?…]$/.test(s)?s:s+".";
+
+function startRound(){
+  S.hp=[100,100];S.meter=[0,0];S.busy=true;S.over=false;
+  S.turn=(S.round%2===1)?0:1;   // alternate who opens each round
+  updateHud();renderPips();
+  $("roundlabel").textContent="ROUND "+S.round;
+  sysLog(`— ROUND ${S.round} —`,S.round);
+  announce("ROUND "+S.round,false,()=>{
+    announce("FIGHT!",true,()=>{S.busy=false;nextTurn()});
+  });
+}
+
+function nextTurn(){
+  if(S.over)return;
+  updateHud();
+  const isHuman = S.mode==="play" && S.turn===0;
+  renderControls(isHuman);
+  if(!isHuman){
+    $("cpuhint").hidden=false;
+    setTimeout(()=>{$("cpuhint").hidden=true;doMove(cpuChoose(S.turn))},900+Math.random()*700);
+  }
+}
+
+function cpuChoose(i){
+  const f=i===0?S.p1:S.p2;
+  if(S.meter[i]>=100)return MOVES.spec;
+  const r=Math.random()*10;
+  if(r<f.aggro*0.7)return Math.random()<.5?MOVES.zing:MOVES.hook;
+  return Math.random()<.6?MOVES.jab:MOVES.hook;
+}
+
+function renderControls(active){
+  const c=$("controls");c.innerHTML="";
+  if(S.over){return}
+  if(!active){c.innerHTML="";return}
+  [MOVES.jab,MOVES.hook,MOVES.zing,MOVES.spec].forEach(m=>{
+    const b=document.createElement("button");
+    const risky=m.key==="spec"?"NO WHIFF RISK":Math.round(m.risk*100)+"% FALLACY RISK";
+    b.className="movebtn"+(m.key==="spec"?" special":"");
+    b.dataset.risk=m.risk<=.15?"low":m.risk<=.3?"med":"high";
+    const label=m.key==="spec"?( (S.turn===0?S.p1:S.p2).special.name ):m.name;
+    b.innerHTML=`<span class="mn">${label}</span><span class="md">${m.desc}</span><span class="mr">${risky} · DMG ${m.dmg[0]}–${m.dmg[1]}</span>`;
+    if(m.key==="spec"&&S.meter[S.turn]<100)b.disabled=true;
+    b.addEventListener("click",()=>{if(!S.busy)doMove(m)});
+    c.appendChild(b);
+  });
+}
+
+function freshLine(fnArr,f,o){
+  // avoid repeating a template twice in a match when possible
+  for(let i=0;i<6;i++){
+    const fn=pick(fnArr);const line=fn(f,o,S.topic);
+    if(!S.usedLines.has(line)){S.usedLines.add(line);return line}
+  }
+  return pick(fnArr)(f,o,S.topic);
+}
+
+function doMove(m){
+  if(S.busy||S.over)return;
+  S.busy=true;renderControls(false);
+  const ai=S.turn, di=1-ai;
+  const A=ai===0?S.p1:S.p2, D=ai===0?S.p2:S.p1;
+  const figA=$( ai===0?"fig1":"fig2"), figD=$(di===0?"fig1":"fig2");
+
+  // fallacy check — logic stat trims risk
+  const risk=m.risk*(1-(A.logic-5)*0.05);
+  const whiffed=Math.random()<risk;
+
+  figA.classList.add("attack");
+  setTimeout(()=>figA.classList.remove("attack"),350);
+
+  if(whiffed){
+    const fal=pick(FALLACIES);
+    const line=SKELETONS.foul[fal.n](A,D,S.topic);
+    const selfDmg=rand(3,7);
+    S.cred[ai]=Math.max(0,S.cred[ai]-rand(6,12));
+    S.hp[ai]=Math.max(0,S.hp[ai]-selfDmg);
+    addLog(A,line,"foul",`${fal.n} — BLOCKED`);
+    flag(`${fal.n} DETECTED · ${fal.d} · BLOCKED — ${selfDmg} CREDIBILITY DAMAGE`, "foul");
+    floatDmg(ai,"BLOCKED","foul");
+    announce(fal.n+"!",false);
+    setTimeout(()=>resolveTurn(),950);
+    return;
+  }
+
+  // landed
+  let dmg=rand(m.dmg[0],m.dmg[1]);
+  if(m.key==="zing")dmg=Math.round(dmg*(1+(A.charisma-5)*0.06));
+  if(m.key==="spec"){S.meter[ai]=0}
+  else S.meter[ai]=Math.min(100,S.meter[ai]+m.meter);
+  S.meter[di]=Math.min(100,S.meter[di]+10);
+
+  const crit=Math.random()<0.12;
+  if(crit)dmg=Math.round(dmg*1.5);
+
+  const line=m.key==="spec"
+    ? A.special.line(S.topic)
+    : freshLine(SKELETONS[m.key],A,D);
+
+  S.hp[di]=Math.max(0,S.hp[di]-dmg);
+  const kind=m.key==="spec"?"special":"solid";
+  const flagTxt=m.key==="spec"?A.special.name:(m.key==="jab"?"VERIFIED FACT":m.key==="hook"?"SOUND LOGIC":"STYLE POINTS");
+  addLog(A,line,kind,flagTxt+(crit?" · CRITICAL":""));
+  flag(`${flagTxt}${crit?" — CRITICAL HIT":""} · ${dmg} DAMAGE`,"solid");
+
+  figD.classList.add("hit");
+  $("stage").classList.add("shake");
+  setTimeout(()=>{figD.classList.remove("hit");$("stage").classList.remove("shake")},420);
+  floatDmg(di,"-"+dmg,"solid");
+  if(m.key==="spec")announce(A.special.name+"!",true);
+  else if(crit)announce("CRITICAL!",false);
+
+  setTimeout(()=>resolveTurn(),950);
+}
+
+function resolveTurn(){
+  updateHud();
+  const ko=S.hp[0]===0?0:S.hp[1]===0?1:-1;
+  if(ko>=0){endRound(1-ko,ko);return}
+  S.turn=1-S.turn;S.busy=false;nextTurn();
+}
+
+function endRound(winner,loser){
+  S.wins[winner]++;
+  const W=winner===0?S.p1:S.p2;
+  const figL=$(loser===0?"fig1":"fig2");
+  figL.classList.add("ko");
+  sysLog(`${W.name.toUpperCase()} WINS ROUND ${S.round} (${S.wins[0]}–${S.wins[1]})`);
+  renderPips();renderControls(false);
+  announce(W.name.toUpperCase()+" WINS THE ROUND",winner===1,()=>{
+    figL.classList.remove("ko");
+    if(S.wins[winner]>=2){readyFatality(winner,loser)}
+    else{S.round++;startRound()}
+  });
+}
+
+function readyFatality(winner,loser){
+  S.over=true;S.pendingWin=winner;
+  announce("FINISH THEM!",false);
+  sysLog("FINISH THEM!");
+  if(S.mode==="play"&&winner===0){
+    $("finishwrap").hidden=false;
+  } else {
+    setTimeout(()=>doFatality(),1400);
+  }
+}
+
+function doFatality(){
+  $("finishwrap").hidden=true;
+  const wi=S.pendingWin, li=1-wi;
+  const W=wi===0?S.p1:S.p2, L=li===0?S.p1:S.p2;
+  const figL=$(li===0?"fig1":"fig2");
+  const line=W.fatality.line(S.topic,W.stance);
+  addLog(W,line,"fatality",W.fatality.name);
+  flag(`FATALITY · ${W.fatality.name}`,"foul");
+  $("stage").classList.add("shake");
+  setTimeout(()=>$("stage").classList.remove("shake"),420);
+  figL.classList.add("ko");
+  S.hp[li]=0;updateHud();
+  announce("FATALITY",false,()=>{
+    announce(W.name.toUpperCase()+" WINS",wi===1,()=>{
+      sysLog(`FATALITY — ${W.fatality.name}. ${W.name.toUpperCase()} WINS THE DEBATE.`);
+      $("donewrap").hidden=false;
+    });
+  });
+}
+
+/* ---------------- hud & fx ---------------- */
+function updateHud(){
+  $("hp1").style.width=S.hp[0]+"%";$("hp2").style.width=S.hp[1]+"%";
+  $("chip1").style.width=S.hp[0]+"%";$("chip2").style.width=S.hp[1]+"%";
+  $("meter1").style.width=S.meter[0]+"%";$("meter2").style.width=S.meter[1]+"%";
+  $("mwrap1").classList.toggle("full",S.meter[0]>=100);
+  $("mwrap2").classList.toggle("full",S.meter[1]>=100);
+  $("cred1").textContent="CREDIBILITY "+S.cred[0];
+  $("cred2").textContent="CREDIBILITY "+S.cred[1];
+}
+function renderPips(){
+  const p=$("pips");p.innerHTML="";
+  for(let i=0;i<3;i++){
+    const d=document.createElement("span");d.className="pip";
+    const seq=[];
+    // reconstruct win sequence from counts is lossy; just fill by count
+    p.appendChild(d);
+  }
+  const pips=p.children;let k=0;
+  for(let i=0;i<S.wins[0];i++)pips[k++].classList.add("w1");
+  for(let i=0;i<S.wins[1];i++)pips[k++].classList.add("w2");
+}
+let annTimer=null;
+function announce(text,gold,after){
+  const a=$("announce");
+  clearTimeout(annTimer);
+  a.classList.remove("show");void a.offsetWidth;
+  a.textContent=text;a.classList.toggle("goldtxt",!!gold);a.classList.add("show");
+  annTimer=setTimeout(()=>{a.classList.remove("show");if(after)after()},900);
+}
+function floatDmg(side,text,kind){
+  const st=$("stage");const el=document.createElement("div");
+  el.className="dmgfloat "+kind;el.textContent=text;
+  el.style[side===0?"left":"right"]=(12+Math.random()*14)+"%";
+  st.appendChild(el);setTimeout(()=>el.remove(),1000);
+}
+function flag(text,kind){
+  const v=$("vflag");v.textContent=text;v.className="verdictflag "+kind;
+}
+function addLog(f,text,kind,flagTxt){
+  S.log.push({round:S.round,speaker:f.name,side:f===S.p1?1:2,text,kind,flag:flagTxt});
+  const t=$("ticker");const d=document.createElement("div");
+  d.className="tline p"+(f===S.p1?1:2);
+  d.innerHTML=`<span class="spk">${f.name}:</span>${esc(text)}<span class="flag ${kind==="foul"?"foul":"solid"}">[${flagTxt}]</span>`;
+  t.appendChild(d);trimTicker();
+}
+function sysLog(text){
+  S.log.push({round:S.round,speaker:null,text,kind:"sys",flag:""});
+  const t=$("ticker");const d=document.createElement("div");
+  d.className="tline sys";d.textContent=text;t.appendChild(d);trimTicker();
+}
+function trimTicker(){const t=$("ticker");while(t.children.length>6)t.removeChild(t.firstChild)}
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+/* ---------------- transcript ---------------- */
+function buildTranscript(){
+  const wi=S.pendingWin,li=1-wi;
+  const W=wi===0?S.p1:S.p2,L=li===0?S.p1:S.p2;
+  const now=new Date();
+  const solids=k=>S.log.filter(e=>e.speaker===k.name&&(e.kind==="solid"||e.kind==="special")).map(e=>e.text);
+  const wPts=solids(W).slice(0,4), lPts=solids(L).slice(0,3);
+  const exchanges=S.log.map(e=>{
+    if(e.kind==="sys")return `<p class="exchange sysx">${esc(e.text)}</p>`;
+    const cls=e.kind==="foul"?"foul":"solid";
+    return `<p class="exchange"><b>${esc(e.speaker)}:</b> ${esc(e.text)} <span class="xflag ${cls}">[${esc(e.flag)}]</span></p>`;
+  }).join("");
+  $("doc").innerHTML=`
+    <header>
+      <div class="docword">Fatality Recorded</div>
+      <div class="docsub">Official transcript · Verbal Kombat Tribunal</div>
+    </header>
+    <dl>
+      <dt>Question</dt><dd>${esc(S.topic)}?</dd>
+      <dt>Combatants</dt><dd>${esc(S.p1.name)} (${esc(S.p1.tag)}) v. ${esc(S.p2.name)} (${esc(S.p2.tag)})</dd>
+      <dt>Result</dt><dd>${esc(W.name)} wins ${S.wins[wi]}–${S.wins[li]} by fatality — ${esc(W.fatality.name)}</dd>
+      <dt>Decided</dt><dd>${now.toLocaleString()}</dd>
+    </dl>
+    <h3>Majority opinion — ${esc(W.name)}, prevailing</h3>
+    <p class="oplead">“${esc(W.stance)}”</p>
+    <ul>${wPts.map(p=>`<li>${esc(p)}</li>`).join("")||"<li>Victory by sheer presence.</li>"}</ul>
+    <h3>Dissenting opinion — ${esc(L.name)}, defeated but unbowed</h3>
+    <p class="oplead">“${esc(L.stance)}”</p>
+    <ul class="dissent">${lPts.map(p=>`<li>${esc(p)}</li>`).join("")||"<li>The dissent rests on vibes alone.</li>"}</ul>
+    <h3>Full record of the bout</h3>
+    ${exchanges}
+    <footer><span>Verbal Kombat · settle it in the arena of ideas</span><span>This ruling is binding until the rematch</span></footer>`;
+  show("s-transcript");
+}
+function transcriptText(){
+  const wi=S.pendingWin,li=1-wi;
+  const W=wi===0?S.p1:S.p2,L=li===0?S.p1:S.p2;
+  const lines=[];
+  lines.push("VERBAL KOMBAT — OFFICIAL TRANSCRIPT","");
+  lines.push("QUESTION: "+S.topic+"?");
+  lines.push("COMBATANTS: "+S.p1.name+" v. "+S.p2.name);
+  lines.push("RESULT: "+W.name+" wins "+S.wins[wi]+"–"+S.wins[li]+" by fatality — "+W.fatality.name);
+  lines.push("","MAJORITY OPINION ("+W.name+"): "+W.stance);
+  lines.push("DISSENT ("+L.name+"): "+L.stance,"","FULL RECORD:");
+  S.log.forEach(e=>{
+    if(e.kind==="sys")lines.push("  -- "+e.text);
+    else lines.push("  "+e.speaker+": "+e.text+"  ["+e.flag+"]");
+  });
+  return lines.join("\n");
+}
+
+/* ---------------- wiring ---------------- */
+$("btn-start").addEventListener("click",()=>{renderRoster();show("s-select")});
+$("btn-cust").addEventListener("click",()=>{
+  const n=$("cust-name").value.trim();if(!n)return;
+  const f=makeCustom(n,$("cust-tag").value.trim());
+  S.custom.push(f);$("cust-name").value="";$("cust-tag").value="";
+  if(!S.p1)S.p1=f;else if(!S.p2)S.p2=f;
+  renderRoster();
+});
+$("btn-clearpicks").addEventListener("click",()=>{S.p1=null;S.p2=null;renderRoster()});
+$("btn-toSetup").addEventListener("click",toSetup);
+$("mode-play").addEventListener("click",()=>{S.mode="play";$("mode-play").classList.add("sel");$("mode-watch").classList.remove("sel")});
+$("mode-watch").addEventListener("click",()=>{S.mode="watch";$("mode-watch").classList.add("sel");$("mode-play").classList.remove("sel")});
+$("btn-fight").addEventListener("click",startFight);
+$("btn-fatality").addEventListener("click",doFatality);
+$("btn-transcript").addEventListener("click",buildTranscript);
+$("btn-print").addEventListener("click",()=>window.print());
+$("btn-download").addEventListener("click",()=>{
+  const blob=new Blob([transcriptText()],{type:"text/plain"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download="verbal-kombat-transcript.txt";a.click();URL.revokeObjectURL(a.href);
+});
+$("btn-rematch").addEventListener("click",()=>{startFight()});
+$("btn-newfight").addEventListener("click",()=>{
+  S.p1=null;S.p2=null;
+  $("stance1").value="";$("stance2").value="";
+  renderRoster();show("s-select");
+});
+</script>
+<!-- ARTIFACT-BODY-END -->
+</body>
+</html>
