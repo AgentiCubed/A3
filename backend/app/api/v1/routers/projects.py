@@ -26,6 +26,7 @@ from app.models.risk import Decision, Risk
 from app.models.user import User
 from app.orchestration.engines import get_workflow_engine
 from app.orchestration.state_machine.machine import IllegalTransition
+from app.orchestration.state_machine.states import ExecutionState
 from app.schemas.agent import AssignRequest
 from app.schemas.approval import ApprovalDecision, ApprovalResponse
 from app.schemas.execution import (
@@ -320,7 +321,24 @@ async def dispatch_task(
             timeout_s=req.timeout_s,
             evaluation=evaluation_cfg,
         )
-        handle = engine.submit_execution(task.id, params)
+        try:
+            handle = engine.submit_execution(task.id, params)
+        except Exception as exc:  # noqa: BLE001 - broker down/unreachable
+            # The QUEUED commit already happened but no message exists; park the
+            # task in BLOCKED (re-dispatchable) instead of leaving it stuck.
+            await execution_service.transition_task(
+                session,
+                task,
+                ExecutionState.BLOCKED,
+                actor_id=user.id,
+                actor_type=ActorType.USER,
+                reason=f"engine submit failed: {type(exc).__name__}",
+            )
+            await session.commit()
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "task queueing failed; task moved to BLOCKED for re-dispatch",
+            ) from exc
         return DispatchAcceptedResponse(
             task_id=task.id,
             status=task.status,

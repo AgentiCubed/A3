@@ -113,7 +113,8 @@ def test_async_dispatch_returns_before_execution_then_worker_runs_it(client, mon
     execs = client.get(f"/api/v1/projects/{pid}/tasks/{task_id}/executions", headers=headers).json()
     assert execs == []
 
-    # The engine received the task id and the caller's parameters.
+    # The engine received exactly one submission: the task id + caller params.
+    assert len(engine.calls) == 1
     work_id, params = engine.calls[0]
     assert work_id == uuid.UUID(task_id)
     assert params["max_attempts"] == 1
@@ -166,6 +167,52 @@ def test_dispatch_rejects_evaluator_equal_to_executor(client, monkeypatch):
     )
     assert resp.status_code == 422
     assert engine.calls == []
+
+
+class _FailingEngine:
+    """WorkflowEngine double whose broker is unreachable."""
+
+    name = "celery"
+
+    def submit_execution(self, work_id: uuid.UUID, params: dict[str, Any] | None = None) -> str:
+        raise ConnectionError("broker down")
+
+    def signal_cancel(self, handle: str) -> None:  # pragma: no cover - unused
+        raise NotImplementedError
+
+    def get_status(self, handle: str) -> EngineStatus:  # pragma: no cover - unused
+        raise NotImplementedError
+
+
+def test_submit_failure_parks_task_blocked_then_redispatchable(client, monkeypatch):
+    """Broker failure after the QUEUED commit must not strand the task.
+
+    The endpoint parks it in BLOCKED (audited, re-dispatchable) and returns
+    503; once the engine is healthy again, dispatch succeeds from BLOCKED.
+    """
+    monkeypatch.setattr("app.api.v1.routers.projects.get_workflow_engine", lambda: _FailingEngine())
+
+    headers = _auth(client)
+    pid = _project(client, headers)
+    task_id = _task(client, headers, pid)
+    agent_id = _agent(client, headers)
+    _assign(client, headers, pid, task_id, agent_id)
+
+    resp = client.post(f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch", json={}, headers=headers)
+    assert resp.status_code == 503
+
+    tasks = client.get(f"/api/v1/projects/{pid}/tasks", headers=headers).json()
+    assert next(t for t in tasks if t["id"] == task_id)["status"] == "blocked"
+    execs = client.get(f"/api/v1/projects/{pid}/tasks/{task_id}/executions", headers=headers).json()
+    assert execs == []
+
+    # Broker recovers: the BLOCKED task dispatches cleanly.
+    engine = _CapturingEngine()
+    monkeypatch.setattr("app.api.v1.routers.projects.get_workflow_engine", lambda: engine)
+    resp = client.post(f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch", json={}, headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "queued"
+    assert len(engine.calls) == 1
 
 
 def test_dispatch_params_round_trip():

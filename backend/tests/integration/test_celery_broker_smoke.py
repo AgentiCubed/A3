@@ -33,24 +33,27 @@ def test_spine_end_to_end_via_real_broker():
     # CI job), not the sqlite test override — the worker subprocess must see
     # the same rows the API writes.
     override = app.dependency_overrides.pop(db_session, None)
-    reset_workflow_engine()
-    assert get_workflow_engine() is not None, "smoke requires WORKFLOW_ENGINE_BACKEND=celery"
-
-    worker = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "celery",
-            "-A",
-            "app.workers.celery_app",
-            "worker",
-            "--loglevel=warning",
-            "--pool=solo",
-            "--concurrency=1",
-        ],
-        env=os.environ.copy(),
-    )
+    worker = None
     try:
+        # Everything after the override pop lives inside the try so the
+        # finally always restores state, even if worker startup raises.
+        reset_workflow_engine()
+        assert get_workflow_engine() is not None, "smoke requires WORKFLOW_ENGINE_BACKEND=celery"
+
+        worker = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "celery",
+                "-A",
+                "app.workers.celery_app",
+                "worker",
+                "--loglevel=warning",
+                "--pool=solo",
+                "--concurrency=1",
+            ],
+            env=os.environ.copy(),
+        )
         with TestClient(app) as client:
             email = f"smoke-{uuid.uuid4().hex[:8]}@example.com"
             client.post(
@@ -106,11 +109,12 @@ def test_spine_end_to_end_via_real_broker():
                 time.sleep(1)
             assert state == "completed", f"worker did not complete the task (last state={state})"
     finally:
-        worker.terminate()
-        try:
-            worker.wait(timeout=15)
-        except subprocess.TimeoutExpired:
-            worker.kill()
+        if worker is not None:
+            worker.terminate()
+            try:
+                worker.wait(timeout=15)
+            except subprocess.TimeoutExpired:
+                worker.kill()
         if override is not None:
             app.dependency_overrides[db_session] = override
         reset_workflow_engine()
