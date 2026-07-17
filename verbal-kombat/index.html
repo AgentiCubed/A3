@@ -252,6 +252,117 @@
   .doc footer{margin-top:2rem;border-top:1px solid #b9a67f;padding-top:.8rem;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a765a;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
   .docactions{display:flex;gap:10px;justify-content:center;padding:1.6rem 0;flex-wrap:wrap}
 
+  /* ---------- GRAPHICS & UI POLISH ---------- */
+  /* title embers */
+  .embers{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+  #s-title{position:relative}
+  #s-title>*{position:relative;z-index:1}
+  .embers span{position:absolute;bottom:-12px;left:var(--x);width:5px;height:5px;border-radius:50%;
+    background:radial-gradient(circle,#ffe0a8 0%,var(--blood) 55%,transparent 75%);
+    opacity:0;animation:emberUp var(--dur,7s) linear var(--del,0s) infinite}
+  @keyframes emberUp{0%{transform:translateY(0) scale(1);opacity:0}8%{opacity:.85}
+    100%{transform:translateY(-104vh) translateX(5vw) scale(.25);opacity:0}}
+  .logo{animation:logoPulse 2.8s ease-in-out infinite alternate}
+  @keyframes logoPulse{to{filter:brightness(1.22)}}
+
+  /* portrait medallions */
+  .medal{display:grid;place-items:center;border-radius:50%;width:74px;height:74px;font-size:40px;
+    background:radial-gradient(circle at 35% 30%,#3f2010,#160a05 72%);
+    border:2px solid var(--gold-dim);box-shadow:inset 0 0 16px rgba(0,0,0,.85),0 5px 12px rgba(0,0,0,.5)}
+  .medal.p1{border-color:var(--blood);box-shadow:inset 0 0 16px rgba(0,0,0,.85),0 0 16px rgba(255,59,47,.25)}
+  .medal.p2{border-color:var(--gold);box-shadow:inset 0 0 16px rgba(0,0,0,.85),0 0 16px rgba(245,166,35,.25)}
+  .medal.big{width:clamp(92px,14vw,150px);height:clamp(92px,14vw,150px);font-size:clamp(50px,8vw,84px)}
+  .medal.sm{width:28px;height:28px;font-size:16px;border-width:1px;box-shadow:inset 0 0 8px rgba(0,0,0,.8)}
+
+  /* character select side panels */
+  .selectlayout{display:grid;grid-template-columns:132px 1fr 132px;gap:12px;align-items:start}
+  .sidepanel{display:flex;flex-direction:column;align-items:center;gap:.6rem;border:1px solid #35190d;
+    border-radius:3px;background:var(--panel);padding:1.2rem .6rem;position:sticky;top:12px}
+  .sidepanel.haspick.sp1{border-color:var(--blood);box-shadow:0 0 14px rgba(255,59,47,.2)}
+  .sidepanel.haspick.sp2{border-color:var(--gold);box-shadow:0 0 14px rgba(245,166,35,.2)}
+  .splabel{font-size:9.5px;letter-spacing:.26em;color:var(--smoke-dim);text-transform:uppercase}
+  .spname{font-family:var(--disp);font-size:16px;letter-spacing:.08em;text-transform:uppercase;text-align:center;color:var(--bone);min-height:1.2em}
+  @media (max-width:760px){.selectlayout{grid-template-columns:1fr}.sidepanel{display:none}}
+
+  /* VS splash */
+  #s-vs{flex-direction:row;align-items:stretch;position:relative;overflow:hidden}
+  .vs-half{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:2rem 1rem 14vh}
+  .vs-left{background:linear-gradient(115deg,#420e07 0%,#1b0503 75%);animation:slideL .5s ease both}
+  .vs-right{background:linear-gradient(-115deg,#42300c 0%,#1b1203 75%);animation:slideR .5s ease both}
+  @keyframes slideL{from{transform:translateX(-70px);opacity:0}}
+  @keyframes slideR{from{transform:translateX(70px);opacity:0}}
+  .vs-name{font-family:var(--disp);font-size:clamp(26px,4.5vw,46px);text-transform:uppercase;letter-spacing:.05em;text-align:center;text-wrap:balance}
+  .vs-left .vs-name{color:#ff9088}.vs-right .vs-name{color:#ffd76b}
+  .vs-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--smoke-dim)}
+  .vs-stance{font-size:13px;color:var(--smoke);max-width:26ch;text-align:center;font-style:italic;line-height:1.5}
+  .vs-word{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);z-index:3;
+    font-family:var(--disp);font-size:clamp(80px,15vw,170px);color:var(--bone);
+    text-shadow:0 0 26px rgba(255,59,47,.85),5px 5px 0 #200200;
+    animation:vsSlam .55s cubic-bezier(.2,1.9,.4,1) .3s both}
+  @keyframes vsSlam{from{transform:translate(-50%,-50%) scale(3.2);opacity:0}}
+  .vs-topic{position:absolute;left:50%;bottom:6vh;transform:translateX(-50%);z-index:3;width:92%;text-align:center;
+    font-family:var(--mono);font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);
+    animation:vsTopic .5s ease .8s both}
+  @keyframes vsTopic{from{opacity:0;transform:translate(-50%,10px)}}
+
+  /* arena dressing */
+  .torch{position:absolute;top:16%;width:9px;height:36px;border-radius:2px;z-index:1;
+    background:linear-gradient(#5a3416,#2a1206)}
+  .torch.tl{left:7%}.torch.tr{right:7%}
+  .torch::before{content:"";position:absolute;left:50%;top:-17px;width:17px;height:21px;
+    border-radius:50% 50% 50% 50%/62% 62% 38% 38%;filter:blur(1px);transform-origin:50% 100%;
+    background:radial-gradient(closest-side,#ffefb0 0%,#ffb300 45%,#ff3b2f 78%,transparent 100%);
+    animation:flick .32s ease-in-out infinite alternate}
+  @keyframes flick{from{transform:translateX(-50%) scale(1,.94) rotate(-4deg)}to{transform:translateX(-50%) scale(.88,1.1) rotate(4deg)}}
+  .banner{position:absolute;top:0;width:52px;height:86px;opacity:.85;z-index:1;
+    clip-path:polygon(0 0,100% 0,100% 78%,50% 100%,0 78%)}
+  .banner.b1{left:17%;background:linear-gradient(180deg,#61150c,#2a0703 85%)}
+  .banner.b2{right:17%;background:linear-gradient(180deg,#5f4511,#241503 85%)}
+  .fighter{z-index:2}
+  .fighter::before{content:"";position:absolute;bottom:1.7rem;left:50%;transform:translateX(-50%);
+    width:130px;height:17px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(0,0,0,.6),transparent)}
+  .fighter .fglyph{animation:idle 2.6s ease-in-out infinite}
+  @keyframes idle{50%{transform:translateY(-6px)}}
+  .p1side .fglyph{filter:drop-shadow(0 14px 10px rgba(0,0,0,.7)) drop-shadow(0 0 22px rgba(255,59,47,.3))}
+  .p2side .fglyph{filter:drop-shadow(0 14px 10px rgba(0,0,0,.7)) drop-shadow(0 0 22px rgba(245,166,35,.3))}
+  .fighter.ko .fglyph{animation:none}
+
+  /* hit FX */
+  .burst{position:absolute;top:38%;width:92px;height:92px;pointer-events:none;z-index:4;
+    background:radial-gradient(circle,#fff 0%,#ffd76b 32%,transparent 62%);
+    clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+    animation:burstPop .45s ease-out forwards}
+  .burst.foul{background:radial-gradient(circle,#fff 0%,var(--violet) 42%,transparent 66%)}
+  @keyframes burstPop{0%{transform:scale(.2) rotate(0deg);opacity:1}100%{transform:scale(1.3) rotate(26deg);opacity:0}}
+  .vignette{position:absolute;inset:0;pointer-events:none;z-index:3;opacity:0;
+    background:radial-gradient(ellipse at 50% 50%,transparent 52%,rgba(255,59,47,.55) 100%)}
+  .stage.bighit .vignette{animation:vinFlash .55s ease-out}
+  @keyframes vinFlash{0%{opacity:1}100%{opacity:0}}
+
+  /* fatality cinematics */
+  .stage.fatal::after{content:"";position:absolute;inset:0;z-index:2;background:rgba(0,0,0,.58);
+    animation:dimIn .6s ease both}
+  @keyframes dimIn{from{opacity:0}}
+  .fighter.spot{z-index:3}
+  .fighter.spot .fglyph{filter:drop-shadow(0 14px 10px rgba(0,0,0,.8)) drop-shadow(0 0 34px rgba(255,235,180,.5))}
+  body.cine::before,body.cine::after{content:"";position:fixed;left:0;right:0;height:4.5vh;background:#000;z-index:95}
+  body.cine::before{top:0}
+  body.cine::after{bottom:0}
+  .announce.fataltxt{color:#fff;letter-spacing:.14em;
+    text-shadow:0 0 14px var(--blood),0 0 44px var(--blood),4px 4px 0 #200200}
+  .announce.fataltxt.show{animation-duration:1.5s}
+
+  /* HUD + controls polish */
+  .namewrap{display:flex;align-items:center;gap:.5rem;min-width:0}
+  .hpside.right .namewrap{flex-direction:row-reverse}
+  .movebtn:active:not([disabled]){transform:scale(.97)}
+  .movebtn.special.ready{animation:specReady .9s ease-in-out infinite alternate}
+  @keyframes specReady{from{box-shadow:0 0 8px rgba(192,92,255,.25)}to{box-shadow:0 0 22px rgba(192,92,255,.6)}}
+  .tline{animation:lineIn .25s ease both}
+  @keyframes lineIn{from{opacity:0;transform:translateY(7px)}}
+  .ticker .tline:last-child:not(.sys){color:#e8dcc4}
+
   @media print{
     body{background:#fff}
     .crt::after{display:none}
@@ -270,6 +381,7 @@
 
 <!-- TITLE -->
 <section class="screen on" id="s-title">
+  <div class="embers" id="embers"></div>
   <div class="logo">Verbal<br><em>Kombat</em></div>
   <div class="tagline">Settle it in the arena of ideas</div>
   <p class="title-rules">Two minds. One question. Three rounds.
@@ -286,7 +398,19 @@
       <h2>Choose Your Fighters</h2>
       <span class="sub" id="pickstate">Pick Fighter 1</span>
     </div>
-    <div class="roster" id="roster"></div>
+    <div class="selectlayout">
+      <aside class="sidepanel sp1" id="sidepanel1">
+        <span class="splabel">Fighter 1</span>
+        <div class="medal p1 big" id="sp-g1">?</div>
+        <div class="spname" id="sp-n1">choose</div>
+      </aside>
+      <div class="roster" id="roster"></div>
+      <aside class="sidepanel sp2" id="sidepanel2">
+        <span class="splabel">Fighter 2</span>
+        <div class="medal p2 big" id="sp-g2">?</div>
+        <div class="spname" id="sp-n2">choose</div>
+      </aside>
+    </div>
     <div class="customrow">
       <div><div class="label">Summon anyone (custom fighter)</div>
         <input type="text" id="cust-name" placeholder="e.g. Beyoncé, Aristotle, your uncle Dave…"></div>
@@ -326,12 +450,30 @@
   </div>
 </section>
 
+<!-- VS SPLASH -->
+<section class="screen" id="s-vs">
+  <div class="vs-half vs-left">
+    <div class="medal p1 big" id="vs-g1"></div>
+    <div class="vs-name" id="vs-n1"></div>
+    <div class="vs-tag" id="vs-t1"></div>
+    <div class="vs-stance" id="vs-s1"></div>
+  </div>
+  <div class="vs-word">VS</div>
+  <div class="vs-half vs-right">
+    <div class="medal p2 big" id="vs-g2"></div>
+    <div class="vs-name" id="vs-n2"></div>
+    <div class="vs-tag" id="vs-t2"></div>
+    <div class="vs-stance" id="vs-s2"></div>
+  </div>
+  <div class="vs-topic" id="vs-topic"></div>
+</section>
+
 <!-- ARENA -->
 <section class="screen" id="s-arena">
   <div class="wrap">
     <div class="hud">
       <div class="hpside">
-        <div class="hpname"><span class="who1" id="hud-n1"></span><span class="cred" id="cred1"></span></div>
+        <div class="hpname"><span class="namewrap"><span class="medal sm p1" id="hudg1"></span><span class="who1" id="hud-n1"></span></span><span class="cred" id="cred1"></span></div>
         <div class="hpbar"><div class="chip" id="chip1"></div><div class="hpfill" id="hp1"></div></div>
         <div class="meterbar" id="mwrap1"><div class="meterfill" id="meter1"></div></div>
       </div>
@@ -341,13 +483,16 @@
         <div class="timer">DEBATE IN PROGRESS</div>
       </div>
       <div class="hpside right">
-        <div class="hpname"><span class="who2" id="hud-n2"></span><span class="cred" id="cred2"></span></div>
+        <div class="hpname"><span class="namewrap"><span class="medal sm p2" id="hudg2"></span><span class="who2" id="hud-n2"></span></span><span class="cred" id="cred2"></span></div>
         <div class="hpbar"><div class="chip" id="chip2"></div><div class="hpfill" id="hp2"></div></div>
         <div class="meterbar" id="mwrap2"><div class="meterfill" id="meter2"></div></div>
       </div>
     </div>
 
     <div class="stage" id="stage">
+      <div class="banner b1"></div><div class="banner b2"></div>
+      <div class="torch tl"></div><div class="torch tr"></div>
+      <div class="vignette"></div>
       <div class="announce" id="announce"></div>
       <div class="fighter p1side" id="fig1"><div class="fglyph" id="glyph1"></div><div class="fstance" id="fs1"></div></div>
       <div class="fighter p2side" id="fig2"><div class="fglyph" id="glyph2"></div><div class="fstance" id="fs2"></div></div>
@@ -584,6 +729,12 @@ function renderRoster(){
   });
   $("pickstate").textContent = !S.p1 ? "Pick Fighter 1" : !S.p2 ? "Pick Fighter 2" : "Ready. Set the stakes →";
   $("btn-toSetup").disabled = !(S.p1&&S.p2);
+  $("sp-g1").textContent=S.p1?S.p1.glyph:"?";
+  $("sp-n1").textContent=S.p1?S.p1.name:"choose";
+  $("sp-g2").textContent=S.p2?S.p2.glyph:"?";
+  $("sp-n2").textContent=S.p2?S.p2.name:"choose";
+  $("sidepanel1").classList.toggle("haspick",!!S.p1);
+  $("sidepanel2").classList.toggle("haspick",!!S.p2);
 }
 function pickFighter(f){
   if(S.p1===f){S.p1=null}
@@ -623,14 +774,32 @@ function startFight(){
   S.round=1;S.wins=[0,0];S.turn=0;S.over=false;S.log=[];S.usedLines.clear();
   S.cred=[100,100];
   $("hud-n1").textContent=S.p1.name;$("hud-n2").textContent=S.p2.name;
+  $("hudg1").textContent=S.p1.glyph;$("hudg2").textContent=S.p2.glyph;
   $("glyph1").textContent=S.p1.glyph;$("glyph2").textContent=S.p2.glyph;
   $("fs1").textContent="“"+S.p1.stance+"”";$("fs2").textContent="“"+S.p2.stance+"”";
   $("finishwrap").hidden=true;$("donewrap").hidden=true;
   $("ticker").innerHTML="";
+  resetCinema();
   sysLog(`THE QUESTION: ${S.topic}?`);
   sysLog(`${S.p1.name.toUpperCase()} argues: ${S.p1.stance} — ${S.p2.name.toUpperCase()} argues: ${S.p2.stance}`);
-  show("s-arena");
-  startRound();
+  showVS();
+}
+
+function showVS(){
+  $("vs-g1").textContent=S.p1.glyph;$("vs-g2").textContent=S.p2.glyph;
+  $("vs-n1").textContent=S.p1.name;$("vs-n2").textContent=S.p2.name;
+  $("vs-t1").textContent=S.p1.tag;$("vs-t2").textContent=S.p2.tag;
+  $("vs-s1").textContent="“"+S.p1.stance+"”";$("vs-s2").textContent="“"+S.p2.stance+"”";
+  $("vs-topic").textContent=`THE QUESTION: ${S.topic}?`;
+  show("s-vs");
+  setTimeout(()=>{show("s-arena");startRound()},2600);
+}
+
+function resetCinema(){
+  $("stage").classList.remove("fatal","bighit");
+  document.body.classList.remove("cine");
+  $("fig1").classList.remove("spot","ko");
+  $("fig2").classList.remove("spot","ko");
 }
 const finishStance=s=>/[.!?…]$/.test(s)?s:s+".";
 
@@ -674,8 +843,11 @@ function renderControls(active){
     b.className="movebtn"+(m.key==="spec"?" special":"");
     b.dataset.risk=m.risk<=.15?"low":m.risk<=.3?"med":"high";
     const label=m.key==="spec"?( (S.turn===0?S.p1:S.p2).special.name ):m.name;
-    b.innerHTML=`<span class="mn">${label}</span><span class="md">${m.desc}</span><span class="mr">${risky} · DMG ${m.dmg[0]}–${m.dmg[1]}</span>`;
-    if(m.key==="spec"&&S.meter[S.turn]<100)b.disabled=true;
+    b.innerHTML=`<span class="mn">${esc(label)}</span><span class="md">${m.desc}</span><span class="mr">${risky} · DMG ${m.dmg[0]}–${m.dmg[1]}</span>`;
+    if(m.key==="spec"){
+      if(S.meter[S.turn]<100)b.disabled=true;
+      else b.classList.add("ready");
+    }
     b.addEventListener("click",()=>{if(!S.busy)doMove(m)});
     c.appendChild(b);
   });
@@ -741,6 +913,9 @@ function doMove(m){
   figD.classList.add("hit");
   $("stage").classList.add("shake");
   setTimeout(()=>{figD.classList.remove("hit");$("stage").classList.remove("shake")},420);
+  if(crit||m.key==="spec"){
+    const st=$("stage");st.classList.remove("bighit");void st.offsetWidth;st.classList.add("bighit");
+  }
   floatDmg(di,"-"+dmg,"solid");
   if(m.key==="spec")announce(A.special.name+"!",true);
   else if(crit)announce("CRITICAL!",false);
@@ -785,11 +960,15 @@ function doFatality(){
   const wi=S.pendingWin, li=1-wi;
   const W=wi===0?S.p1:S.p2, L=li===0?S.p1:S.p2;
   const figL=$(li===0?"fig1":"fig2");
+  const figW=$(wi===0?"fig1":"fig2");
   const line=W.fatality.line(S.topic,W.stance);
   addLog(W,line,"fatality",W.fatality.name);
   flag(`FATALITY · ${W.fatality.name}`,"foul");
   $("stage").classList.add("shake");
   setTimeout(()=>$("stage").classList.remove("shake"),420);
+  $("stage").classList.add("fatal");
+  document.body.classList.add("cine");
+  figW.classList.add("spot");
   figL.classList.add("ko");
   S.hp[li]=0;updateHud();
   announce("FATALITY",false,()=>{
@@ -821,18 +1000,26 @@ function renderPips(){
   for(let i=0;i<S.wins[1];i++)pips[k++].classList.add("w2");
 }
 let annTimer=null;
-function announce(text,gold,after){
+function announce(text,gold,after,cls){
   const a=$("announce");
   clearTimeout(annTimer);
-  a.classList.remove("show");void a.offsetWidth;
-  a.textContent=text;a.classList.toggle("goldtxt",!!gold);a.classList.add("show");
-  annTimer=setTimeout(()=>{a.classList.remove("show");if(after)after()},900);
+  a.className="announce";void a.offsetWidth;
+  a.textContent=text;
+  if(gold)a.classList.add("goldtxt");
+  if(cls)a.classList.add(cls);
+  a.classList.add("show");
+  const hold=cls==="fataltxt"?1500:900;
+  annTimer=setTimeout(()=>{a.classList.remove("show");if(after)after()},hold);
 }
 function floatDmg(side,text,kind){
   const st=$("stage");const el=document.createElement("div");
   el.className="dmgfloat "+kind;el.textContent=text;
   el.style[side===0?"left":"right"]=(12+Math.random()*14)+"%";
   st.appendChild(el);setTimeout(()=>el.remove(),1000);
+  const b=document.createElement("div");
+  b.className="burst"+(kind==="foul"?" foul":"");
+  b.style[side===0?"left":"right"]=(13+Math.random()*10)+"%";
+  st.appendChild(b);setTimeout(()=>b.remove(),500);
 }
 function flag(text,kind){
   const v=$("vflag");v.textContent=text;v.className="verdictflag "+kind;
@@ -884,6 +1071,7 @@ function buildTranscript(){
     <h3>Full record of the bout</h3>
     ${exchanges}
     <footer><span>Verbal Kombat · settle it in the arena of ideas</span><span>This ruling is binding until the rematch</span></footer>`;
+  resetCinema();
   show("s-transcript");
 }
 function transcriptText(){
@@ -926,6 +1114,16 @@ $("btn-download").addEventListener("click",()=>{
   a.download="verbal-kombat-transcript.txt";a.click();URL.revokeObjectURL(a.href);
 });
 $("btn-rematch").addEventListener("click",()=>{startFight()});
+(function spawnEmbers(){
+  const e=$("embers");
+  for(let i=0;i<16;i++){
+    const s=document.createElement("span");
+    s.style.setProperty("--x",(Math.random()*100).toFixed(1)+"%");
+    s.style.setProperty("--dur",(5+Math.random()*6).toFixed(2)+"s");
+    s.style.setProperty("--del",(-Math.random()*9).toFixed(2)+"s");
+    e.appendChild(s);
+  }
+})();
 $("btn-newfight").addEventListener("click",()=>{
   S.p1=null;S.p2=null;
   $("stance1").value="";$("stance2").value="";
