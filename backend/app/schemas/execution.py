@@ -20,6 +20,43 @@ class DispatchRequest(BaseModel):
     max_remediations: int = Field(default=1, ge=0, le=5)
 
 
+class DispatchAcceptedResponse(BaseModel):
+    """Async dispatch (WORKFLOW_ENGINE_BACKEND=celery): queued, not yet run.
+
+    The final outcome is not known at response time — poll the executions
+    endpoint or subscribe to the project's SSE event stream.
+    """
+
+    task_id: uuid.UUID
+    status: ExecutionState  # QUEUED
+    engine: str
+    engine_handle: str
+
+
+class ProjectStartRequest(BaseModel):
+    """Options applied to every task the scheduling pass dispatches."""
+
+    max_attempts: int = Field(default=2, ge=1, le=10)
+    timeout_s: float = Field(default=30.0, gt=0, le=600)
+
+
+class StartedTaskResponse(BaseModel):
+    task_id: uuid.UUID
+    status: ExecutionState
+
+
+class ProjectStartResponse(BaseModel):
+    """Outcome of a project-level scheduling pass.
+
+    In celery mode ``tasks`` are the initial QUEUED wave; the worker dispatches
+    successors as their predecessors complete. In inline mode the whole
+    dependency chain has already run and ``tasks`` hold final states.
+    """
+
+    engine: str
+    tasks: list[StartedTaskResponse]
+
+
 class DispatchResultResponse(BaseModel):
     final_state: ExecutionState
     attempts: int
@@ -49,6 +86,8 @@ class ExecutionResponse(BaseModel):
     agent_id: uuid.UUID | None
     attempt_number: int
     state: ExecutionState
+    # What was fed in: prompt size plus any predecessor-output handoff (WS-3).
+    input_context: dict | None
     output: str | None
     error: str | None
     provider: str | None

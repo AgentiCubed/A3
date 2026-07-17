@@ -18,11 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
+from app.core.config import get_settings
 from app.core.enums import AgentKind, RiskLevel, Verdict
 from app.core.roles import ActorType
 from app.models.agent import Agent
 from app.models.approval import Approval
-from app.models.task import Task
+from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
@@ -38,6 +39,10 @@ class NotAssigned(Exception):
 
 class NotExecutable(Exception):
     """The assigned agent is not an AI agent (human tasks complete out-of-band)."""
+
+
+class AlreadyQueued(Exception):
+    """The task is already QUEUED; re-dispatch would enqueue a duplicate message."""
 
 
 @dataclass
@@ -75,6 +80,109 @@ def build_prompt(task: Task, extra_context: str | None = None) -> str:
     return "\n\n".join(parts)
 
 
+# ── Predecessor-output handoff (WS-3) ─────────────────────────────────────
+@dataclass(frozen=True)
+class HandoffItem:
+    """One predecessor's contribution to a successor's prompt."""
+
+    task_id: uuid.UUID
+    task_title: str
+    execution_id: uuid.UUID
+    output: str
+    truncated: bool
+
+
+async def collect_predecessor_context(session: AsyncSession, task: Task) -> list[HandoffItem]:
+    """Latest successful execution output per COMPLETED predecessor.
+
+    Outputs are consumed in dependency-creation order against a single total
+    character budget (the ``handoff_budget_chars`` setting, env
+    ``HANDOFF_BUDGET_CHARS``): each output is truncated to the budget
+    remaining, and once the budget is exhausted later predecessors are
+    dropped. Predecessors that are not COMPLETED, or completed without an
+    execution output (e.g. human tasks), contribute nothing.
+
+    Three fixed queries regardless of predecessor count: dependencies, their
+    tasks, and their successful executions (latest-per-task picked in Python).
+    """
+    deps = (
+        (
+            await session.execute(
+                select(TaskDependency)
+                .where(TaskDependency.successor_task_id == task.id)
+                .order_by(TaskDependency.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not deps:
+        return []
+    predecessor_ids = [d.predecessor_task_id for d in deps]
+    predecessors = {
+        t.id: t
+        for t in (await session.execute(select(Task).where(Task.id.in_(predecessor_ids))))
+        .scalars()
+        .all()
+        if t.status == ExecutionState.COMPLETED
+    }
+    latest_success: dict[uuid.UUID, TaskExecution] = {}
+    executions = (
+        (
+            await session.execute(
+                select(TaskExecution)
+                .where(
+                    TaskExecution.task_id.in_(predecessor_ids),
+                    TaskExecution.state == ExecutionState.COMPLETED,
+                )
+                .order_by(TaskExecution.attempt_number)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for execution in executions:  # ascending attempts: the last one seen wins
+        latest_success[execution.task_id] = execution
+
+    budget = get_settings().handoff_budget_chars
+    items: list[HandoffItem] = []
+    for dep in deps:
+        if budget <= 0:
+            break
+        predecessor = predecessors.get(dep.predecessor_task_id)
+        execution = latest_success.get(dep.predecessor_task_id)
+        if predecessor is None or execution is None or not execution.output:
+            continue
+        truncated = len(execution.output) > budget
+        output = execution.output[:budget] if truncated else execution.output
+        budget -= len(output)
+        items.append(
+            HandoffItem(
+                task_id=predecessor.id,
+                task_title=predecessor.title,
+                execution_id=execution.id,
+                output=output,
+                truncated=truncated,
+            )
+        )
+    return items
+
+
+def format_handoff(items: list[HandoffItem]) -> str | None:
+    if not items:
+        return None
+    sections = ["Output from completed prerequisite tasks:"]
+    for item in items:
+        marker = " (truncated)" if item.truncated else ""
+        sections.append(f"### {item.task_title}{marker}\n{item.output}")
+    return "\n\n".join(sections)
+
+
+def _join_context(*parts: str | None) -> str | None:
+    joined = [p for p in parts if p]
+    return "\n\n".join(joined) if joined else None
+
+
 async def _transition(
     session: AsyncSession,
     task: Task,
@@ -90,6 +198,7 @@ async def _transition(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="task.transition",
@@ -130,6 +239,71 @@ async def transition_task(
     await _transition(session, task, to, actor_id=actor_id, actor_type=actor_type, reason=reason)
 
 
+async def _require_executable(session: AsyncSession, task: Task) -> Agent:
+    """The task must have an assigned AI agent to be dispatchable."""
+    if task.assigned_agent_id is None:
+        raise NotAssigned()
+    agent = await session.get(Agent, task.assigned_agent_id)
+    if agent is None:
+        raise NotAssigned()
+    if agent.kind != AgentKind.AI:
+        raise NotExecutable()
+    return agent
+
+
+def build_dispatch_params(
+    *,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+    max_attempts: int,
+    timeout_s: float,
+    evaluation: EvaluationConfig | None,
+) -> dict:
+    """Serialize dispatch options into the JSON-safe dict the worker accepts.
+
+    The inverse lives in ``app.workers.tasks._parse_dispatch_params``; the two
+    are covered by a round-trip test so they cannot drift apart silently.
+    """
+    params: dict = {
+        "actor_id": str(actor_id) if actor_id else None,
+        "actor_type": actor_type.value,
+        "max_attempts": max_attempts,
+        "timeout_s": timeout_s,
+    }
+    if evaluation is not None:
+        params["evaluation"] = {
+            "rubric_specs": evaluation.rubric_specs,
+            "evaluator_agent_id": (
+                str(evaluation.evaluator_agent_id) if evaluation.evaluator_agent_id else None
+            ),
+            "max_remediations": evaluation.max_remediations,
+        }
+    return params
+
+
+async def queue_task(
+    session: AsyncSession,
+    *,
+    task: Task,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+) -> None:
+    """Validate and move a task to QUEUED for asynchronous (worker) dispatch.
+
+    Runs the same dispatchability checks as ``execute_task`` so an
+    unassigned/non-AI task is rejected at the API instead of failing silently
+    in the worker. A task that is *already* QUEUED is rejected here — since
+    ``_move_to_queued`` treats QUEUED as a no-op, re-dispatch would otherwise
+    enqueue a second worker message and run the task concurrently. (The
+    worker's own re-entry through QUEUED is unaffected: it calls
+    ``_move_to_queued`` directly, not this function.)
+    """
+    if task.status == ExecutionState.QUEUED:
+        raise AlreadyQueued()
+    await _require_executable(session, task)
+    await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
+
+
 async def _create_approval(
     session: AsyncSession,
     *,
@@ -151,6 +325,7 @@ async def _create_approval(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="approval.requested",
@@ -177,13 +352,7 @@ async def execute_task(
     With ``evaluation`` a successful run is graded; a failing verdict triggers the
     remediation policy, which either re-executes inline or escalates to a human.
     """
-    if task.assigned_agent_id is None:
-        raise NotAssigned()
-    agent = await session.get(Agent, task.assigned_agent_id)
-    if agent is None:
-        raise NotAssigned()
-    if agent.kind != AgentKind.AI:
-        raise NotExecutable()
+    agent = await _require_executable(session, task)
 
     adapter = get_adapter(agent.provider)
     credential_ref = (agent.config or {}).get("api_key_ref")
@@ -193,6 +362,20 @@ async def execute_task(
     remediations = 0
     extra_context: str | None = None
 
+    # WS-3: completed predecessors' outputs ride into every attempt's prompt;
+    # what was injected is recorded on the execution row for audit.
+    handoff_items = await collect_predecessor_context(session, task)
+    handoff_text = format_handoff(handoff_items)
+    handoff_meta = [
+        {
+            "task_id": str(i.task_id),
+            "execution_id": str(i.execution_id),
+            "chars": len(i.output),
+            "truncated": i.truncated,
+        }
+        for i in handoff_items
+    ] or None
+
     await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 
     while True:
@@ -201,7 +384,7 @@ async def execute_task(
             session, task, ExecutionState.RUNNING, actor_id=actor_id, actor_type=actor_type
         )
         started = _now()
-        prompt = build_prompt(task, extra_context)
+        prompt = build_prompt(task, _join_context(handoff_text, extra_context))
         request = AgentRunRequest(prompt=prompt, model=agent.model, credential_ref=credential_ref)
         try:
             result = await asyncio.wait_for(adapter.run(request), timeout=timeout_s)
@@ -217,6 +400,8 @@ async def execute_task(
                     output=None,
                     error=f"timeout after {timeout_s}s",
                     provider=agent.provider,
+                    prompt_chars=len(prompt),
+                    handoff=handoff_meta,
                 )
             )
             outcome = await _handle_failure(
@@ -237,6 +422,8 @@ async def execute_task(
                     output=None,
                     error=f"{type(exc).__name__}: {exc}",
                     provider=agent.provider,
+                    prompt_chars=len(prompt),
+                    handoff=handoff_meta,
                 )
             )
             outcome = await _handle_failure(
@@ -257,6 +444,8 @@ async def execute_task(
             output=result.output,
             error=None,
             provider=result.provider,
+            prompt_chars=len(prompt),
+            handoff=handoff_meta,
             tokens_used=result.tokens_used,
             cost_estimate=result.cost_estimate,
         )
@@ -321,6 +510,7 @@ async def execute_task(
         await record_audit(
             session,
             organization_id=task.organization_id,
+            project_id=task.project_id,
             actor_type=actor_type,
             actor_id=actor_id,
             action="remediation.selected",
@@ -414,6 +604,7 @@ async def _handle_failure(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="task.escalated",
@@ -435,16 +626,21 @@ async def _record(
     output: str | None,
     error: str | None,
     provider: str | None,
+    prompt_chars: int,
+    handoff: list[dict] | None = None,
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
 ) -> uuid.UUID:
+    input_context: dict = {"prompt_chars": prompt_chars}
+    if handoff:
+        input_context["handoff"] = handoff
     execution = TaskExecution(
         organization_id=task.organization_id,
         task_id=task.id,
         agent_id=agent.id,
         attempt_number=attempt,
         state=state,
-        input_context={"prompt_chars": len(build_prompt(task))},
+        input_context=input_context,
         output=output,
         error=error,
         provider=provider,
@@ -481,6 +677,7 @@ async def reassign_task(
     await record_audit(
         session,
         organization_id=task.organization_id,
+        project_id=task.project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="task.reassigned",

@@ -49,6 +49,20 @@ class Settings(BaseSettings):
     artifact_store_backend: str = Field(default="local")
     artifact_store_path: str = Field(default="/var/artifacts")
 
+    # Live event stream — "memory" (single process) or "redis" (multi-process)
+    event_bus_backend: str = Field(default="memory")
+
+    # Task dispatch — "inline" executes in the API request (dev/tests);
+    # "celery" queues to the worker via the WorkflowEngine port (compose/prod).
+    workflow_engine_backend: str = Field(default="inline")
+
+    # Dependency-aware scheduling — max tasks in flight per project.
+    scheduler_max_parallel: int = Field(default=3, ge=1)
+
+    # Predecessor-output handoff — total chars of prerequisite output injected
+    # into a successor task's prompt (WS-3).
+    handoff_budget_chars: int = Field(default=8000, ge=0)
+
     # Providers
     default_provider: str = Field(default="mock")
     anthropic_api_key: str = Field(default="")
