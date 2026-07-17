@@ -30,7 +30,7 @@ from app.orchestration.ports import AgentRunRequest
 from app.orchestration.state_machine.machine import assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.remediation.policy import RemediationContext, select_remediation
-from app.services import evaluation_service
+from app.services import evaluation_service, tool_runtime
 
 
 class NotAssigned(Exception):
@@ -356,6 +356,11 @@ async def execute_task(
 
     adapter = get_adapter(agent.provider)
     credential_ref = (agent.config or {}).get("api_key_ref")
+    # WS-5: the request carries schemas only for tools this agent holds a
+    # grant for (adapters that support provider-native tools surface them; the
+    # mock does today). Enforcement never relies on that — the runtime
+    # re-checks every call against the default-deny permission table.
+    tool_schemas = await tool_runtime.permitted_tool_schemas(session, agent)
 
     execution_ids: list[uuid.UUID] = []
     attempt = 0
@@ -385,9 +390,24 @@ async def execute_task(
         )
         started = _now()
         prompt = build_prompt(task, _join_context(handoff_text, extra_context))
-        request = AgentRunRequest(prompt=prompt, model=agent.model, credential_ref=credential_ref)
+        request = AgentRunRequest(
+            prompt=prompt, model=agent.model, credential_ref=credential_ref, tools=tool_schemas
+        )
         try:
-            result = await asyncio.wait_for(adapter.run(request), timeout=timeout_s)
+            # timeout_s is the attempt's time budget and wraps the WHOLE tool
+            # loop, not just one model call (WS-5).
+            result = await asyncio.wait_for(
+                tool_runtime.run_with_tools(
+                    session,
+                    agent=agent,
+                    adapter=adapter,
+                    request=request,
+                    task=task,
+                    actor_id=actor_id,
+                    actor_type=actor_type,
+                ),
+                timeout=timeout_s,
+            )
         except TimeoutError:
             execution_ids.append(
                 await _record(
