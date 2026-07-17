@@ -33,7 +33,7 @@ Every claim was checked against code before this plan was written.
 
 | # | Audit claim | Verification (code-level) | Status |
 |---|------------|---------------------------|--------|
-| 1 | Next.js 15.1.6 has a critical CVE; 15.1.9 patched | `package.json` pinned 15.1.6; registry shows 15.1.x line patched through 15.1.12 | **FIXED in this PR** — bumped to 15.1.12 (latest same-minor patch); tests, tsc, production build, e2e all green |
+| 1 | Next.js 15.1.6 has a critical CVE; 15.1.9 patched | `package.json` pinned 15.1.6; registry shows 15.1.x line patched through 15.1.12 | **FIX IN COMPANION PR #31** — bumped to 15.1.12 there (latest same-minor patch); tests, tsc, production build, e2e all green on that branch. `main` still pins 15.1.6 until #31 merges |
 | 2 | API execution bypasses Celery | `execute_task` calls `adapter.run()` inline (`execution_service.py:209`); `WorkflowEngine.submit_execution` is defined (`engines.py:30`) and **never called** from any service path | **CONFIRMED** |
 | 3 | No objective-to-plan decomposition | `app/services/decomposition` named in `architecture.md` §4 **does not exist as a module at all** — worse than "unfinished," it is doc-drift | **CONFIRMED+** |
 | 4 | No dependency-aware scheduler | Task completion does not trigger dispatch of newly-READY successors; dispatch is one-at-a-time via API call | **CONFIRMED** |
@@ -67,7 +67,7 @@ link; the loop works when the chain has no missing link, and only then.
 ## 3. What we can and cannot act on
 
 **Can act now:** every gap in §1 is code we own. No external dependency
-blocks any workstream. The CVE is already fixed.
+blocks any workstream. The CVE fix is delivered in companion PR #31.
 
 **Cannot act on (park, don't churn):** the broader Agentic³ vision
 (5–15%) is gated on design issues #16/#17 and Principal decisions on the
@@ -93,13 +93,15 @@ documents outrun our enforcement.
   execution completes and the execution row is written by the worker path;
   CI includes one real end-to-end dispatch through Celery against Redis
   (the CI services already exist).
-- **Status: DELIVERED.** Proof, per the §7 standing rule:
+- **Status: DELIVERED IN COMPANION PR #34** (pending merge — until it
+  lands, `main` does not contain these artifacts and this block reads as
+  *(planned)* under the §7 standing rule). Proof, on that branch:
   `tests/integration/test_dispatch_spine.py` (hermetic acceptance: dispatch
   returns with the task QUEUED and zero execution rows; the worker
   entrypoint then completes it with the exact captured params) and
   `tests/integration/test_celery_broker_smoke.py` + the CI "Celery spine
   smoke" step (HTTP dispatch → real Redis → real worker subprocess → real
-  Postgres → polled completion). Compose api now sets
+  Postgres → polled completion). Compose api there sets
   `WORKFLOW_ENGINE_BACKEND=celery`; inline remains the dev/test default,
   returning the full result as before. Found-and-fixed along the way: the
   deployed worker never registered `execution.run` at boot (`celery_app`
