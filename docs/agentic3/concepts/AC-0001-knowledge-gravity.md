@@ -43,9 +43,9 @@ Every rule and definitional claim below carries one of three labels:
 
 **Knowledge Gravity** is metadata carried by knowledge entities (records,
 patterns, decisions, principles) expressing how much justified weight the
-institution currently assigns them **[reconstructed** — issue #16 uses the
+institution currently assigns them **[reconstructed]** (issue #16 uses the
 term without defining it; this sentence is the reconstruction under
-review**]**. Weight is earned and lost through four named update sources
+review). Weight is earned and lost through four named update sources
 **[supported: #16 acceptance criteria]**:
 
 1. **Evidence** — verified outcomes that support or contradict the knowledge;
