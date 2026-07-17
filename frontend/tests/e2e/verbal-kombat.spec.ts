@@ -2,16 +2,13 @@ import { expect, test } from "@playwright/test";
 import path from "node:path";
 
 // The game is a self-contained static file at the repo root; no dev server needed.
-const gameUrl =
-  "file://" + path.resolve(__dirname, "../../../verbal-kombat/index.html");
+const gameUrl = "file://" + path.resolve(__dirname, "../../../verbal-kombat/index.html");
 
 test.describe("Verbal Kombat", () => {
   // A CPU-vs-CPU match plays out in real time (~1-2s per exchange, best of 3 rounds).
   test.setTimeout(180_000);
 
-  test("spectated match runs to fatality and produces a transcript", async ({
-    page,
-  }) => {
+  test("spectated match runs to fatality and produces a transcript", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
 
@@ -36,9 +33,7 @@ test.describe("Verbal Kombat", () => {
     expect(errors).toEqual([]);
   });
 
-  test("custom fighter names are escaped, not injected as HTML", async ({
-    page,
-  }) => {
+  test("custom fighter names are escaped, not injected as HTML", async ({ page }) => {
     await page.goto(gameUrl);
     await page.click("#btn-start");
     await page.fill("#cust-name", '<img src=x onerror="window.xss=1">');
@@ -47,8 +42,6 @@ test.describe("Verbal Kombat", () => {
     // The name must render as text inside the roster card, not as an element.
     await expect(page.locator(".fcard img")).toHaveCount(0);
     expect(await page.evaluate(() => (window as any).xss)).toBeUndefined();
-    await expect(
-      page.locator(".fcard .fname").last(),
-    ).toContainText("<img src=x");
+    await expect(page.locator(".fcard .fname").last()).toContainText("<img src=x");
   });
 });
