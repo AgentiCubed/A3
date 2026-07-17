@@ -30,7 +30,7 @@ from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis import python_worker
@@ -96,7 +96,13 @@ async def _artifact_read(session: AsyncSession, ctx: ToolContext, args: dict) ->
     except ValueError as exc:
         raise ValueError("artifact_id (uuid) is required") from exc
     artifact = await session.get(Artifact, artifact_id)
-    if artifact is None or artifact.organization_id != ctx.org_id:
+    if (
+        artifact is None
+        or artifact.organization_id != ctx.org_id
+        or artifact.project_id != ctx.project_id
+    ):
+        # Project-scoped like the artifacts API: a task's agent cannot read
+        # another project's artifacts even within its own org.
         raise ValueError("artifact not found")
     data = artifact_service.default_store().get(artifact.storage_key)
     text = data.decode("utf-8", errors="replace")
@@ -132,7 +138,7 @@ TOOL_IMPLEMENTATIONS: dict[str, ToolImpl] = {
 
 # ── Permitted schemas (what the model is shown) ───────────────────────────
 async def permitted_tool_schemas(session: AsyncSession, agent: Agent) -> list[ToolSchema]:
-    """Schemas of tools this agent holds an unexpired grant for."""
+    """Schemas of tools this agent holds an unexpired grant for (one query)."""
     now = datetime.now(UTC)
     stmt = (
         select(Tool)
@@ -140,19 +146,17 @@ async def permitted_tool_schemas(session: AsyncSession, agent: Agent) -> list[To
         .where(
             AgentToolPermission.agent_id == agent.id,
             Tool.organization_id == agent.organization_id,
+            or_(
+                AgentToolPermission.expires_at.is_(None),
+                AgentToolPermission.expires_at > now,
+            ),
         )
     )
     tools = (await session.execute(stmt)).scalars().all()
-    schemas = []
-    for tool in tools:
-        if not await tool_service.has_permission(
-            session, agent_id=agent.id, tool_id=tool.id, now=now
-        ):
-            continue  # expired grant
-        schemas.append(
-            ToolSchema(name=tool.name, description=tool.description, input_schema=tool.schema or {})
-        )
-    return schemas
+    return [
+        ToolSchema(name=tool.name, description=tool.description, input_schema=tool.schema or {})
+        for tool in tools
+    ]
 
 
 # ── The runtime loop ──────────────────────────────────────────────────────

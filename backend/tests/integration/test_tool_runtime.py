@@ -271,3 +271,30 @@ def test_analysis_tool_round_trip(client):
     body = _dispatch(client, headers, pid, task_id).json()
     assert body["final_state"] == "completed"
     assert _audits_for_task(task_id, "tool.invoked")[0]["status"] == "ok"
+
+
+def test_artifact_read_is_project_scoped(client, monkeypatch, tmp_path):
+    """An agent cannot read another project's artifact, even in its own org."""
+    monkeypatch.setattr(get_settings(), "artifact_store_path", str(tmp_path))
+    headers = _auth(client)
+    pid_a = _project(client, headers)
+    pid_b = _project(client, headers)
+    agent_id = _agent(client, headers)
+    write_id = _register_tool(client, headers, "artifact.write")
+    read_id = _register_tool(client, headers, "artifact.read")
+    _grant(client, headers, agent_id, write_id)
+    _grant(client, headers, agent_id, read_id)
+
+    # Write an artifact in project A.
+    t1 = _task(client, headers, pid_a, "Write", _marker("artifact.write", content_text="secret"))
+    _assign(client, headers, pid_a, t1, agent_id)
+    assert _dispatch(client, headers, pid_a, t1).json()["final_state"] == "completed"
+    foreign_artifact = _artifacts(client, headers, pid_a)[0]["id"]
+
+    # A task in project B tries to read it: the tool errors, it is not served.
+    marker = _marker("artifact.read", artifact_id=foreign_artifact)
+    t2 = _task(client, headers, pid_b, "Read", marker)
+    _assign(client, headers, pid_b, t2, agent_id)
+    assert _dispatch(client, headers, pid_b, t2).json()["final_state"] == "completed"
+    invoked = _audits_for_task(t2, "tool.invoked")
+    assert invoked[0]["status"] == "error"

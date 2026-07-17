@@ -356,8 +356,10 @@ async def execute_task(
 
     adapter = get_adapter(agent.provider)
     credential_ref = (agent.config or {}).get("api_key_ref")
-    # WS-5: the model is shown only tools this agent holds a grant for; the
-    # runtime re-checks every call against the same default-deny table.
+    # WS-5: the request carries schemas only for tools this agent holds a
+    # grant for (adapters that support provider-native tools surface them; the
+    # mock does today). Enforcement never relies on that — the runtime
+    # re-checks every call against the default-deny permission table.
     tool_schemas = await tool_runtime.permitted_tool_schemas(session, agent)
 
     execution_ids: list[uuid.UUID] = []
