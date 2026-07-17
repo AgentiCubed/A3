@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, actor_from_user, require
+from app.core.audit import record_audit
 from app.core.rbac import Action
 from app.core.roles import ActorType
 from app.models.project import (
@@ -35,7 +36,10 @@ from app.schemas.execution import (
     DispatchResultResponse,
     EvaluationResponse,
     ExecutionResponse,
+    ProjectStartRequest,
+    ProjectStartResponse,
     ReassignRequest,
+    StartedTaskResponse,
 )
 from app.schemas.project import (
     MethodologyResponse,
@@ -71,6 +75,7 @@ from app.services import (
     evaluation_service,
     execution_service,
     project_service,
+    scheduler_service,
     task_service,
 )
 from app.services.methodology import ProjectSignals
@@ -259,7 +264,71 @@ async def assign_task_agent(
     return TaskResponse.model_validate(task)
 
 
-# ── Execution (dispatch, history, reassignment) ───────────────────────────
+# ── Execution (start, dispatch, history, reassignment) ────────────────────
+@router.post("/{project_id}/start", response_model=ProjectStartResponse)
+async def start_project(
+    project_id: uuid.UUID,
+    req: ProjectStartRequest,
+    session: DbSession,
+    user: TaskEditor,
+):
+    """Start the project's execution loop: dispatch every dependency-satisfied task.
+
+    Celery mode queues the initial wave and returns immediately; the worker
+    dispatches successors as their predecessors complete. Inline mode runs the
+    whole dependency chain in-request. Unassigned, human, and
+    dependency-blocked tasks are left untouched and keep gating their
+    successors.
+    """
+    project = await _load_project(session, user, project_id)
+    await record_audit(
+        session,
+        organization_id=user.organization_id,
+        project_id=project.id,
+        actor_type=ActorType.USER,
+        actor_id=user.id,
+        action="project.started",
+        entity_type="Project",
+        entity_id=project.id,
+    )
+    engine = get_workflow_engine()
+    if engine is not None:
+        params = execution_service.build_dispatch_params(
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+            evaluation=None,
+        )
+        outcomes = await scheduler_service.dispatch_ready(
+            session,
+            project_id=project.id,
+            engine=engine,
+            params=params,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+        )
+        await session.commit()
+        return ProjectStartResponse(
+            engine=engine.name,
+            tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
+        )
+
+    outcomes = await scheduler_service.run_inline(
+        session,
+        project_id=project.id,
+        actor_id=user.id,
+        actor_type=ActorType.USER,
+        max_attempts=req.max_attempts,
+        timeout_s=req.timeout_s,
+    )
+    await session.commit()
+    return ProjectStartResponse(
+        engine="inline",
+        tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
+    )
+
+
 @router.post(
     "/{project_id}/tasks/{task_id}/dispatch",
     response_model=DispatchResultResponse | DispatchAcceptedResponse,

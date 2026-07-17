@@ -33,6 +33,30 @@ class DispatchAcceptedResponse(BaseModel):
     engine_handle: str
 
 
+class ProjectStartRequest(BaseModel):
+    """Options applied to every task the scheduling pass dispatches."""
+
+    max_attempts: int = Field(default=2, ge=1, le=10)
+    timeout_s: float = Field(default=30.0, gt=0, le=600)
+
+
+class StartedTaskResponse(BaseModel):
+    task_id: uuid.UUID
+    status: ExecutionState
+
+
+class ProjectStartResponse(BaseModel):
+    """Outcome of a project-level scheduling pass.
+
+    In celery mode ``tasks`` are the initial QUEUED wave; the worker dispatches
+    successors as their predecessors complete. In inline mode the whole
+    dependency chain has already run and ``tasks`` hold final states.
+    """
+
+    engine: str
+    tasks: list[StartedTaskResponse]
+
+
 class DispatchResultResponse(BaseModel):
     final_state: ExecutionState
     attempts: int

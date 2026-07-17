@@ -5,6 +5,10 @@ path runs — so the worker engine is just transport. Dispatch parameters
 (attempts, timeout, evaluation config, actor) ride the Celery message as a
 JSON-safe dict so the worker runs with the caller's exact intent. The session
 factory is indirected so tests can run this task against the test DB.
+
+After a task COMPLETES, the worker runs a scheduling pass (WS-2) so successor
+tasks whose dependencies are now satisfied get dispatched without another API
+call — this is what keeps a started project moving.
 """
 
 from __future__ import annotations
@@ -14,7 +18,9 @@ import uuid
 
 from app.core.roles import ActorType
 from app.models.task import Task
-from app.services import execution_service
+from app.orchestration.engines import get_workflow_engine
+from app.orchestration.state_machine.states import ExecutionState
+from app.services import execution_service, scheduler_service
 from app.workers.celery_app import celery_app
 
 # Overridable for tests; defaults to the application's async session factory.
@@ -63,8 +69,33 @@ async def _run(task_id: uuid.UUID, params: dict) -> None:
         task = await session.get(Task, task_id)
         if task is None:
             return
-        await execution_service.execute_task(session, task=task, **_parse_dispatch_params(params))
+        parsed = _parse_dispatch_params(params)
+        await execution_service.execute_task(session, task=task, **parsed)
         await session.commit()
+
+        if task.status != ExecutionState.COMPLETED:
+            return
+        engine = get_workflow_engine()
+        if engine is None:
+            # Worker configured inline (misconfiguration): nothing to advance.
+            return
+        # Scheduler-triggered dispatches act as the system, inheriting the
+        # chain's attempt/timeout options but not task-specific evaluation.
+        successor_params = execution_service.build_dispatch_params(
+            actor_id=None,
+            actor_type=ActorType.SYSTEM,
+            max_attempts=parsed["max_attempts"],
+            timeout_s=parsed["timeout_s"],
+            evaluation=None,
+        )
+        await scheduler_service.dispatch_ready(
+            session,
+            project_id=task.project_id,
+            engine=engine,
+            params=successor_params,
+            actor_id=None,
+            actor_type=ActorType.SYSTEM,
+        )
 
 
 @celery_app.task(name="execution.run")
