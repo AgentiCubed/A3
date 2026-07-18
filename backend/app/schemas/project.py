@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.enums import (
     Methodology,
@@ -15,6 +17,23 @@ from app.core.enums import (
     RequirementKind,
     RequirementPriority,
 )
+
+AcceptanceCheck = Literal[
+    "non_empty",
+    "min_length",
+    "max_length",
+    "contains_all",
+    "contains_any",
+    "is_json",
+    "regex",
+]
+
+_DELIVERABLE_SEPARATORS_RE = re.compile(r"[\s_\-]+")
+
+
+def normalize_deliverable_name(name: str) -> str:
+    """Return the canonical form used for deliverable-name matching."""
+    return _DELIVERABLE_SEPARATORS_RE.sub("", name.lower())
 
 
 class SignalsIn(BaseModel):
@@ -26,19 +45,99 @@ class SignalsIn(BaseModel):
 
 
 class AcceptanceCriterionIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    """One deterministic project-acceptance rubric criterion.
 
-    key: str | None = None
-    check: str = Field(min_length=1)
-    params: dict = Field(default_factory=dict)
-    weight: float = Field(default=1.0, gt=0)
+    This is the canonical validation boundary for both API input and persisted
+    JSON. Keeping the per-check parameter contract here prevents malformed
+    specifications from reaching the rubric evaluator and raising at close time.
+    """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    key: str | None = Field(default=None, min_length=1)
+    check: AcceptanceCheck
+    params: dict[str, object] = Field(default_factory=dict)
+    weight: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_check_params(self) -> AcceptanceCriterionIn:
+        params = self.params
+
+        if self.check in {"non_empty", "is_json"}:
+            if params:
+                raise ValueError(f"{self.check} does not accept parameters")
+            return self
+
+        if self.check in {"min_length", "max_length"}:
+            param_name = "min" if self.check == "min_length" else "max"
+            unknown = set(params) - {param_name}
+            if unknown:
+                raise ValueError(
+                    f"{self.check} has unsupported parameters: {', '.join(sorted(unknown))}"
+                )
+            if param_name in params:
+                value = params[param_name]
+                minimum = 1 if self.check == "min_length" else 0
+                if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
+                    raise ValueError(
+                        f"{self.check} parameter '{param_name}' must be an integer >= {minimum}"
+                    )
+            return self
+
+        if self.check in {"contains_all", "contains_any"}:
+            if set(params) != {"keywords"}:
+                raise ValueError(f"{self.check} requires only the 'keywords' parameter")
+            keywords = params["keywords"]
+            if not isinstance(keywords, list) or not keywords:
+                raise ValueError(f"{self.check} keywords must be a non-empty list of strings")
+            cleaned: list[str] = []
+            for keyword in keywords:
+                if not isinstance(keyword, str) or not keyword.strip():
+                    raise ValueError(f"{self.check} keywords must be a non-empty list of strings")
+                cleaned.append(keyword.strip())
+            self.params = {"keywords": cleaned}
+            return self
+
+        if self.check == "regex":
+            if set(params) != {"pattern"}:
+                raise ValueError("regex requires only the 'pattern' parameter")
+            pattern = params["pattern"]
+            if not isinstance(pattern, str) or not pattern.strip():
+                raise ValueError("regex pattern must be a non-empty string")
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                raise ValueError(f"regex pattern is invalid: {exc}") from exc
+            self.params = {"pattern": pattern}
+            return self
+
+        raise ValueError(f"unsupported acceptance check: {self.check}")
 
 
 class AcceptanceCriteriaIn(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    """Canonical project-acceptance specification for API and stored JSON."""
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     criteria: list[AcceptanceCriterionIn] = Field(default_factory=list)
     deliverables: list[str] = Field(default_factory=list)
+
+    @field_validator("deliverables")
+    @classmethod
+    def validate_deliverables(cls, deliverables: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        for deliverable in deliverables:
+            name = deliverable.strip()
+            normalized = normalize_deliverable_name(name)
+            if not name or not normalized or not any(char.isalnum() for char in normalized):
+                raise ValueError("deliverables must contain non-empty names, not only separators")
+            cleaned.append(name)
+        return cleaned
+
+
+def validate_acceptance_criteria(spec: object) -> AcceptanceCriteriaIn:
+    """Validate API or persisted acceptance JSON through one strict contract."""
+    return AcceptanceCriteriaIn.model_validate(spec)
 
 
 class ProjectCreate(BaseModel):

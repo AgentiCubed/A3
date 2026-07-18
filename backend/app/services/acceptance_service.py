@@ -9,9 +9,10 @@ with its acceptance criteria unsatisfied.
 Supported ``acceptance_criteria`` shapes (both keys may be combined):
 
 - ``{"criteria": [<rubric spec>, ...]}`` — rubric specs (same shape the task
-  rubric engine uses: ``{"key", "check", "params", "weight"}``) evaluated
-  against the corpus of the project's successful execution outputs. Unknown
-  checks fail closed (rubric engine behavior).
+   rubric engine uses: ``{"key", "check", "params", "weight"}``) evaluated
+   against the corpus of the project's successful execution outputs. Unsupported
+   checks or malformed parameters are rejected at input and fail closed if found
+   in persisted data.
 - ``{"deliverables": ["brief", ...]}`` — each name must match a stored
   project artifact (case-insensitive substring, ignoring spaces/hyphens/
   underscores, so "demand chart" matches "widget-demand-chart.png").
@@ -22,10 +23,10 @@ the project to), which the report makes explicit via ``evaluated=False``.
 
 from __future__ import annotations
 
-import re
 import uuid
 from dataclasses import dataclass
 
+from pydantic import ValidationError
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +38,11 @@ from app.models.project import Project
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
 from app.orchestration.state_machine.states import ExecutionState
+from app.schemas.project import (
+    AcceptanceCriteriaIn,
+    normalize_deliverable_name,
+    validate_acceptance_criteria,
+)
 
 
 @dataclass(frozen=True)
@@ -68,22 +74,25 @@ class AcceptanceReport:
         }
 
 
-def _normalize(name: str) -> str:
-    """Case/separator-insensitive form for deliverable-name matching."""
-    return re.sub(r"[\s_\-]+", "", name.lower())
-
-
 async def _output_corpus(session: AsyncSession, project_id: uuid.UUID) -> str:
     """Accepted execution outputs of the project's tasks, newest last.
 
     Executions without an evaluation are successful by execution state alone.
-    Once evaluated, only a PASS may contribute to project acceptance; rejected
-    attempts must never help a project earn completion.
+    Once evaluated, only a latest PASS may contribute to project acceptance;
+    rejected attempts must never help a project earn completion.
     """
+    latest_evaluation_id = (
+        select(Evaluation.id)
+        .where(Evaluation.task_execution_id == TaskExecution.id)
+        .order_by(Evaluation.created_at.desc(), Evaluation.id.desc())
+        .limit(1)
+        .correlate(TaskExecution)
+        .scalar_subquery()
+    )
     stmt = (
         select(TaskExecution.output)
         .join(Task, TaskExecution.task_id == Task.id)
-        .outerjoin(Evaluation, Evaluation.task_execution_id == TaskExecution.id)
+        .outerjoin(Evaluation, Evaluation.id == latest_evaluation_id)
         .where(
             Task.project_id == project_id,
             TaskExecution.state == ExecutionState.COMPLETED,
@@ -99,20 +108,27 @@ async def evaluate_project_acceptance(
     session: AsyncSession, *, project: Project
 ) -> AcceptanceReport:
     """Evaluate the project's acceptance criteria against its actual record."""
-    spec = project.acceptance_criteria or {}
-    malformed = _malformed_spec_reason(spec)
-    if malformed:
+    try:
+        spec = (
+            AcceptanceCriteriaIn()
+            if project.acceptance_criteria is None
+            else validate_acceptance_criteria(project.acceptance_criteria)
+        )
+    except ValidationError as exc:
         return AcceptanceReport(
             evaluated=True,
             satisfied=False,
             results=[
                 CriterionStatus(
-                    key="acceptance_criteria", kind="rubric", passed=False, notes=malformed
+                    key="acceptance_criteria",
+                    kind="rubric",
+                    passed=False,
+                    notes=_validation_error_reason(exc),
                 )
             ],
         )
-    rubric_specs = spec.get("criteria") or []
-    deliverables = spec.get("deliverables") or []
+    rubric_specs = [criterion.model_dump(exclude_none=True) for criterion in spec.criteria]
+    deliverables = spec.deliverables
     if not rubric_specs and not deliverables:
         return AcceptanceReport(evaluated=False, satisfied=True, results=[])
 
@@ -128,7 +144,7 @@ async def evaluate_project_acceptance(
 
     if deliverables:
         artifact_names = [
-            _normalize(n)
+            normalize_deliverable_name(n)
             for n in (
                 await session.execute(
                     select(Artifact.name).where(Artifact.project_id == project.id)
@@ -138,10 +154,10 @@ async def evaluate_project_acceptance(
             .all()
         ]
         for wanted in deliverables:
-            found = any(_normalize(str(wanted)) in name for name in artifact_names)
+            found = any(normalize_deliverable_name(wanted) in name for name in artifact_names)
             results.append(
                 CriterionStatus(
-                    key=str(wanted),
+                    key=wanted,
                     kind="deliverable",
                     passed=found,
                     notes="" if found else f"no stored artifact matches '{wanted}'",
@@ -153,22 +169,8 @@ async def evaluate_project_acceptance(
     )
 
 
-def _malformed_spec_reason(spec: object) -> str | None:
-    """Return a fail-closed diagnostic for unsupported persisted specifications."""
-    if not isinstance(spec, dict):
-        return "acceptance criteria must be an object"
-    unknown = set(spec) - {"criteria", "deliverables"}
-    if unknown:
-        return f"unsupported acceptance criteria keys: {', '.join(sorted(unknown))}"
-    criteria = spec.get("criteria", [])
-    deliverables = spec.get("deliverables", [])
-    if criteria is not None and (
-        not isinstance(criteria, list) or any(not isinstance(item, dict) for item in criteria)
-    ):
-        return "criteria must be a list of rubric objects"
-    if deliverables is not None and (
-        not isinstance(deliverables, list)
-        or any(not isinstance(item, str) or not item.strip() for item in deliverables)
-    ):
-        return "deliverables must be a list of non-empty strings"
-    return None
+def _validation_error_reason(exc: ValidationError) -> str:
+    """Return a stable fail-closed diagnostic without leaking the stored value."""
+    error = exc.errors(include_url=False, include_input=False)[0]
+    location = ".".join(str(part) for part in error["loc"]) or "root"
+    return f"malformed acceptance criteria at {location}: {error['msg']}"
