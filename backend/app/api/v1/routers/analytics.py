@@ -95,7 +95,8 @@ async def close_project(
     """Close the project — refused while acceptance criteria fail (WS-4b).
 
     A 409 lists the unmet criteria. Passing acknowledge_unmet_criteria=true
-    closes anyway (deliberate abandonment) and records the acknowledgment.
+    closes a legacy manual project anyway (deliberate abandonment) and records
+    the acknowledgment. Approved-plan projects cannot waive their gates.
     """
     project = await _project(session, user, project_id)
     try:
@@ -105,6 +106,91 @@ async def close_project(
             actor_id=user.id,
             acknowledge_unmet_criteria=bool(req and req.acknowledge_unmet_criteria),
         )
+    except closeout_service.GovernedPlanApprovalRequired as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "plan_approval_required"},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "plan_approval_required"},
+        ) from exc
+    except closeout_service.GovernedMaterializationInvalid as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "approved_materialization_invalid", "detail": exc.reason},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "approved_materialization_invalid", "reason": exc.reason},
+        ) from exc
+    except closeout_service.GovernedProjectNotActive as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "governed_project_not_active"},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "governed_project_not_active"},
+        ) from exc
+    except closeout_service.PlanTasksIncomplete as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "plan_tasks_incomplete", "tasks": exc.tasks},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "plan_tasks_incomplete", "tasks": exc.tasks},
+        ) from exc
+    except closeout_service.PlanTaskEvidenceInvalid as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "plan_task_evidence_invalid", "tasks": exc.tasks},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "plan_task_evidence_invalid", "tasks": exc.tasks},
+        ) from exc
     except closeout_service.AcceptanceNotMet as exc:
         # Persist the refusal before answering: the audit trail must show the
         # gate firing even though the request fails.
@@ -117,7 +203,11 @@ async def close_project(
             action="project.close_refused",
             entity_type="Project",
             entity_id=project.id,
-            after={"unmet_criteria": [r.key for r in exc.report.unmet]},
+            after={
+                "reason": "acceptance_criteria_unmet",
+                "unmet_criteria": [r.key for r in exc.report.unmet],
+                "acknowledgement_allowed": exc.acknowledgement_allowed,
+            },
         )
         await session.commit()
         raise HTTPException(
@@ -125,7 +215,12 @@ async def close_project(
             {
                 "error": "acceptance_criteria_unmet",
                 "unmet": [r.to_dict() for r in exc.report.unmet],
-                "hint": "resolve the criteria or pass acknowledge_unmet_criteria=true",
+                "acknowledgement_allowed": exc.acknowledgement_allowed,
+                "hint": (
+                    "resolve the criteria or pass acknowledge_unmet_criteria=true"
+                    if exc.acknowledgement_allowed
+                    else "resolve every criterion; governed acceptance cannot be waived"
+                ),
             },
         ) from exc
     report = await closeout_service.generate_closeout(

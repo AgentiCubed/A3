@@ -188,4 +188,7 @@ async def run_inline(
                 timeout_s=timeout_s,
             )
             outcomes[task.id] = result.final_state
+            # Keep each governed result and its proof durable before the next
+            # task begins; a later failure must not erase earlier work.
+            await session.commit()
     return [TaskOutcome(task_id=tid, status=state) for tid, state in outcomes.items()]

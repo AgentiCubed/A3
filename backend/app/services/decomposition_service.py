@@ -12,6 +12,7 @@ import json
 import math
 import re
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from pydantic import ValidationError
@@ -29,13 +30,15 @@ from app.core.enums import (
     ProjectStatus,
 )
 from app.core.roles import ActorType
-from app.evaluation.specs import rubric_sha256
+from app.evaluation.specs import normalize_rubric_specs, rubric_sha256
 from app.models.agent import Agent, AgentCapability
+from app.models.audit_event import AuditEvent
 from app.models.decomposition_plan import DecompositionPlan
 from app.models.project import Project
 from app.models.task import Task, TaskDependency
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
+from app.orchestration.state_machine.states import ExecutionState
 from app.scheduling.graph import CycleError, DependencyGraph
 from app.schemas.decomposition import PlanSpec, PlanTaskAssignmentIn
 from app.schemas.project import normalize_deliverable_name, validate_acceptance_criteria
@@ -92,6 +95,30 @@ class AssignmentError(Exception):
 
 class AcceptanceConflict(Exception):
     pass
+
+
+class PlanApprovalRequired(Exception):
+    """A draft exists but has not received the explicit lifecycle decision required."""
+
+
+class MaterializationInvalid(Exception):
+    """Approved plan provenance no longer matches the executable project graph."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(reason)
+
+
+class GovernedProjectNotStartable(Exception):
+    """A governed project has already started or its initial state is no longer intact."""
+
+
+@dataclass(frozen=True)
+class ApprovedMaterialization:
+    plan: DecompositionPlan
+    spec: PlanSpec
+    tasks: list[Task]
+    dependencies: list[TaskDependency]
 
 
 def _prompt(project: Project) -> str:
@@ -347,6 +374,14 @@ async def generate_plan(
         raise NotFound("project")
     project = locked_project
     if project.status not in {ProjectStatus.INTAKE, ProjectStatus.PLANNING}:
+        raise ProjectNotPlannable()
+    approved_plan = await session.scalar(
+        select(DecompositionPlan.id).where(
+            DecompositionPlan.project_id == project.id,
+            DecompositionPlan.status == DecompositionPlanStatus.APPROVED,
+        )
+    )
+    if approved_plan is not None:
         raise ProjectNotPlannable()
     existing = await session.scalar(
         select(DecompositionPlan.id).where(
@@ -663,3 +698,273 @@ async def approve_plan(
         },
     )
     return plan, materialized, len(spec.dependencies)
+
+
+async def load_approved_materialization(
+    session: AsyncSession,
+    *,
+    project: Project,
+    require_executable_assignments: bool = True,
+) -> ApprovedMaterialization | None:
+    """Verify the approved plan still exactly matches its executable graph.
+
+    Only projects with no plan history and no plan-derived tasks retain the
+    legacy manual workflow. Once any plan decision or plan-derived task exists,
+    every provenance link is fail-closed.
+    """
+    plans = list(
+        (
+            await session.execute(
+                select(DecompositionPlan).where(DecompositionPlan.project_id == project.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    tasks = list(
+        (
+            await session.execute(
+                select(Task).where(Task.project_id == project.id).order_by(Task.order_index)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    approved = [plan for plan in plans if plan.status == DecompositionPlanStatus.APPROVED]
+    source_tasks = [task for task in tasks if task.source_plan_id is not None]
+    drafts = [plan for plan in plans if plan.status == DecompositionPlanStatus.DRAFT]
+
+    if not approved and not source_tasks:
+        if drafts:
+            raise PlanApprovalRequired()
+        if plans:
+            raise MaterializationInvalid(
+                "decomposition plan history exists without an approved plan"
+            )
+        return None
+    if len(approved) != 1:
+        raise MaterializationInvalid("governed project must have exactly one approved plan")
+    if drafts:
+        raise MaterializationInvalid("a newer draft must be decided before execution")
+
+    plan = approved[0]
+    if plan.organization_id != project.organization_id:
+        raise MaterializationInvalid("approved plan organization does not match project")
+    if plan.contract_version != PLAN_CONTRACT:
+        raise MaterializationInvalid("approved plan contract version is unsupported")
+    if plan.objective_sha256 != _digest(plan.objective) or plan.objective != project.objective:
+        raise MaterializationInvalid("project objective changed after approval")
+    if not isinstance(plan.plan_spec, dict):
+        raise MaterializationInvalid("approved plan specification is missing")
+    if plan.plan_spec_sha256 != _digest(_canonical_json(plan.plan_spec)):
+        raise MaterializationInvalid("approved plan specification hash does not match")
+    try:
+        spec = PlanSpec.model_validate(plan.plan_spec)
+        _validate_plan(spec)
+    except (ValidationError, ValueError) as exc:
+        raise MaterializationInvalid("approved plan specification no longer validates") from exc
+
+    approval_events = list(
+        (
+            await session.execute(
+                select(AuditEvent).where(
+                    AuditEvent.organization_id == project.organization_id,
+                    AuditEvent.entity_id == plan.id,
+                    AuditEvent.entity_type == "DecompositionPlan",
+                    AuditEvent.action == "plan.approved",
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if len(approval_events) != 1 or not isinstance(approval_events[0].after, dict):
+        raise MaterializationInvalid("approved plan audit provenance is missing or ambiguous")
+    approval = approval_events[0].after
+    if approval.get("plan_spec_sha256") != plan.plan_spec_sha256:
+        raise MaterializationInvalid("approved plan audit hash does not match")
+    if approval.get("version") != plan.version:
+        raise MaterializationInvalid("approved plan audit version does not match")
+
+    try:
+        acceptance = validate_acceptance_criteria(project.acceptance_criteria)
+    except ValidationError as exc:
+        raise MaterializationInvalid("project acceptance policy is malformed") from exc
+    acceptance_json = acceptance.model_dump(mode="json", exclude_none=True)
+    if approval.get("acceptance_sha256") != _digest(_canonical_json(acceptance_json)):
+        raise MaterializationInvalid("project acceptance policy changed after approval")
+
+    expected_by_key = {task.key: task for task in spec.tasks}
+    actual_by_key = {
+        task.source_plan_task_key: task for task in tasks if task.source_plan_task_key is not None
+    }
+    if len(tasks) != len(spec.tasks) or set(actual_by_key) != set(expected_by_key):
+        raise MaterializationInvalid("materialized task set does not exactly match approved plan")
+    current_task_ids = {key: str(actual_by_key[key].id) for key in expected_by_key}
+    if approval.get("task_ids") != current_task_ids:
+        raise MaterializationInvalid("materialized task identities changed after approval")
+
+    assignments: list[PlanTaskAssignmentIn] = []
+    current_policies: dict[str, dict] = {}
+    for index, expected in enumerate(spec.tasks):
+        task = actual_by_key[expected.key]
+        expected_rubric = [
+            criterion.model_dump(mode="json", exclude_none=True)
+            for criterion in expected.acceptance_criteria
+        ]
+        try:
+            actual_rubric = normalize_rubric_specs(task.acceptance_criteria)
+        except ValueError as exc:
+            raise MaterializationInvalid(
+                f"task '{expected.key}' acceptance policy is malformed"
+            ) from exc
+        exact_fields_match = (
+            task.organization_id == project.organization_id
+            and task.project_id == project.id
+            and task.source_plan_id == plan.id
+            and task.title == expected.title
+            and task.description == expected.description
+            and list(task.required_capabilities or []) == expected.required_capabilities
+            and actual_rubric == expected_rubric
+            and task.estimate_hours == expected.estimate_hours
+            and task.priority == expected.priority
+            and task.order_index == index
+            and not task.is_human_task
+        )
+        if not exact_fields_match:
+            raise MaterializationInvalid(
+                f"task '{expected.key}' differs from its approved specification"
+            )
+        if task.assigned_agent_id is None:
+            raise MaterializationInvalid(f"task '{expected.key}' has no approved executor")
+        assignments.append(
+            PlanTaskAssignmentIn(
+                task_key=expected.key,
+                agent_id=task.assigned_agent_id,
+                evaluator_agent_id=task.evaluator_agent_id,
+                max_remediations=task.max_remediations,
+            )
+        )
+        current_policies[expected.key] = {
+            "executor_agent_id": str(task.assigned_agent_id),
+            "evaluator_agent_id": (
+                str(task.evaluator_agent_id) if task.evaluator_agent_id is not None else None
+            ),
+            "max_remediations": task.max_remediations,
+            "rubric_sha256": rubric_sha256(actual_rubric),
+        }
+
+    if approval.get("policy_sha256") != _digest(_canonical_json(current_policies)):
+        raise MaterializationInvalid("materialized task policy changed after approval")
+    if approval.get("task_policies") != current_policies:
+        raise MaterializationInvalid("materialized task policy audit does not match")
+    if require_executable_assignments:
+        try:
+            await _validate_assignments(
+                session,
+                project=project,
+                spec=spec,
+                assignments=assignments,
+            )
+        except AssignmentError as exc:
+            raise MaterializationInvalid(
+                "approved agent assignment is no longer executable"
+            ) from exc
+
+    dependencies = list(
+        (
+            await session.execute(
+                select(TaskDependency).where(TaskDependency.project_id == project.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if any(dependency.organization_id != project.organization_id for dependency in dependencies):
+        raise MaterializationInvalid("dependency organization does not match project")
+    key_by_id = {task.id: key for key, task in actual_by_key.items()}
+    try:
+        actual_dependencies = sorted(
+            (
+                key_by_id[dependency.predecessor_task_id],
+                key_by_id[dependency.successor_task_id],
+                dependency.dependency_type.value,
+                dependency.lag_hours,
+            )
+            for dependency in dependencies
+        )
+    except KeyError as exc:
+        raise MaterializationInvalid(
+            "dependency references a task outside the approved plan"
+        ) from exc
+    expected_dependencies = sorted(
+        (
+            dependency.predecessor_key,
+            dependency.successor_key,
+            dependency.dependency_type.value,
+            dependency.lag_hours,
+        )
+        for dependency in spec.dependencies
+    )
+    if actual_dependencies != expected_dependencies:
+        raise MaterializationInvalid("dependency graph differs from approved plan")
+    if approval.get("dependency_count") != len(dependencies):
+        raise MaterializationInvalid("dependency audit count does not match")
+
+    return ApprovedMaterialization(
+        plan=plan,
+        spec=spec,
+        tasks=tasks,
+        dependencies=dependencies,
+    )
+
+
+async def begin_project_execution(
+    session: AsyncSession,
+    *,
+    project: Project,
+    actor_id: uuid.UUID,
+) -> ApprovedMaterialization | None:
+    """Start a governed project exactly once after revalidating its approved graph."""
+    locked = await session.scalar(select(Project).where(Project.id == project.id).with_for_update())
+    if locked is None:
+        raise NotFound("project")
+    materialization = await load_approved_materialization(
+        session,
+        project=locked,
+    )
+    if materialization is None:
+        return None
+    if locked.status != ProjectStatus.PLANNING:
+        raise GovernedProjectNotStartable()
+    if any(task.status != ExecutionState.PLANNED for task in materialization.tasks):
+        raise GovernedProjectNotStartable()
+
+    result = await session.execute(
+        update(Project)
+        .where(Project.id == locked.id, Project.status == ProjectStatus.PLANNING)
+        .values(status=ProjectStatus.ACTIVE)
+    )
+    if result.rowcount != 1:
+        raise GovernedProjectNotStartable()
+    await session.refresh(locked)
+    await record_audit(
+        session,
+        organization_id=locked.organization_id,
+        project_id=locked.id,
+        actor_type=ActorType.USER,
+        actor_id=actor_id,
+        action="project.started",
+        entity_type="Project",
+        entity_id=locked.id,
+        before={"status": ProjectStatus.PLANNING.value},
+        after={
+            "status": ProjectStatus.ACTIVE.value,
+            "plan_id": str(materialization.plan.id),
+            "plan_version": materialization.plan.version,
+            "plan_spec_sha256": materialization.plan.plan_spec_sha256,
+            "materialized_task_count": len(materialization.tasks),
+            "dependency_count": len(materialization.dependencies),
+        },
+    )
+    return materialization
