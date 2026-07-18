@@ -9,8 +9,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
-from app.core.enums import DependencyType, KanbanColumn
+from app.core.enums import DecompositionPlanStatus, DependencyType, KanbanColumn
 from app.core.roles import ActorType
+from app.models.decomposition_plan import DecompositionPlan
 from app.models.project import Project
 from app.models.task import Task, TaskDependency
 from app.scheduling.critical_path import Edge, TaskNode, compute_critical_path
@@ -33,6 +34,26 @@ class TaskNotFound(Exception):
     pass
 
 
+class GovernedGraphLocked(Exception):
+    """An approved plan's materialized task graph is immutable."""
+
+
+async def _lock_mutable_graph(session: AsyncSession, project: Project) -> Project:
+    """Serialize graph mutations with approval/start/close and reject governed graphs."""
+    locked = await session.scalar(select(Project).where(Project.id == project.id).with_for_update())
+    if locked is None:
+        raise TaskNotFound()
+    approved_plan = await session.scalar(
+        select(DecompositionPlan.id).where(
+            DecompositionPlan.project_id == locked.id,
+            DecompositionPlan.status == DecompositionPlanStatus.APPROVED,
+        )
+    )
+    if approved_plan is not None:
+        raise GovernedGraphLocked()
+    return locked
+
+
 async def create_task(
     session: AsyncSession,
     *,
@@ -45,6 +66,7 @@ async def create_task(
     milestone_id: uuid.UUID | None,
     priority: int,
 ) -> Task:
+    project = await _lock_mutable_graph(session, project)
     task = Task(
         organization_id=project.organization_id,
         project_id=project.id,
@@ -82,6 +104,7 @@ async def add_dependency(
     lag_hours: float,
 ) -> TaskDependency:
     """Create a dependency, rejecting self-loops, duplicates, and cycles."""
+    project = await _lock_mutable_graph(session, project)
     if predecessor_id == successor_id:
         raise DependencyCycle([predecessor_id, successor_id])
 

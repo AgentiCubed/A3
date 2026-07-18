@@ -14,24 +14,26 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.core.audit import record_audit
 from app.core.config import get_settings
-from app.core.enums import AgentKind, AgentRole, AgentStatus, RiskLevel, Verdict
+from app.core.enums import AgentKind, AgentRole, AgentStatus, ProjectStatus, RiskLevel, Verdict
 from app.core.roles import ActorType
 from app.evaluation.specs import RubricSpecError, merge_rubric_specs, rubric_sha256
 from app.models.agent import Agent, AgentCapability
 from app.models.approval import Approval
+from app.models.project import Project
 from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
-from app.orchestration.state_machine.machine import assert_transition
+from app.orchestration.state_machine.machine import IllegalTransition, assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.remediation.policy import RemediationContext, select_remediation
-from app.services import evaluation_service, tool_runtime
+from app.services import evaluation_service, governed_evidence_service, tool_runtime
 
 
 class NotAssigned(Exception):
@@ -42,8 +44,18 @@ class NotExecutable(Exception):
     """The assigned agent is not currently eligible to execute this task."""
 
 
-class AlreadyQueued(Exception):
-    """The task is already QUEUED; re-dispatch would enqueue a duplicate message."""
+class AlreadyQueued(IllegalTransition):
+    """A competing dispatcher already claimed this task.
+
+    This remains an ``IllegalTransition`` so the existing inline API path maps
+    a lost claim to HTTP 409, while the asynchronous path can continue to catch
+    the more specific exception before submitting a duplicate worker message.
+    """
+
+    def __init__(self) -> None:
+        self.frm = ExecutionState.QUEUED
+        self.to = ExecutionState.RUNNING
+        Exception.__init__(self, "task dispatch was already claimed by another transaction")
 
 
 class EvaluationConfigConflict(Exception):
@@ -52,6 +64,14 @@ class EvaluationConfigConflict(Exception):
 
 class GovernedAssignmentLocked(Exception):
     """A materialized plan assignment cannot be changed outside plan governance."""
+
+
+class GovernedProjectNotActive(Exception):
+    """Plan-derived tasks cannot execute before the governed project starts."""
+
+
+class GovernedDependenciesIncomplete(Exception):
+    """A plan-derived task cannot bypass its approved predecessor gates."""
 
 
 @dataclass
@@ -229,6 +249,112 @@ async def _transition(
     )
 
 
+async def _compare_and_transition_governed(
+    session: AsyncSession,
+    task: Task,
+    expected: ExecutionState,
+    to: ExecutionState,
+    *,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+    reason: str | None = None,
+) -> None:
+    """Atomically claim one governed transition and audit the winner.
+
+    A normal ORM assignment is a read-then-write operation: two sessions can
+    both read QUEUED and both begin provider execution. The conditional UPDATE
+    makes the persisted state the arbiter. On PostgreSQL a competing UPDATE
+    waits for the winner and then re-checks the predicate; exactly one caller
+    can change ``expected`` to ``to``. The task instance is synchronized as a
+    committed value so a later flush cannot emit a stale unconditional write.
+    """
+    if task.source_plan_id is None:
+        raise ValueError("atomic governed transition requires plan provenance")
+    assert_transition(expected, to)
+    result = await session.execute(
+        update(Task)
+        .where(
+            Task.id == task.id,
+            Task.organization_id == task.organization_id,
+            Task.source_plan_id == task.source_plan_id,
+            Task.status == expected,
+        )
+        .values(status=to)
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        await session.refresh(task)
+        raise AlreadyQueued()
+    set_committed_value(task, "status", to)
+    await record_audit(
+        session,
+        organization_id=task.organization_id,
+        project_id=task.project_id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action="task.transition",
+        entity_type="Task",
+        entity_id=task.id,
+        before={"status": expected.value},
+        after={"status": to.value, "reason": reason},
+    )
+
+
+async def _move_governed_to_queued(
+    session: AsyncSession,
+    task: Task,
+    *,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+) -> None:
+    """Walk a governed task to QUEUED using conditional state claims."""
+    if task.status == ExecutionState.PLANNED:
+        await _compare_and_transition_governed(
+            session,
+            task,
+            ExecutionState.PLANNED,
+            ExecutionState.READY,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+    if task.status in (ExecutionState.READY, ExecutionState.FAILED, ExecutionState.BLOCKED):
+        expected = task.status
+        await _compare_and_transition_governed(
+            session,
+            task,
+            expected,
+            ExecutionState.QUEUED,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+    if task.status != ExecutionState.QUEUED:
+        assert_transition(task.status, ExecutionState.QUEUED)
+
+
+async def _claim_governed_execution(
+    session: AsyncSession,
+    task: Task,
+    *,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+) -> None:
+    """Atomically claim the first RUNNING transition before provider work."""
+    await _move_governed_to_queued(
+        session,
+        task,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
+    await _compare_and_transition_governed(
+        session,
+        task,
+        ExecutionState.QUEUED,
+        ExecutionState.RUNNING,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
+
+
 async def _move_to_queued(
     session: AsyncSession, task: Task, *, actor_id: uuid.UUID | None, actor_type: ActorType
 ) -> None:
@@ -291,6 +417,45 @@ async def _require_executable(session: AsyncSession, task: Task) -> Agent:
         if not required <= held:
             raise NotExecutable()
     return agent
+
+
+async def _require_active_governed_project(session: AsyncSession, task: Task) -> None:
+    """Prevent every dispatch path from bypassing the one governed start gate."""
+    if task.source_plan_id is None:
+        return
+    project = await session.get(Project, task.project_id)
+    if (
+        project is None
+        or project.organization_id != task.organization_id
+        or project.status != ProjectStatus.ACTIVE
+    ):
+        raise GovernedProjectNotActive()
+
+
+async def _require_governed_dependencies_complete(session: AsyncSession, task: Task) -> None:
+    """Apply dependency ordering centrally, including individual dispatch calls."""
+    if task.source_plan_id is None:
+        return
+    predecessors = (
+        (
+            await session.execute(
+                select(Task)
+                .join(
+                    TaskDependency,
+                    TaskDependency.predecessor_task_id == Task.id,
+                )
+                .where(TaskDependency.successor_task_id == task.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if any(predecessor.status != ExecutionState.COMPLETED for predecessor in predecessors):
+        raise GovernedDependenciesIncomplete()
+    try:
+        await governed_evidence_service.passing_evaluation_ids(session, predecessors)
+    except governed_evidence_service.EvidenceInvalid as exc:
+        raise GovernedDependenciesIncomplete() from exc
 
 
 async def resolve_evaluation_config(
@@ -423,11 +588,21 @@ async def queue_task(
     """
     if task.status == ExecutionState.QUEUED:
         raise AlreadyQueued()
+    await _require_active_governed_project(session, task)
+    await _require_governed_dependencies_complete(session, task)
     executor = await _require_executable(session, task)
     await resolve_evaluation_config(
         session, task=task, executor=executor, request_overlay=evaluation
     )
-    await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
+    if task.source_plan_id is not None:
+        await _move_governed_to_queued(
+            session,
+            task,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+    else:
+        await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 
 
 async def _create_approval(
@@ -479,6 +654,8 @@ async def execute_task(
     If no persisted or request-level policy exists, a successful run completes
     without grading (the legacy Phase-5 behavior).
     """
+    await _require_active_governed_project(session, task)
+    await _require_governed_dependencies_complete(session, task)
     agent = await _require_executable(session, task)
     effective_evaluation = await resolve_evaluation_config(
         session, task=task, executor=agent, request_overlay=evaluation
@@ -526,13 +703,29 @@ async def execute_task(
         for i in handoff_items
     ] or None
 
-    await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
+    first_attempt_claimed = task.source_plan_id is not None
+    if first_attempt_claimed:
+        await _claim_governed_execution(
+            session,
+            task,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+        # Persist the exclusive RUNNING claim before any provider or tool can
+        # produce an external side effect. A later failure may leave recovery
+        # work, but it cannot erase the claim and silently execute twice.
+        await session.commit()
+    else:
+        await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 
     while True:
         attempt += 1
-        await _transition(
-            session, task, ExecutionState.RUNNING, actor_id=actor_id, actor_type=actor_type
-        )
+        if first_attempt_claimed:
+            first_attempt_claimed = False
+        else:
+            await _transition(
+                session, task, ExecutionState.RUNNING, actor_id=actor_id, actor_type=actor_type
+            )
         started = _now()
         prompt = build_prompt(task, _join_context(handoff_text, extra_context))
         request = AgentRunRequest(

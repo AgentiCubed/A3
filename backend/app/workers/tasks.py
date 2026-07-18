@@ -73,7 +73,13 @@ async def _run(task_id: uuid.UUID, params: dict) -> None:
         if task is None:
             return
         parsed = _parse_dispatch_params(params)
-        await execution_service.execute_task(session, task=task, **parsed)
+        try:
+            await execution_service.execute_task(session, task=task, **parsed)
+        except execution_service.AlreadyQueued:
+            # Duplicate broker deliveries are expected in at-least-once
+            # transports. The persisted governed claim is the authority.
+            await session.rollback()
+            return
         await session.commit()
 
         if task.status != ExecutionState.COMPLETED:
