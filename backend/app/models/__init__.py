@@ -17,6 +17,7 @@ from app.models.agent import (
 from app.models.approval import Approval
 from app.models.artifact import Artifact
 from app.models.audit_event import AuditEvent
+from app.models.decomposition_plan import DecompositionPlan
 from app.models.evaluation import Evaluation, EvaluationCriterion
 from app.models.metric import AgentMetric, ProjectMetric
 from app.models.organization import Organization
@@ -40,6 +41,7 @@ __all__ = [
     "Artifact",
     "AuditEvent",
     "Decision",
+    "DecompositionPlan",
     "Evaluation",
     "EvaluationCriterion",
     "Milestone",
