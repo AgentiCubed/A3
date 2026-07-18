@@ -93,15 +93,13 @@ documents outrun our enforcement.
   execution completes and the execution row is written by the worker path;
   CI includes one real end-to-end dispatch through Celery against Redis
   (the CI services already exist).
-- **Status: DELIVERED IN COMPANION PR #34** (pending merge — until it
-  lands, `main` does not contain these artifacts and this block reads as
-  *(planned)* under the §7 standing rule). Proof, on that branch:
+- **Status: DELIVERED — merged to `main` in PR #34 (2026-07-17).** Proof:
   `tests/integration/test_dispatch_spine.py` (hermetic acceptance: dispatch
   returns with the task QUEUED and zero execution rows; the worker
   entrypoint then completes it with the exact captured params) and
   `tests/integration/test_celery_broker_smoke.py` + the CI "Celery spine
   smoke" step (HTTP dispatch → real Redis → real worker subprocess → real
-  Postgres → polled completion). Compose api there sets
+  Postgres → polled completion). Compose api sets
   `WORKFLOW_ENGINE_BACKEND=celery`; inline remains the dev/test default,
   returning the full result as before. Found-and-fixed along the way: the
   deployed worker never registered `execution.run` at boot (`celery_app`
@@ -120,6 +118,13 @@ documents outrun our enforcement.
 - **Done when:** a seeded 3-task chain (A→B→C) completes end-to-end from
   a single "start project" call in an integration test, with no per-task
   API calls.
+- **Status: DELIVERED — merged to `main` in PR #36 (2026-07-17).** Proof:
+  `tests/integration/test_scheduler.py` — the definition-of-done test is
+  `test_inline_start_completes_full_chain_in_one_call` (single
+  `POST /projects/{id}/start`, dependency order proven by execution
+  timestamps); worker-driven chain advancement, the concurrency cap, and
+  unschedulable-predecessor gating are each covered. The compose worker
+  sets `WORKFLOW_ENGINE_BACKEND=celery` and `EVENT_BUS_BACKEND=redis`.
 
 ### WS-3 — Predecessor-output handoff
 *Clears claim 5.*
@@ -132,6 +137,12 @@ documents outrun our enforcement.
   in `input_context` for audit.
 - **Done when:** integration test asserts B's prompt contains A's output
   and the injection is recorded on B's execution row.
+- **Status: DELIVERED — merged to `main` in PR #38 (2026-07-17).** Proof:
+  `tests/integration/test_handoff.py` — the definition-of-done test is
+  `test_predecessor_output_lands_in_successor_prompt_and_is_recorded`;
+  budget truncation, multi-predecessor budget sharing, incomplete
+  predecessors, and latest-successful selection are each covered. Budget
+  is the `handoff_budget_chars` setting.
 
 ### WS-4 — Verdict and acceptance-criteria integrity
 *Clears claims 7 and 8. Makes evaluation mean something.*
@@ -146,6 +157,18 @@ documents outrun our enforcement.
 - **Done when:** tests prove (a) a malformed evaluator response fails
   closed (NEEDS_REVISION, never silent PASS), and (b) a project with an
   unsatisfied acceptance criterion cannot complete.
+- **Status: DELIVERED in three merged PRs.** (a) PR #39 (2026-07-17):
+  `verdict_json_v1` contract with fail-closed parsing — proof:
+  `tests/unit/test_verdict_combination.py` and the fail-closed integration
+  tests in `tests/integration/test_evaluation.py`; closes the issue 0004
+  residual. (b) PR #41 (2026-07-18): acceptance-criteria gate on project
+  close — proof: `tests/integration/test_acceptance_gate.py`
+  (`test_close_refused_until_rubric_criterion_met` is the
+  definition-of-done test; acknowledged abandonment is audited).
+  Hardened by PR #42 (2026-07-18): evaluation-rejected outputs excluded
+  from the acceptance corpus, criteria shapes validated at creation,
+  malformed persisted criteria fail closed — the contract WS-6 will
+  generate against.
 
 ### WS-5 — Agent tool runtime
 *Clears claim 6.*
@@ -161,6 +184,12 @@ documents outrun our enforcement.
 - **Done when:** tests prove a permitted tool round-trip works, a denied
   tool call halts with an audit event, and budgets terminate runaway
   loops.
+- **Status: DELIVERED — merged to `main` in PR #40 (2026-07-17).** Proof:
+  `tests/integration/test_tool_runtime.py` — permitted round-trip creates
+  a real artifact with a `tool.invoked` audit; ungranted, unknown, and
+  registered-but-unimplemented calls halt BLOCKED with `tool.denied`
+  audits and no side effects; `[[TOOL_LOOP]]` termination proves the
+  iteration budget; artifact reads are project-scoped.
 
 ### WS-6 — Objective-to-plan decomposition
 *Clears claim 3. The front door — deliberately LAST of the loop links.*
@@ -175,6 +204,10 @@ documents outrun our enforcement.
 - **Done when:** integration test: objective in → approved plan →
   WS-2 scheduler runs it → project completes against generated criteria.
   This test **is** the product claim, in CI, unchoreographed.
+- **Status: READY TO START *(planned — no implementation exists)*.** All
+  prerequisites are on `main`: the WS-1..WS-5 machinery above and the
+  hardened acceptance contract (PR #42). Executor handoff brief:
+  `docs/HANDOFF-WS6.md` (PR #43).
 
 ### WS-7 — Honest demo and loop-level CI
 *Clears claim 9; the proof that clears the "as advertised" verdict.*
