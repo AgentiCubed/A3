@@ -13,6 +13,13 @@ class ProjectStatus(StrEnum):
     CLOSED = "closed"
 
 
+class DecompositionPlanStatus(StrEnum):
+    DRAFT = "draft"
+    INVALID = "invalid"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
 class Methodology(StrEnum):
     KANBAN = "kanban"
     SCRUM = "scrum"

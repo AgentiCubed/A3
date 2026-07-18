@@ -63,6 +63,8 @@ class MockProvider:
         digest = hashlib.sha256(f"{request.system or ''}\n{prompt}".encode()).hexdigest()
         if request.params.get("expected_format") == "verdict_json_v1":
             output = self._structured_verdict(prompt)
+        elif request.params.get("expected_format") == "plan_json_v1":
+            output = self._structured_plan(prompt)
         else:
             output = f"[mock:{request.model or 'default'}] response::{digest[:16]}"
         tokens = max(1, len(prompt) // 4)
@@ -94,3 +96,42 @@ class MockProvider:
         else:
             verdict, score, critique = "pass", 1.0, "reviewed output looks complete"
         return json.dumps({"verdict": verdict, "score": score, "critique": critique, "gaps": []})
+
+    @staticmethod
+    def _structured_plan(prompt: str) -> str:
+        """Deterministic two-step plan for hermetic decomposition tests."""
+        if "[[MALFORMED_PLAN]]" in prompt:
+            return "This objective needs a research task and a delivery task."
+        return json.dumps(
+            {
+                "tasks": [
+                    {
+                        "key": "research",
+                        "title": "Research the objective",
+                        "description": "Gather and analyze the evidence needed for the objective.",
+                        "estimate_hours": 1,
+                        "required_capabilities": [],
+                        "priority": 2,
+                        "acceptance_criteria": [{"key": "research_output", "check": "non_empty"}],
+                    },
+                    {
+                        "key": "deliver",
+                        "title": "Deliver the objective",
+                        "description": (
+                            "Use the predecessor findings to produce the final deliverable."
+                        ),
+                        "estimate_hours": 1,
+                        "required_capabilities": [],
+                        "priority": 1,
+                        "acceptance_criteria": [{"key": "delivery_output", "check": "non_empty"}],
+                    },
+                ],
+                "dependencies": [{"predecessor_key": "research", "successor_key": "deliver"}],
+                "project_acceptance": {
+                    "criteria": [{"key": "project_output", "check": "non_empty"}],
+                    "deliverables": [],
+                },
+                "assumptions": ["An executor agent will be assigned before project start."],
+                "warnings": [],
+            }
+        )
