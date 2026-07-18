@@ -104,7 +104,11 @@ async def create_project(req: ProjectCreate, session: DbSession, user: ProjectCr
         actor_id=user.id,
         name=req.name,
         objective=req.objective,
-        acceptance_criteria=req.acceptance_criteria,
+        acceptance_criteria=(
+            req.acceptance_criteria.model_dump(exclude_none=True)
+            if req.acceptance_criteria
+            else None
+        ),
         signals=signals,
     )
     await session.commit()

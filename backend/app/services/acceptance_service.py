@@ -26,11 +26,13 @@ import re
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.enums import Verdict
 from app.evaluation.rubric import evaluate_deterministic
 from app.models.artifact import Artifact
+from app.models.evaluation import Evaluation
 from app.models.project import Project
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
@@ -72,13 +74,20 @@ def _normalize(name: str) -> str:
 
 
 async def _output_corpus(session: AsyncSession, project_id: uuid.UUID) -> str:
-    """All successful execution outputs of the project's tasks, newest last."""
+    """Accepted execution outputs of the project's tasks, newest last.
+
+    Executions without an evaluation are successful by execution state alone.
+    Once evaluated, only a PASS may contribute to project acceptance; rejected
+    attempts must never help a project earn completion.
+    """
     stmt = (
         select(TaskExecution.output)
         .join(Task, TaskExecution.task_id == Task.id)
+        .outerjoin(Evaluation, Evaluation.task_execution_id == TaskExecution.id)
         .where(
             Task.project_id == project_id,
             TaskExecution.state == ExecutionState.COMPLETED,
+            or_(Evaluation.id.is_(None), Evaluation.verdict == Verdict.PASS),
         )
         .order_by(TaskExecution.finished_at)
     )
@@ -91,6 +100,17 @@ async def evaluate_project_acceptance(
 ) -> AcceptanceReport:
     """Evaluate the project's acceptance criteria against its actual record."""
     spec = project.acceptance_criteria or {}
+    malformed = _malformed_spec_reason(spec)
+    if malformed:
+        return AcceptanceReport(
+            evaluated=True,
+            satisfied=False,
+            results=[
+                CriterionStatus(
+                    key="acceptance_criteria", kind="rubric", passed=False, notes=malformed
+                )
+            ],
+        )
     rubric_specs = spec.get("criteria") or []
     deliverables = spec.get("deliverables") or []
     if not rubric_specs and not deliverables:
@@ -131,3 +151,24 @@ async def evaluate_project_acceptance(
     return AcceptanceReport(
         evaluated=True, satisfied=all(r.passed for r in results), results=results
     )
+
+
+def _malformed_spec_reason(spec: object) -> str | None:
+    """Return a fail-closed diagnostic for unsupported persisted specifications."""
+    if not isinstance(spec, dict):
+        return "acceptance criteria must be an object"
+    unknown = set(spec) - {"criteria", "deliverables"}
+    if unknown:
+        return f"unsupported acceptance criteria keys: {', '.join(sorted(unknown))}"
+    criteria = spec.get("criteria", [])
+    deliverables = spec.get("deliverables", [])
+    if criteria is not None and (
+        not isinstance(criteria, list) or any(not isinstance(item, dict) for item in criteria)
+    ):
+        return "criteria must be a list of rubric objects"
+    if deliverables is not None and (
+        not isinstance(deliverables, list)
+        or any(not isinstance(item, str) or not item.strip() for item in deliverables)
+    ):
+        return "deliverables must be a list of non-empty strings"
+    return None

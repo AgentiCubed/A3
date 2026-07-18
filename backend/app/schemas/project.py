@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.enums import (
     Methodology,
@@ -25,10 +25,26 @@ class SignalsIn(BaseModel):
     resource_constrained: bool = False
 
 
+class AcceptanceCriterionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    key: str | None = None
+    check: str = Field(min_length=1)
+    params: dict = Field(default_factory=dict)
+    weight: float = Field(default=1.0, gt=0)
+
+
+class AcceptanceCriteriaIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    criteria: list[AcceptanceCriterionIn] = Field(default_factory=list)
+    deliverables: list[str] = Field(default_factory=list)
+
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     objective: str = ""
-    acceptance_criteria: dict | None = None
+    acceptance_criteria: AcceptanceCriteriaIn | None = None
     signals: SignalsIn | None = None
 
 
