@@ -184,7 +184,7 @@ async def close_project(
             "acceptance_evaluated": report.evaluated,
             "acceptance_satisfied": report.satisfied,
             "unmet_criteria": unmet,
-            "unmet_acknowledged": bool(unmet),
+            "unmet_acknowledged": bool(unmet and acknowledge_unmet_criteria),
         },
     )
     return project

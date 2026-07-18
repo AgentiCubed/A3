@@ -10,12 +10,18 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 
 from app.core.config import get_settings
+from app.core.enums import EvaluatorKind, Verdict
 from app.models.audit_event import AuditEvent
+from app.models.evaluation import Evaluation
+from app.models.task import Task
+from app.models.task_execution import TaskExecution
 from app.orchestration.ports import AgentRunRequest, AgentRunResult
+from app.orchestration.state_machine.states import ExecutionState
 from app.services import artifact_service, execution_service
 from tests.conftest import TestSessionFactory
 
@@ -191,6 +197,69 @@ def test_close_without_criteria_is_ungated(client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "closed"
     assert resp.json()["closeout"]["acceptance"]["evaluated"] is False
+
+
+def test_malformed_acceptance_criteria_rejected_at_creation(client):
+    headers = _auth(client)
+    for malformed in (
+        {"criteria": {"key": "x", "check": "non_empty"}},
+        {"deliverables": "brief"},
+        {"unknown_gate": []},
+    ):
+        resp = client.post(
+            "/api/v1/projects",
+            json={"name": "P", "objective": "o", "acceptance_criteria": malformed},
+            headers=headers,
+        )
+        assert resp.status_code == 422, (malformed, resp.text)
+
+
+def test_rejected_execution_output_cannot_satisfy_project_acceptance(client):
+    headers = _auth(client)
+    project = _project(
+        client,
+        headers,
+        {
+            "criteria": [
+                {"key": "claim", "check": "contains_all", "params": {"keywords": ["CLAIM"]}}
+            ]
+        },
+    )
+
+    async def _seed_rejected_attempt():
+        async with TestSessionFactory() as session:
+            task = Task(
+                organization_id=uuid.UUID(project["organization_id"]),
+                project_id=uuid.UUID(project["id"]),
+                title="Rejected work",
+            )
+            session.add(task)
+            await session.flush()
+            execution = TaskExecution(
+                organization_id=task.organization_id,
+                task_id=task.id,
+                state=ExecutionState.COMPLETED,
+                output="CLAIM appears only in rejected work",
+                finished_at=datetime.now(UTC),
+            )
+            session.add(execution)
+            await session.flush()
+            session.add(
+                Evaluation(
+                    organization_id=task.organization_id,
+                    task_execution_id=execution.id,
+                    evaluator_kind=EvaluatorKind.DETERMINISTIC,
+                    verdict=Verdict.FAIL,
+                    score=0.0,
+                    summary="rejected",
+                )
+            )
+            await session.commit()
+
+    asyncio.run(_seed_rejected_attempt())
+    report = client.get(f"/api/v1/projects/{project['id']}/acceptance", headers=headers).json()
+    assert report["satisfied"] is False
+    assert report["results"][0]["key"] == "claim"
 
 
 def test_acceptance_report_endpoint_shows_live_status(client, monkeypatch):
