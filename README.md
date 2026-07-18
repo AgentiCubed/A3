@@ -89,8 +89,8 @@ pytest
 ## Demo
 
 The end-to-end demonstration runs **host-side** (not inside a container). Postgres and Redis
-may run through Docker Compose; backend Python dependencies and a host Rscript installation
-are required.
+may run through Docker Compose, and the backend Python analysis dependencies are required.
+`Rscript` is optional and adds a cross-check; it is not required for the governed proof.
 
 > **Note:** `docker compose exec api python -m app.seed.demo` is **not** a supported v1.0.x
 > path. The container image intentionally does not include pandas, matplotlib, or R for v1.0.x.
@@ -127,8 +127,11 @@ ARTIFACT_STORE_PATH="/tmp/agenticubed-demo-artifacts" \
 configured (virtualenv active, env vars exported). A bare `make demo` on a fresh checkout
 is **not** sufficient — follow the steps above first.
 
-> **Host Rscript required:** the R analysis worker shells out to `Rscript`. Install R on your
-> host (e.g. `brew install r` or `sudo apt install r-base`) before running the demo.
+The reproducible demo does **not** call a live language model. `MockProvider` produces the
+plan and agent responses deterministically, while the permissioned pandas analysis,
+matplotlib chart generation, and content-addressed artifact storage are real. To include the
+optional R statistics cross-check, install R on the host (for example, `brew install r` or
+`sudo apt install r-base`).
 
 See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, what each step proves, and how to call the demo programmatically in tests.
 
@@ -159,6 +162,11 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 
 **Phase 7** (project + agent metrics, a project dashboard with Gantt/dependency/risk-matrix/agent views, and CSV / JSON / Power BI-ready star-schema exports) — **complete & verified** (backend **112/112** pytest, frontend **14/14** vitest + tsc clean, migrations render 0001→0007).
 
-**Phase 8** (security hardening, real Python + R analysis workers, artifact storage, the seeded **end-to-end demonstration** — research → brief → data analysis → visualization → evaluation → deliberate failure → remediation → completion → closeout report, plus docs) — **complete & verified** (backend **120/120** pytest, frontend **14/14** vitest + tsc, ruff + black clean, migrations render 0001→0008).
+**Phase 8** (security hardening, analysis workers, artifact storage, and the seeded **end-to-end demonstration** — objective → durable draft → explicit approval → one governed start → permissioned analysis → deterministic evaluation rejection → automatic remediation → acceptance-gated close) — **complete & verified**. The agent responses are deterministic `MockProvider` fixtures; pandas/matplotlib computation and artifact persistence are real.
 
-**All eight phases are complete.** See **[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md)** for the consolidated overview. Canonical host demo invocation is from repo root: `make demo` (see [`docs/demo.md`](docs/demo.md)). The [`docs/roadmap.md`](docs/roadmap.md) has the full phase-by-phase record; tracked follow-ups (all addressed) are in [`docs/issues/`](docs/issues/).
+**The original eight-phase MVP roadmap is implemented.** This is not a claim that every
+production-hardening gap is closed. The current governed runtime proof is documented in
+[`docs/demo.md`](docs/demo.md); active post-baseline work includes the artifact/acceptance
+serialization boundary tracked in [GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45).
+See [`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md) and
+[`docs/roadmap.md`](docs/roadmap.md) for the full record.

@@ -54,6 +54,8 @@ jobs:
         run: .venv/bin/alembic upgrade head
       - name: Tests
         run: .venv/bin/python -m pytest -q
+      - name: Governed objective-to-close proof
+        run: .venv/bin/python -m pytest tests/integration/test_demo.py -q
       - name: Celery spine smoke (real broker + worker process)
         env:
           CELERY_BROKER_SMOKE: "1"
