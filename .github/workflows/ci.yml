@@ -53,7 +53,7 @@ jobs:
       - name: Apply migrations against real Postgres
         run: .venv/bin/alembic upgrade head
       - name: Tests
-        run: .venv/bin/python -m pytest -q
+        run: .venv/bin/python -m pytest -q --ignore=tests/integration/test_demo.py
       - name: Governed objective-to-close proof
         run: .venv/bin/python -m pytest tests/integration/test_demo.py -q
       - name: Celery spine smoke (real broker + worker process)

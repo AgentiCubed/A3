@@ -176,7 +176,7 @@ async def build_and_run_demo(
         ),
         agent_id=analyst.id,
         tool_id=analysis_tool.id,
-        scope={"project": "demo"},
+        scope=None,
         expires_at=None,
     )
 
