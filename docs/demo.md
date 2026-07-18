@@ -12,7 +12,7 @@ artifact bytes, hashes, database records, and audit trail are real.
 
 ## What it does
 
-Project: *"Governed market brief: Widget X regional demand."*
+Project: *"Governed market brief: Widget X regional demand"*
 
 1. **Objective and agents** — creates an organization, owner, planner, executor,
    and a separate evaluator. The objective carries a transparent demo fixture
