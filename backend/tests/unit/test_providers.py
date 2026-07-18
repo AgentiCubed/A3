@@ -13,6 +13,7 @@ from app.orchestration.adapters.registry import (
     get_adapter,
 )
 from app.orchestration.ports import AgentRunRequest
+from app.services.decomposition_service import parse_plan
 
 
 async def test_mock_provider_is_deterministic():
@@ -23,6 +24,69 @@ async def test_mock_provider_is_deterministic():
     assert r1.output == r2.output
     assert r1.provider == "mock"
     assert r1.tokens_used > 0
+
+
+async def test_mock_provider_autonomous_demo_plan_is_executable():
+    provider = MockProvider()
+    result = await provider.run(
+        AgentRunRequest(
+            prompt="Objective: [[AUTONOMOUS_DEMO:DEMO_ACCEPTED]]",
+            params={"expected_format": "plan_json_v1"},
+        )
+    )
+
+    plan = parse_plan(result.output)
+    assert [task.key for task in plan.tasks] == ["research", "deliver"]
+    assert plan.dependencies[0].predecessor_key == "research"
+    assert plan.dependencies[0].successor_key == "deliver"
+    assert plan.project_acceptance.deliverables == ["market brief", "demand chart"]
+    assert plan.project_acceptance.criteria[0].params == {"keywords": ["DEMO_ACCEPTED"]}
+
+    research_call = await provider.run(AgentRunRequest(prompt=plan.tasks[0].description))
+    assert len(research_call.tool_calls) == 1
+    assert research_call.tool_calls[0].name == "analysis.summary_stats"
+    assert research_call.tool_calls[0].arguments == {
+        "records": [{"value": 120}, {"value": 95}, {"value": 140}, {"value": 110}],
+        "value_column": "value",
+    }
+
+    tool_result = await provider.run(
+        AgentRunRequest(
+            prompt=(
+                plan.tasks[0].description
+                + '\n\n[[TOOL_RESULTS]]\n[{"tool":"analysis.summary_stats",'
+                '"status":"ok","result":{"stats":{"mean":116.25,"sum":465.0,'
+                '"min":95.0,"max":140.0}}}]\nUse these tool results to produce your final answer.'
+            )
+        )
+    )
+    assert "mean=116.25" in tool_result.output
+    assert "sum=465.0" in tool_result.output
+
+
+async def test_mock_provider_remediates_once_after_evaluation_feedback():
+    provider = MockProvider()
+    marker = "[[REMEDIATE_ONCE:DEMO_ACCEPTED]]"
+
+    first = await provider.run(AgentRunRequest(prompt=f"Deliver the brief. {marker}"))
+    assert "DEMO_ACCEPTED" not in first.output
+
+    retry = await provider.run(
+        AgentRunRequest(
+            prompt=(
+                f"Deliver the brief. {marker}\n\n"
+                "Address these evaluation gaps: missing keywords: ['DEMO_ACCEPTED']"
+            )
+        )
+    )
+    assert "DEMO_ACCEPTED" in retry.output
+
+
+async def test_mock_provider_rejects_malformed_tool_marker():
+    with pytest.raises(ValueError, match="tool marker arguments"):
+        await MockProvider().run(
+            AgentRunRequest(prompt="[[TOOL:analysis.summary_stats:{not-json}]]")
+        )
 
 
 def test_registry_resolution():

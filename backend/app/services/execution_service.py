@@ -687,6 +687,7 @@ async def execute_task(
     execution_ids: list[uuid.UUID] = []
     attempt = 0
     remediations = 0
+    remediation_of: uuid.UUID | None = None
     extra_context: str | None = None
 
     # WS-3: completed predecessors' outputs ride into every attempt's prompt;
@@ -761,6 +762,7 @@ async def execute_task(
                     prompt_chars=len(prompt),
                     handoff=handoff_meta,
                     evaluation=evaluation_context,
+                    remediation_of=remediation_of,
                 )
             )
             outcome = await _handle_failure(
@@ -784,6 +786,7 @@ async def execute_task(
                     prompt_chars=len(prompt),
                     handoff=handoff_meta,
                     evaluation=evaluation_context,
+                    remediation_of=remediation_of,
                 )
             )
             outcome = await _handle_failure(
@@ -807,6 +810,7 @@ async def execute_task(
             prompt_chars=len(prompt),
             handoff=handoff_meta,
             evaluation=evaluation_context,
+            remediation_of=remediation_of,
             tokens_used=result.tokens_used,
             cost_estimate=result.cost_estimate,
         )
@@ -883,6 +887,7 @@ async def execute_task(
 
         if decision.auto_applicable:
             remediations += 1
+            remediation_of = execution_id
             extra_context = "Address these evaluation gaps: " + "; ".join(ev.gaps or [])
             await _transition(
                 session,
@@ -991,6 +996,7 @@ async def _record(
     prompt_chars: int,
     handoff: list[dict] | None = None,
     evaluation: dict | None = None,
+    remediation_of: uuid.UUID | None = None,
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
 ) -> uuid.UUID:
@@ -1013,6 +1019,7 @@ async def _record(
         cost_estimate=cost_estimate,
         started_at=started,
         finished_at=_now(),
+        remediation_of=remediation_of,
     )
     session.add(execution)
     await session.flush()
