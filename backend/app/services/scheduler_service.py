@@ -27,9 +27,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.enums import AgentKind
+from app.core.enums import AgentKind, AgentRole, AgentStatus
 from app.core.roles import ActorType
-from app.models.agent import Agent
+from app.models.agent import Agent, AgentCapability
 from app.models.task import Task, TaskDependency
 from app.orchestration.ports import WorkflowEngine
 from app.orchestration.state_machine.states import ExecutionState
@@ -77,19 +77,40 @@ async def find_dispatchable(session: AsyncSession, project_id: uuid.UUID) -> lis
     completed = {t.id for t in tasks if t.status == ExecutionState.COMPLETED}
 
     assigned_ids = {t.assigned_agent_id for t in tasks if t.assigned_agent_id is not None}
-    ai_agent_ids: set[uuid.UUID] = set()
+    executable_agents: dict[uuid.UUID, Agent] = {}
+    capabilities: dict[uuid.UUID, set[str]] = {}
     if assigned_ids:
-        rows = await session.execute(
-            select(Agent.id).where(Agent.id.in_(assigned_ids), Agent.kind == AgentKind.AI)
+        agents = (
+            (await session.execute(select(Agent).where(Agent.id.in_(assigned_ids)))).scalars().all()
         )
-        ai_agent_ids = set(rows.scalars().all())
+        executable_agents = {
+            agent.id: agent
+            for agent in agents
+            if agent.kind == AgentKind.AI
+            and agent.status == AgentStatus.ACTIVE
+            and agent.default_role in {AgentRole.EXECUTOR, AgentRole.EITHER}
+            and bool(agent.provider)
+        }
+        capability_rows = (
+            (
+                await session.execute(
+                    select(AgentCapability).where(AgentCapability.agent_id.in_(executable_agents))
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for capability in capability_rows:
+            capabilities.setdefault(capability.agent_id, set()).add(capability.capability)
 
     eligible = [
         t
         for t in tasks
         if t.status in _SCHEDULABLE
         and not t.is_human_task
-        and t.assigned_agent_id in ai_agent_ids
+        and t.assigned_agent_id in executable_agents
+        and executable_agents[t.assigned_agent_id].organization_id == t.organization_id
+        and set(t.required_capabilities or []) <= capabilities.get(t.assigned_agent_id, set())
         and predecessors.get(t.id, set()) <= completed
     ]
     return eligible[:capacity]

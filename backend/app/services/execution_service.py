@@ -19,9 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
 from app.core.config import get_settings
-from app.core.enums import AgentKind, RiskLevel, Verdict
+from app.core.enums import AgentKind, AgentRole, AgentStatus, RiskLevel, Verdict
 from app.core.roles import ActorType
-from app.models.agent import Agent
+from app.evaluation.specs import RubricSpecError, merge_rubric_specs, rubric_sha256
+from app.models.agent import Agent, AgentCapability
 from app.models.approval import Approval
 from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
@@ -38,20 +39,39 @@ class NotAssigned(Exception):
 
 
 class NotExecutable(Exception):
-    """The assigned agent is not an AI agent (human tasks complete out-of-band)."""
+    """The assigned agent is not currently eligible to execute this task."""
 
 
 class AlreadyQueued(Exception):
     """The task is already QUEUED; re-dispatch would enqueue a duplicate message."""
 
 
+class EvaluationConfigConflict(Exception):
+    """A request tried to weaken or conflict with persisted evaluation policy."""
+
+
+class GovernedAssignmentLocked(Exception):
+    """A materialized plan assignment cannot be changed outside plan governance."""
+
+
 @dataclass
 class EvaluationConfig:
-    """How to evaluate a successful execution and remediate failures."""
+    """Optional request overlay for evaluating and remediating an execution."""
 
     rubric_specs: list[dict] = field(default_factory=list)
     evaluator_agent_id: uuid.UUID | None = None
-    max_remediations: int = 1
+    max_remediations: int | None = None
+
+
+@dataclass(frozen=True)
+class ResolvedEvaluationConfig:
+    """Authoritative policy resolved from the Task plus an additive request overlay."""
+
+    rubric_specs: list[dict]
+    rubric_sha256: str
+    evaluator_agent_id: uuid.UUID | None
+    max_remediations: int
+    sources: list[str]
 
 
 @dataclass
@@ -240,15 +260,117 @@ async def transition_task(
 
 
 async def _require_executable(session: AsyncSession, task: Task) -> Agent:
-    """The task must have an assigned AI agent to be dispatchable."""
+    """Revalidate the assigned executor at the moment work is dispatched."""
     if task.assigned_agent_id is None:
         raise NotAssigned()
     agent = await session.get(Agent, task.assigned_agent_id)
     if agent is None:
         raise NotAssigned()
-    if agent.kind != AgentKind.AI:
+    if (
+        agent.organization_id != task.organization_id
+        or agent.kind != AgentKind.AI
+        or agent.status != AgentStatus.ACTIVE
+        or agent.default_role not in {AgentRole.EXECUTOR, AgentRole.EITHER}
+        or not agent.provider
+    ):
         raise NotExecutable()
+    required = set(task.required_capabilities or [])
+    if required:
+        held = set(
+            (
+                await session.execute(
+                    select(AgentCapability.capability).where(
+                        AgentCapability.organization_id == task.organization_id,
+                        AgentCapability.agent_id == agent.id,
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if not required <= held:
+            raise NotExecutable()
     return agent
+
+
+async def resolve_evaluation_config(
+    session: AsyncSession,
+    *,
+    task: Task,
+    executor: Agent,
+    request_overlay: EvaluationConfig | None,
+) -> ResolvedEvaluationConfig | None:
+    """Resolve immutable governed criteria plus a strictly additive request overlay."""
+    try:
+        specs, sources = merge_rubric_specs(
+            task.acceptance_criteria if task.acceptance_criteria is not None else [],
+            request_overlay.rubric_specs if request_overlay else [],
+        )
+    except RubricSpecError as exc:
+        raise EvaluationConfigConflict(str(exc)) from exc
+
+    persisted_evaluator_id = task.evaluator_agent_id
+    requested_evaluator_id = request_overlay.evaluator_agent_id if request_overlay else None
+    if (
+        persisted_evaluator_id is not None
+        and requested_evaluator_id is not None
+        and persisted_evaluator_id != requested_evaluator_id
+    ):
+        raise EvaluationConfigConflict("requested evaluator conflicts with governed evaluator")
+    evaluator_agent_id = persisted_evaluator_id or requested_evaluator_id
+    if evaluator_agent_id is not None:
+        evaluator = await session.get(Agent, evaluator_agent_id)
+        if (
+            evaluator is None
+            or evaluator.organization_id != task.organization_id
+            or evaluator.status != AgentStatus.ACTIVE
+            or evaluator.kind != AgentKind.AI
+            or evaluator.default_role not in {AgentRole.EVALUATOR, AgentRole.EITHER}
+            or not evaluator.provider
+        ):
+            raise EvaluationConfigConflict("evaluator is unavailable or not evaluator-capable")
+        if evaluator.id == executor.id:
+            raise EvaluationConfigConflict("evaluator agent must differ from the executor")
+        if persisted_evaluator_id is not None:
+            evaluator_capabilities = set(
+                (
+                    await session.execute(
+                        select(AgentCapability.capability).where(
+                            AgentCapability.organization_id == task.organization_id,
+                            AgentCapability.agent_id == evaluator.id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if "evaluation.rubric" not in evaluator_capabilities:
+                raise EvaluationConfigConflict(
+                    "governed evaluator no longer has the evaluation.rubric capability"
+                )
+
+    governed = task.source_plan_id is not None
+    requested_max = request_overlay.max_remediations if request_overlay else None
+    if governed:
+        max_remediations = task.max_remediations
+        if requested_max is not None:
+            max_remediations = min(max_remediations, requested_max)
+    else:
+        max_remediations = requested_max if requested_max is not None else task.max_remediations
+
+    if not specs and evaluator_agent_id is None:
+        return None
+    if persisted_evaluator_id is not None and "persisted" not in sources:
+        sources.insert(0, "persisted")
+    if requested_evaluator_id is not None and "request" not in sources:
+        sources.append("request")
+    return ResolvedEvaluationConfig(
+        rubric_specs=specs,
+        rubric_sha256=rubric_sha256(specs),
+        evaluator_agent_id=evaluator_agent_id,
+        max_remediations=max_remediations,
+        sources=sources,
+    )
 
 
 def build_dispatch_params(
@@ -287,6 +409,7 @@ async def queue_task(
     task: Task,
     actor_id: uuid.UUID | None,
     actor_type: ActorType,
+    evaluation: EvaluationConfig | None = None,
 ) -> None:
     """Validate and move a task to QUEUED for asynchronous (worker) dispatch.
 
@@ -300,7 +423,10 @@ async def queue_task(
     """
     if task.status == ExecutionState.QUEUED:
         raise AlreadyQueued()
-    await _require_executable(session, task)
+    executor = await _require_executable(session, task)
+    await resolve_evaluation_config(
+        session, task=task, executor=executor, request_overlay=evaluation
+    )
     await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
 
 
@@ -348,11 +474,30 @@ async def execute_task(
 ) -> DispatchResult:
     """Run a task end-to-end: execute (with retries) → evaluate → remediate.
 
-    Without ``evaluation`` a successful run simply completes (Phase-5 behavior).
-    With ``evaluation`` a successful run is graded; a failing verdict triggers the
-    remediation policy, which either re-executes inline or escalates to a human.
+    Persisted task criteria are always enforced. A request-level ``evaluation``
+    may add criteria or tighten remediation, but cannot weaken governed policy.
+    If no persisted or request-level policy exists, a successful run completes
+    without grading (the legacy Phase-5 behavior).
     """
     agent = await _require_executable(session, task)
+    effective_evaluation = await resolve_evaluation_config(
+        session, task=task, executor=agent, request_overlay=evaluation
+    )
+    evaluation_context = (
+        {
+            "rubric_specs": effective_evaluation.rubric_specs,
+            "rubric_sha256": effective_evaluation.rubric_sha256,
+            "evaluator_agent_id": (
+                str(effective_evaluation.evaluator_agent_id)
+                if effective_evaluation.evaluator_agent_id
+                else None
+            ),
+            "max_remediations": effective_evaluation.max_remediations,
+            "sources": effective_evaluation.sources,
+        }
+        if effective_evaluation
+        else None
+    )
 
     adapter = get_adapter(agent.provider)
     credential_ref = (agent.config or {}).get("api_key_ref")
@@ -422,6 +567,7 @@ async def execute_task(
                     provider=agent.provider,
                     prompt_chars=len(prompt),
                     handoff=handoff_meta,
+                    evaluation=evaluation_context,
                 )
             )
             outcome = await _handle_failure(
@@ -444,6 +590,7 @@ async def execute_task(
                     provider=agent.provider,
                     prompt_chars=len(prompt),
                     handoff=handoff_meta,
+                    evaluation=evaluation_context,
                 )
             )
             outcome = await _handle_failure(
@@ -466,6 +613,7 @@ async def execute_task(
             provider=result.provider,
             prompt_chars=len(prompt),
             handoff=handoff_meta,
+            evaluation=evaluation_context,
             tokens_used=result.tokens_used,
             cost_estimate=result.cost_estimate,
         )
@@ -474,7 +622,7 @@ async def execute_task(
             session, task, ExecutionState.EVALUATING, actor_id=actor_id, actor_type=actor_type
         )
 
-        if evaluation is None:
+        if effective_evaluation is None:
             await _transition(
                 session, task, ExecutionState.COMPLETED, actor_id=actor_id, actor_type=actor_type
             )
@@ -490,15 +638,16 @@ async def execute_task(
 
         execution = await session.get(TaskExecution, execution_id)
         evaluator_agent = (
-            await session.get(Agent, evaluation.evaluator_agent_id)
-            if evaluation.evaluator_agent_id
+            await session.get(Agent, effective_evaluation.evaluator_agent_id)
+            if effective_evaluation.evaluator_agent_id
             else None
         )
         ev = await evaluation_service.evaluate_execution(
             session,
             execution=execution,
-            rubric_specs=evaluation.rubric_specs,
+            rubric_specs=effective_evaluation.rubric_specs,
             evaluator_agent=evaluator_agent,
+            rubric_source="+".join(effective_evaluation.sources),
             actor_id=actor_id,
             actor_type=actor_type,
         )
@@ -524,7 +673,7 @@ async def execute_task(
                 score=ev.score,
                 gaps=list(ev.gaps or []),
                 remediations_used=remediations,
-                max_remediations=evaluation.max_remediations,
+                max_remediations=effective_evaluation.max_remediations,
             )
         )
         await record_audit(
@@ -648,12 +797,15 @@ async def _record(
     provider: str | None,
     prompt_chars: int,
     handoff: list[dict] | None = None,
+    evaluation: dict | None = None,
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
 ) -> uuid.UUID:
     input_context: dict = {"prompt_chars": prompt_chars}
     if handoff:
         input_context["handoff"] = handoff
+    if evaluation:
+        input_context["evaluation"] = evaluation
     execution = TaskExecution(
         organization_id=task.organization_id,
         task_id=task.id,
@@ -683,6 +835,8 @@ async def reassign_task(
     actor_type: ActorType = ActorType.USER,
 ) -> None:
     """Reassign a (typically failed) task to another agent, then make it ready."""
+    if task.source_plan_id is not None:
+        raise GovernedAssignmentLocked()
     before = str(task.assigned_agent_id)
     task.assigned_agent_id = new_agent.id
     if task.status in (ExecutionState.FAILED, ExecutionState.BLOCKED):

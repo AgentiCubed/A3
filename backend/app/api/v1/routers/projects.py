@@ -264,6 +264,11 @@ async def assign_task_agent(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             {"error": "capability_mismatch", "missing": exc.missing},
         ) from exc
+    except agent_service.GovernedAssignmentLocked as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "plan-derived task assignment requires a new governed plan decision",
+        ) from exc
     await session.commit()
     return TaskResponse.model_validate(task)
 
@@ -364,7 +369,10 @@ async def dispatch_task(
                 "evaluator agent must differ from the executor (executor/evaluator separation)",
             )
         evaluation_cfg = execution_service.EvaluationConfig(
-            rubric_specs=req.rubric or [],
+            rubric_specs=[
+                criterion.model_dump(mode="json", exclude_none=True)
+                for criterion in (req.rubric or [])
+            ],
             evaluator_agent_id=req.evaluator_agent_id,
             max_remediations=req.max_remediations,
         )
@@ -373,7 +381,11 @@ async def dispatch_task(
     if engine is not None:
         try:
             await execution_service.queue_task(
-                session, task=task, actor_id=user.id, actor_type=ActorType.USER
+                session,
+                task=task,
+                actor_id=user.id,
+                actor_type=ActorType.USER,
+                evaluation=evaluation_cfg,
             )
         except execution_service.AlreadyQueued as exc:
             raise HTTPException(
@@ -386,8 +398,11 @@ async def dispatch_task(
             ) from exc
         except execution_service.NotExecutable as exc:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned agent is not an AI agent"
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "assigned agent is not currently eligible to execute",
             ) from exc
+        except execution_service.EvaluationConfigConflict as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
         except IllegalTransition as exc:
             raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
         # Commit BEFORE submitting so the worker sees the QUEUED state.
@@ -440,8 +455,11 @@ async def dispatch_task(
         ) from exc
     except execution_service.NotExecutable as exc:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned agent is not an AI agent"
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "assigned agent is not currently eligible to execute",
         ) from exc
+    except execution_service.EvaluationConfigConflict as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     except evaluation_service.EvaluatorConflict as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -548,6 +566,11 @@ async def reassign_task(
         await execution_service.reassign_task(
             session, task=task, new_agent=agent, actor_id=user.id, actor_type=ActorType.USER
         )
+    except execution_service.GovernedAssignmentLocked as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "plan-derived task assignment requires a new governed plan decision",
+        ) from exc
     except IllegalTransition as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     await session.commit()

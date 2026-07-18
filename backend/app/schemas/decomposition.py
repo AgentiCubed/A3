@@ -50,6 +50,24 @@ class PlanRejectRequest(BaseModel):
     comment: str | None = Field(default=None, max_length=2000)
 
 
+class PlanTaskAssignmentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    task_key: str = Field(min_length=1, max_length=80, pattern=r"^[a-zA-Z0-9_.-]+$")
+    agent_id: uuid.UUID
+    evaluator_agent_id: uuid.UUID | None = None
+    max_remediations: int = Field(default=1, ge=0, le=5)
+
+
+class PlanApproveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    expected_version: int = Field(ge=1)
+    expected_plan_spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    assignments: list[PlanTaskAssignmentIn] = Field(min_length=1, max_length=50)
+    comment: str | None = Field(default=None, max_length=2000)
+
+
 class DecompositionPlanResponse(BaseModel):
     id: uuid.UUID
     project_id: uuid.UUID
@@ -72,3 +90,15 @@ class DecompositionPlanResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class MaterializedTaskRef(BaseModel):
+    task_key: str
+    task_id: uuid.UUID
+    agent_id: uuid.UUID
+
+
+class PlanApprovalResponse(BaseModel):
+    plan: DecompositionPlanResponse
+    tasks: list[MaterializedTaskRef]
+    dependency_count: int

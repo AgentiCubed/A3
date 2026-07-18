@@ -54,7 +54,7 @@ class AcceptanceCriterionIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    key: str | None = Field(default=None, min_length=1)
+    key: str | None = Field(default=None, min_length=1, max_length=80)
     check: AcceptanceCheck
     params: dict[str, object] = Field(default_factory=dict)
     weight: float = Field(default=1.0, gt=0, allow_inf_nan=False)

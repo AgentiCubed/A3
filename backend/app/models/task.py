@@ -4,7 +4,17 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Boolean, Enum, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -15,6 +25,18 @@ from app.orchestration.state_machine.states import ExecutionState
 
 class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "tasks"
+    __table_args__ = (
+        UniqueConstraint("source_plan_id", "source_plan_task_key", name="uq_task_source_plan_key"),
+        CheckConstraint(
+            "(source_plan_id IS NULL AND source_plan_task_key IS NULL) OR "
+            "(source_plan_id IS NOT NULL AND source_plan_task_key IS NOT NULL)",
+            name="ck_tasks_source_plan_pair",
+        ),
+        CheckConstraint(
+            "max_remediations >= 0 AND max_remediations <= 5",
+            name="ck_tasks_max_remediations",
+        ),
+    )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
@@ -50,7 +72,16 @@ class Task(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     assigned_agent_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
     )
+    evaluator_agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("agents.id", ondelete="SET NULL"), nullable=True
+    )
     required_capabilities: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    acceptance_criteria: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    max_remediations: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    source_plan_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("decomposition_plans.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    source_plan_task_key: Mapped[str | None] = mapped_column(String(80), nullable=True)
     estimate_hours: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     is_human_task: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

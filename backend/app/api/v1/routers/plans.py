@@ -14,6 +14,9 @@ from app.core.rbac import Action
 from app.models.user import User
 from app.schemas.decomposition import (
     DecompositionPlanResponse,
+    MaterializedTaskRef,
+    PlanApprovalResponse,
+    PlanApproveRequest,
     PlanGenerateRequest,
     PlanRejectRequest,
 )
@@ -101,6 +104,61 @@ async def get_plan(
     except decomposition_service.NotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "plan not found") from exc
     return DecompositionPlanResponse.model_validate(plan)
+
+
+@router.post("/{plan_id}/approve", response_model=PlanApprovalResponse)
+async def approve_plan(
+    project_id: uuid.UUID,
+    plan_id: uuid.UUID,
+    req: PlanApproveRequest,
+    session: DbSession,
+    user: PlanApprover,
+):
+    project = await _project(session, user, project_id)
+    try:
+        plan, tasks, dependency_count = await decomposition_service.approve_plan(
+            session,
+            project=project,
+            plan_id=plan_id,
+            expected_version=req.expected_version,
+            expected_plan_spec_sha256=req.expected_plan_spec_sha256,
+            assignments=req.assignments,
+            actor_id=user.id,
+            comment=req.comment,
+        )
+        response = PlanApprovalResponse(
+            plan=DecompositionPlanResponse.model_validate(plan),
+            tasks=[
+                MaterializedTaskRef(
+                    task_key=task.source_plan_task_key,
+                    task_id=task.id,
+                    agent_id=task.assigned_agent_id,
+                )
+                for task in tasks
+            ],
+            dependency_count=dependency_count,
+        )
+        await session.commit()
+        return response
+    except decomposition_service.NotFound as exc:
+        await session.rollback()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "plan not found") from exc
+    except decomposition_service.AssignmentError as exc:
+        await session.rollback()
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except (
+        decomposition_service.AlreadyDecided,
+        decomposition_service.PlanMismatch,
+        decomposition_service.StaleObjective,
+        decomposition_service.MaterializationConflict,
+        decomposition_service.AcceptanceConflict,
+        decomposition_service.ProjectNotPlannable,
+        IntegrityError,
+    ) as exc:
+        await session.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "plan approval conflict; nothing was materialized"
+        ) from exc
 
 
 @router.post("/{plan_id}/reject", response_model=DecompositionPlanResponse)
