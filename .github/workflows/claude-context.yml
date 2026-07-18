@@ -1,0 +1,44 @@
+name: Claude Context Assembly
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: claude-context-assembly
+  cancel-in-progress: true
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Assemble Claude context
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >-
+          python backend/scripts/assemble_claude_context.py
+          --root "$GITHUB_WORKSPACE"
+          --output "$GITHUB_WORKSPACE/CLAUDE_CONTEXT.md"
+
+      - name: Upload Claude context
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-context
+          path: CLAUDE_CONTEXT.md
+          if-no-files-found: error
+          retention-days: 1
