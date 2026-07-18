@@ -9,15 +9,16 @@ from pydantic import BaseModel, Field
 
 from app.core.enums import Verdict
 from app.orchestration.state_machine.states import ExecutionState
+from app.schemas.project import AcceptanceCriterionIn
 
 
 class DispatchRequest(BaseModel):
     max_attempts: int = Field(default=2, ge=1, le=10)
     timeout_s: float = Field(default=30.0, gt=0, le=600)
     # Optional closed-loop evaluation. Omit for a plain run that completes on success.
-    rubric: list[dict] | None = None
+    rubric: list[AcceptanceCriterionIn] | None = None
     evaluator_agent_id: uuid.UUID | None = None
-    max_remediations: int = Field(default=1, ge=0, le=5)
+    max_remediations: int | None = Field(default=None, ge=0, le=5)
 
 
 class DispatchAcceptedResponse(BaseModel):
@@ -76,6 +77,9 @@ class EvaluationResponse(BaseModel):
     score: float
     summary: str
     gaps: list | None
+    rubric_specs: list[dict] | None
+    rubric_sha256: str | None
+    rubric_source: str | None
 
     model_config = {"from_attributes": True}
 

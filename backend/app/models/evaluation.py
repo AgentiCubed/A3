@@ -44,6 +44,10 @@ class Evaluation(UUIDPrimaryKeyMixin, Immutable, Base):
     score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     gaps: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # Null on legacy rows created before rubric provenance was recorded.
+    rubric_specs: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    rubric_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    rubric_source: Mapped[str | None] = mapped_column(String(24), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

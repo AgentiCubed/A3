@@ -29,6 +29,12 @@ class TaskResponse(BaseModel):
     kanban_column: KanbanColumn
     estimate_hours: float
     required_capabilities: list[str] | None
+    assigned_agent_id: uuid.UUID | None
+    evaluator_agent_id: uuid.UUID | None
+    acceptance_criteria: list[dict]
+    max_remediations: int
+    source_plan_id: uuid.UUID | None
+    source_plan_task_key: str | None
     is_human_task: bool
     milestone_id: uuid.UUID | None
     priority: int

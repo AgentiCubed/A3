@@ -19,6 +19,7 @@ from app.core.audit import record_audit
 from app.core.enums import EvaluatorKind, Verdict
 from app.core.roles import ActorType
 from app.evaluation.rubric import evaluate_deterministic
+from app.evaluation.specs import normalize_rubric_specs, rubric_sha256
 from app.models.agent import Agent
 from app.models.evaluation import Evaluation, EvaluationCriterion
 from app.models.task_execution import TaskExecution
@@ -127,11 +128,14 @@ async def evaluate_execution(
     execution: TaskExecution,
     rubric_specs: list[dict],
     evaluator_agent: Agent | None,
+    rubric_source: str,
     actor_id: uuid.UUID | None,
     actor_type: ActorType = ActorType.USER,
 ) -> Evaluation:
     """Evaluate one execution's output. Returns the immutable Evaluation row."""
-    outcome = evaluate_deterministic(execution.output or "", rubric_specs)
+    normalized_specs = normalize_rubric_specs(rubric_specs)
+    rubric_digest = rubric_sha256(normalized_specs)
+    outcome = evaluate_deterministic(execution.output or "", normalized_specs)
 
     evaluator_kind = EvaluatorKind.DETERMINISTIC
     evaluator_agent_id: uuid.UUID | None = None
@@ -150,7 +154,7 @@ async def evaluate_execution(
         try:
             result = await adapter.run(
                 AgentRunRequest(
-                    prompt=_review_prompt(execution.output or "", rubric_specs),
+                    prompt=_review_prompt(execution.output or "", normalized_specs),
                     model=evaluator_agent.model,
                     credential_ref=cred,
                     params={"expected_format": VERDICT_CONTRACT},
@@ -179,6 +183,9 @@ async def evaluate_execution(
         score=outcome.score,
         summary=summary,
         gaps=combined_gaps or None,
+        rubric_specs=normalized_specs,
+        rubric_sha256=rubric_digest,
+        rubric_source=rubric_source,
     )
     session.add(evaluation)
     await session.flush()
@@ -208,6 +215,8 @@ async def evaluate_execution(
             "verdict": final_verdict.value,
             "score": outcome.score,
             "kind": evaluator_kind.value,
+            "rubric_sha256": rubric_digest,
+            "rubric_source": rubric_source,
             # None for deterministic-only evaluations; True means the agent's
             # response violated the contract and the verdict failed closed.
             "agent_malformed": agent_malformed,

@@ -11,6 +11,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+import pytest
+
 from app.core.roles import ActorType
 from app.orchestration.ports import EngineStatus
 from app.services import execution_service
@@ -273,3 +275,9 @@ def test_dispatch_params_round_trip_minimal():
     assert kwargs["actor_id"] is None
     assert kwargs["actor_type"] == ActorType.SYSTEM
     assert "evaluation" not in kwargs
+
+
+@pytest.mark.parametrize("malformed", [{}, "", 0, False])
+def test_worker_parser_preserves_falsey_malformed_rubrics_for_central_rejection(malformed):
+    kwargs = _parse_dispatch_params({"evaluation": {"rubric_specs": malformed}})
+    assert kwargs["evaluation"].rubric_specs == malformed

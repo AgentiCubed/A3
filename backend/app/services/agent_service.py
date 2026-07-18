@@ -33,6 +33,10 @@ class CapabilityMismatch(Exception):
         super().__init__(f"agent is missing required capabilities: {missing}")
 
 
+class GovernedAssignmentLocked(Exception):
+    """A materialized plan assignment cannot be changed outside plan governance."""
+
+
 async def register_agent(
     session: AsyncSession,
     *,
@@ -151,6 +155,8 @@ async def assign_agent_to_task(
     agent: Agent,
 ) -> Task:
     """Assign an agent to a task, enforcing capability coverage."""
+    if task.source_plan_id is not None:
+        raise GovernedAssignmentLocked()
     required = list(task.required_capabilities or [])
     profile = await _profiles(session, org_id)
     agent_caps = next((p.capabilities for p in profile if p.agent_id == agent.id), {})

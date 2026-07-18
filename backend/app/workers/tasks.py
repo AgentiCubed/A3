@@ -51,14 +51,17 @@ def _parse_dispatch_params(params: dict) -> dict:
     }
     raw_eval = params.get("evaluation")
     if raw_eval is not None:
+        raw_max_remediations = raw_eval.get("max_remediations")
         kwargs["evaluation"] = execution_service.EvaluationConfig(
-            rubric_specs=raw_eval.get("rubric_specs") or [],
+            rubric_specs=(raw_eval["rubric_specs"] if "rubric_specs" in raw_eval else []),
             evaluator_agent_id=(
                 uuid.UUID(raw_eval["evaluator_agent_id"])
                 if raw_eval.get("evaluator_agent_id")
                 else None
             ),
-            max_remediations=int(raw_eval.get("max_remediations", 1)),
+            max_remediations=(
+                int(raw_max_remediations) if raw_max_remediations is not None else None
+            ),
         )
     return kwargs
 
