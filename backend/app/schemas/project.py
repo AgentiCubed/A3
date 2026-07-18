@@ -52,6 +52,13 @@ class ProjectResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ProjectCloseRequest(BaseModel):
+    """Close options (WS-4b). Closing with unmet acceptance criteria requires
+    explicit acknowledgment — deliberate abandonment, recorded in the audit."""
+
+    acknowledge_unmet_criteria: bool = False
+
+
 class ProjectWithMethodology(ProjectResponse):
     methodology: MethodologyResponse | None = None
 

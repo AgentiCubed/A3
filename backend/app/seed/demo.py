@@ -217,13 +217,29 @@ async def build_and_run_demo(
         store,
         org_id=org_id,
         project_id=project.id,
-        name="widget-demand.png",
+        name="widget-demand-chart.png",
         content_type="image/png",
         data=chart_png,
         task_execution_id=analyze_exec[-1].id if analyze_exec else None,
         produced_by_agent_id=analyst.id,
         actor_id=owner.id,
     )
+    # The brief itself is a promised deliverable — store it, so the project's
+    # acceptance criteria are actually met when it closes (WS-4b gate).
+    brief_exec = await execution_service.list_executions(session, org_id=org_id, task_id=t_brief.id)
+    if brief_exec and brief_exec[-1].output:
+        await artifact_service.store_artifact(
+            session,
+            store,
+            org_id=org_id,
+            project_id=project.id,
+            name="market-brief.md",
+            content_type="text/markdown",
+            data=brief_exec[-1].output.encode("utf-8"),
+            task_execution_id=brief_exec[-1].id,
+            produced_by_agent_id=writer.id,
+            actor_id=owner.id,
+        )
     r_stats = r_worker.run_summary(SAMPLE_DATASET, "value") if r_worker.r_available() else None
     await project_service.add_decision(
         session,
