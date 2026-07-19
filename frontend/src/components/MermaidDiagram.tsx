@@ -21,7 +21,9 @@ export function MermaidDiagram({ source }: { source: string }) {
         const { default: mermaid } = await import("mermaid");
         mermaid.initialize({
           startOnLoad: false,
+          securityLevel: "strict",
           theme: "dark",
+          flowchart: { htmlLabels: false },
           themeVariables: {
             background: "#0d1117",
             primaryColor: "#2f6fed",
