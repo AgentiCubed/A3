@@ -9,11 +9,15 @@ combined with the deterministic rubric (`evaluation_service.combine_verdicts` /
 agent can downgrade a deterministic PASS (→ NEEDS_REVISION/FAIL) but can never
 upgrade a hard deterministic FAIL. Verified by `test_verdict_combination`.
 
-Residual (intentional): the structured verdict is still a deterministic stand-in,
-not a live LLM judging through a provider tool/schema (kept so CI stays
-provider-free, A15). Wiring a mock *structured-output* evaluator over the
-`ToolSchema` port remains the upgrade path, but the agent verdict is no longer
-ignored.
+Residual closed (2026-07-17, WS-4): the evaluator agent now answers a strict
+JSON contract (`verdict_json_v1`, requested via `AgentRunRequest.params` and
+instructed in the review prompt). `evaluation_service.parse_evaluator_verdict`
+fails closed — prose, wrong types, unknown verdicts, out-of-range scores, and
+evaluator errors all yield NEEDS_REVISION (never a silent PASS) and are flagged
+`agent_malformed` in the audit event. The MockProvider emits deterministic
+contract-compliant verdicts so CI stays provider-free (A15). Verified by
+`test_verdict_combination` (parser + combination) and the fail-closed
+integration tests in `test_evaluation.py`.
 
 ## What is incomplete
 When an evaluation uses an evaluator **agent**, the agent produces a narrative

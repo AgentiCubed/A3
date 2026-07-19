@@ -1,46 +1,49 @@
-"""End-to-end demonstration project (the required Phase-8 deliverable).
+"""Auditable objective-to-close demonstration of the governed runtime.
 
-Builds and runs a real project through the full control loop:
-  research → write brief → analyze a sample dataset → generate a visualization →
-  evaluate → hit one deliberate failure → apply a remediation → complete →
-  generate a closeout report.
-
-Analysis and visualization use the REAL workers (pandas/matplotlib; R if present),
-not mocks. Agent "thinking" uses the deterministic MockProvider so the demo is
-reproducible offline (assumption A15).
+The planner, executors, and evaluator use the deterministic ``mock`` adapter so
+the orchestration proof is reproducible and offline. That adapter is not live
+market research and the returned evidence says so explicitly. The statistics,
+permissioned analysis-tool invocation, chart rendering, artifact persistence,
+evaluation/remediation loop, and lifecycle gates are real application paths.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis import python_worker, r_worker
 from app.core.artifacts import LocalArtifactStore
-from app.core.enums import (
-    AgentKind,
-    AgentRole,
-    DependencyType,
-    RequirementKind,
-    RequirementPriority,
-)
-from app.core.roles import ActorType
+from app.core.enums import AgentKind, AgentRole, ToolKind, ToolSensitivity
+from app.core.rbac import Actor
+from app.core.roles import ActorType, SystemRole
+from app.models.audit_event import AuditEvent
 from app.schemas.auth import RegisterRequest
+from app.schemas.decomposition import PlanTaskAssignmentIn
 from app.services import (
     agent_service,
     artifact_service,
     auth_service,
     closeout_service,
+    decomposition_service,
+    evaluation_service,
     execution_service,
     project_service,
-    task_service,
+    scheduler_service,
+    tool_service,
 )
-from app.services.execution_service import EvaluationConfig
 from app.services.methodology import ProjectSignals
 
-# A small sample dataset the analysis worker crunches for real.
+AUTONOMOUS_DEMO_MARKER = "[[AUTONOMOUS_DEMO:DEMO_ACCEPTED]]"
+DEMO_ACCEPTANCE_TOKEN = "DEMO_ACCEPTED"  # noqa: S105 - rubric token, not a credential
+MOCK_DISCLOSURE = (
+    "Planner, executor, and evaluator text was produced by the deterministic "
+    "MockProvider for an offline orchestration demonstration; it is not live market research."
+)
+
 SAMPLE_DATASET = [
     {"label": "Northeast", "value": 120},
     {"label": "Midwest", "value": 95},
@@ -49,7 +52,15 @@ SAMPLE_DATASET = [
 ]
 
 
-async def _agent(session, org_id, actor_id, name, caps, role=AgentRole.EXECUTOR):
+async def _agent(
+    session: AsyncSession,
+    *,
+    org_id: uuid.UUID,
+    actor_id: uuid.UUID,
+    name: str,
+    capabilities: list[str],
+    role: AgentRole,
+):
     agent = await agent_service.register_agent(
         session,
         org_id=org_id,
@@ -57,21 +68,38 @@ async def _agent(session, org_id, actor_id, name, caps, role=AgentRole.EXECUTOR)
         name=name,
         kind=AgentKind.AI,
         provider="mock",
-        model="demo",
+        model="deterministic-demo",
         default_role=role,
         config=None,
     )
-    for cap in caps:
+    for capability in capabilities:
         await agent_service.add_capability(
-            session, agent=agent, capability=cap, proficiency=4, evidence=None
+            session,
+            agent=agent,
+            capability=capability,
+            proficiency=4,
+            evidence="offline governed-demo registration",
         )
     return agent
 
 
+async def _audits(session: AsyncSession, *, org_id: uuid.UUID, action: str) -> list[AuditEvent]:
+    rows = await session.execute(
+        select(AuditEvent)
+        .where(AuditEvent.organization_id == org_id, AuditEvent.action == action)
+        .order_by(AuditEvent.occurred_at, AuditEvent.id)
+    )
+    return list(rows.scalars().all())
+
+
 async def build_and_run_demo(
-    session: AsyncSession, *, store: LocalArtifactStore, now: datetime, email: str | None = None
+    session: AsyncSession,
+    *,
+    store: LocalArtifactStore,
+    now: datetime,
+    email: str | None = None,
 ) -> dict:
-    # 1. Organization + owner.
+    """Run one deterministic, governed project and return its persisted proof."""
     owner_email = email or f"demo-{uuid.uuid4().hex[:8]}@agenticubed.dev"
     owner = await auth_service.register_organization(
         session,
@@ -83,24 +111,85 @@ async def build_and_run_demo(
     )
     org_id = owner.organization_id
 
-    # 2. Agents (executors + a separate evaluator).
-    researcher = await _agent(session, org_id, owner.id, "Researcher", ["research.web"])
-    writer = await _agent(session, org_id, owner.id, "Writer", ["writing.brief"])
+    planner = await _agent(
+        session,
+        org_id=org_id,
+        actor_id=owner.id,
+        name="Demo Planner",
+        capabilities=["planning.decompose"],
+        role=AgentRole.EXECUTOR,
+    )
     analyst = await _agent(
-        session, org_id, owner.id, "Analyst", ["analysis.data", "analysis.python"]
+        session,
+        org_id=org_id,
+        actor_id=owner.id,
+        name="Demo Research Analyst",
+        capabilities=[
+            "research.market",
+            "analysis.data",
+            "analysis.python",
+            "analysis.stats",
+        ],
+        role=AgentRole.EXECUTOR,
+    )
+    writer = await _agent(
+        session,
+        org_id=org_id,
+        actor_id=owner.id,
+        name="Demo Brief Writer",
+        capabilities=["writing.brief", "writing.report"],
+        role=AgentRole.EXECUTOR,
     )
     evaluator = await _agent(
-        session, org_id, owner.id, "Evaluator", ["evaluation.rubric"], role=AgentRole.EVALUATOR
+        session,
+        org_id=org_id,
+        actor_id=owner.id,
+        name="Demo Independent Evaluator",
+        capabilities=["evaluation.rubric"],
+        role=AgentRole.EVALUATOR,
     )
 
-    # 3. Project (dependency-heavy + deadline → CPM recommended).
+    analysis_tool = await tool_service.register_tool(
+        session,
+        org_id=org_id,
+        actor_id=owner.id,
+        name="analysis.summary_stats",
+        kind=ToolKind.PYTHON_FN,
+        description="Compute summary statistics over a supplied numeric dataset.",
+        schema={
+            "type": "object",
+            "required": ["records", "value_column"],
+            "properties": {
+                "records": {"type": "array", "items": {"type": "object"}},
+                "value_column": {"type": "string"},
+            },
+        },
+        sensitivity=ToolSensitivity.LOW,
+    )
+    await tool_service.grant_tool_permission(
+        session,
+        actor=Actor(
+            actor_type=ActorType.USER,
+            organization_id=org_id,
+            user_id=owner.id,
+            system_role=SystemRole.OWNER,
+        ),
+        agent_id=analyst.id,
+        tool_id=analysis_tool.id,
+        scope=None,
+        expires_at=None,
+    )
+
     project, _ = await project_service.create_project(
         session,
         org_id=org_id,
         actor_id=owner.id,
-        name="Market brief: Widget X regional demand",
-        objective="Produce a researched, data-backed brief on Widget X regional demand.",
-        acceptance_criteria={"deliverables": ["brief", "demand chart"]},
+        name="Governed market brief: Widget X regional demand",
+        objective=(
+            "Produce a data-backed market brief and demand chart for Widget X regional demand. "
+            f"Run the offline autonomous orchestration proof {AUTONOMOUS_DEMO_MARKER}."
+        ),
+        acceptance_criteria={"deliverables": ["market brief", "demand chart"]},
         signals=ProjectSignals(
             requirements_stable=True,
             hard_deadline=True,
@@ -109,164 +198,148 @@ async def build_and_run_demo(
             resource_constrained=False,
         ),
     )
-    await project_service.add_requirement(
-        session,
-        project=project,
-        kind=RequirementKind.ACCEPTANCE,
-        text="A written brief and a regional-demand visualization.",
-        priority=RequirementPriority.MUST,
-        source="demo",
-    )
-    await project_service.add_milestone(
-        session, project=project, name="Brief delivered", due_date=None, order_index=1
-    )
 
-    # 4. Tasks + dependencies.
-    t_research = await task_service.create_task(
+    draft = await decomposition_service.generate_plan(
         session,
         project=project,
-        title="Research Widget X demand",
-        description="",
-        estimate_hours=3,
-        required_capabilities=["research.web"],
-        is_human_task=False,
-        milestone_id=None,
-        priority=2,
+        planner_agent_id=planner.id,
+        actor_id=owner.id,
     )
-    t_brief = await task_service.create_task(
-        session,
-        project=project,
-        title="Write the market brief",
-        description="",
-        estimate_hours=4,
-        required_capabilities=["writing.brief"],
-        is_human_task=False,
-        milestone_id=None,
-        priority=2,
-    )
-    t_analyze = await task_service.create_task(
-        session,
-        project=project,
-        title="Analyze the regional dataset",
-        description="",
-        estimate_hours=5,
-        required_capabilities=["analysis.data"],
-        is_human_task=False,
-        milestone_id=None,
-        priority=1,
-    )
-    # The visualization task carries a deliberate failure marker (see step 7).
-    t_visual = await task_service.create_task(
-        session,
-        project=project,
-        title="Render the demand chart [[FAIL]]",
-        description="",
-        estimate_hours=2,
-        required_capabilities=["analysis.python"],
-        is_human_task=False,
-        milestone_id=None,
-        priority=1,
-    )
-    for pred, succ in [(t_research, t_brief), (t_research, t_analyze), (t_analyze, t_visual)]:
-        await task_service.add_dependency(
-            session,
-            project=project,
-            actor_id=owner.id,
-            predecessor_id=pred.id,
-            successor_id=succ.id,
-            dependency_type=DependencyType.FINISH_TO_START,
-            lag_hours=0,
+    if draft.plan_spec is None or draft.plan_spec_sha256 is None:
+        raise RuntimeError(f"demo planner did not produce a valid draft: {draft.diagnostic}")
+    draft_version = draft.version
+    draft_sha256 = draft.plan_spec_sha256
+    plan_task_keys = [task["key"] for task in draft.plan_spec["tasks"]]
+    executor_by_key = {"research": analyst, "deliver": writer}
+    if set(plan_task_keys) != set(executor_by_key):
+        raise RuntimeError(f"unexpected autonomous demo task keys: {plan_task_keys}")
+    assignments = [
+        PlanTaskAssignmentIn(
+            task_key=task_key,
+            agent_id=executor_by_key[task_key].id,
+            evaluator_agent_id=evaluator.id,
+            max_remediations=1,
         )
-
-    for task, agent in [
-        (t_research, researcher),
-        (t_brief, writer),
-        (t_analyze, analyst),
-        (t_visual, analyst),
-    ]:
-        await agent_service.assign_agent_to_task(
-            session, org_id=org_id, actor_id=owner.id, task=task, agent=agent
-        )
-
-    # 5. Execute research / brief / analyze with rubrics + a separate evaluator.
-    eval_cfg = EvaluationConfig(
-        rubric_specs=[{"key": "nonempty", "check": "non_empty"}],
-        evaluator_agent_id=evaluator.id,
-        max_remediations=1,
+        for task_key in plan_task_keys
+    ]
+    approved_plan, materialized_tasks, dependency_count = await decomposition_service.approve_plan(
+        session,
+        project=project,
+        plan_id=draft.id,
+        expected_version=draft_version,
+        expected_plan_spec_sha256=draft_sha256,
+        assignments=assignments,
+        actor_id=owner.id,
+        comment="Approved exact deterministic demo plan and agent assignments.",
     )
-    for task in (t_research, t_brief, t_analyze):
-        await execution_service.execute_task(
-            session,
-            task=task,
-            actor_id=owner.id,
-            actor_type=ActorType.USER,
-            max_attempts=2,
-            evaluation=eval_cfg,
-        )
+    # Approval provenance is executable authority, so make it durable before
+    # the one governed start revalidates the plan.
+    await session.commit()
 
-    # 6. REAL analysis + visualization (Python worker; R cross-check if available).
+    materialization = await decomposition_service.begin_project_execution(
+        session, project=project, actor_id=owner.id
+    )
+    if materialization is None:
+        raise RuntimeError("approved demo project was not recognized as governed")
+    started_status = project.status.value
+    await session.commit()
+
+    outcomes = await scheduler_service.run_inline(
+        session,
+        project_id=project.id,
+        actor_id=owner.id,
+        actor_type=ActorType.USER,
+        max_attempts=1,
+        timeout_s=30,
+    )
+    key_by_id = {task.id: str(task.source_plan_task_key) for task in materialization.tasks}
+    execution_order = [key_by_id[outcome.task_id] for outcome in outcomes]
+    if len(outcomes) != len(materialization.tasks) or any(
+        outcome.status.value != "completed" for outcome in outcomes
+    ):
+        raise RuntimeError("governed scheduler did not complete the approved demo graph")
+
     stats = python_worker.summary_stats(SAMPLE_DATASET, "value")
     chart_png = python_worker.bar_chart_png(
         SAMPLE_DATASET, "label", "value", title="Widget X regional demand"
     )
-    analyze_exec = await execution_service.list_executions(
-        session, org_id=org_id, task_id=t_analyze.id
-    )
-    artifact = await artifact_service.store_artifact(
+    r_stats = r_worker.run_summary(SAMPLE_DATASET, "value") if r_worker.r_available() else None
+
+    tasks_by_key = {str(task.source_plan_task_key): task for task in materialized_tasks}
+    executions_by_key = {
+        key: await execution_service.list_executions(session, org_id=org_id, task_id=task.id)
+        for key, task in tasks_by_key.items()
+    }
+    deliver_output = executions_by_key["deliver"][-1].output or ""
+    brief_bytes = (
+        "# Widget X regional-demand market brief\n\n"
+        f"> Demonstration disclosure: {MOCK_DISCLOSURE}\n\n"
+        "## Governed agent output\n\n"
+        f"{deliver_output}\n\n"
+        "## Real dataset analysis\n\n"
+        f"- Mean demand: {stats['mean']}\n"
+        f"- Total demand: {stats['sum']}\n"
+        f"- Highest regional demand: {stats['max']}\n"
+    ).encode()
+    brief_artifact = await artifact_service.store_artifact(
         session,
         store,
         org_id=org_id,
         project_id=project.id,
-        name="widget-demand.png",
-        content_type="image/png",
-        data=chart_png,
-        task_execution_id=analyze_exec[-1].id if analyze_exec else None,
-        produced_by_agent_id=analyst.id,
-        actor_id=owner.id,
-    )
-    r_stats = r_worker.run_summary(SAMPLE_DATASET, "value") if r_worker.r_available() else None
-    await project_service.add_decision(
-        session,
-        project=project,
-        actor_id=owner.id,
-        title="Regional demand analysis",
-        context=f"Python worker stats: {stats}",
-        decision=f"South leads demand (max={stats['max']}); mean={stats['mean']}.",
-        consequences="Prioritize Southern distribution in the brief.",
-    )
-
-    # 7. Deliberate failure + remediation on the visualization task.
-    fail_result = await execution_service.execute_task(
-        session, task=t_visual, actor_id=owner.id, actor_type=ActorType.USER, max_attempts=1
-    )  # raises no exception; the attempt fails and the task escalates to BLOCKED
-    await project_service.add_decision(
-        session,
-        project=project,
-        actor_id=owner.id,
-        title="Remediation: chart renderer crash",
-        context="The first render attempt failed on malformed input.",
-        decision="Applied remediation (add_context/clean input) and re-ran the task.",
-        consequences="Chart produced successfully on the retry.",
-    )
-    # Apply the remediation: clean the input that crashed it, return to READY, re-run.
-    t_visual.title = t_visual.title.replace(" [[FAIL]]", "")
-    await execution_service.transition_task(
-        session,
-        t_visual,
-        execution_service.ExecutionState.READY,
+        name="market-brief.md",
+        content_type="text/markdown",
+        data=brief_bytes,
+        task_execution_id=executions_by_key["deliver"][-1].id,
+        produced_by_agent_id=writer.id,
         actor_id=owner.id,
         actor_type=ActorType.USER,
-        reason="remediation applied",
     )
-    ok_result = await execution_service.execute_task(
-        session, task=t_visual, actor_id=owner.id, actor_type=ActorType.USER, max_attempts=1
+    chart_artifact = await artifact_service.store_artifact(
+        session,
+        store,
+        org_id=org_id,
+        project_id=project.id,
+        name="demand-chart.png",
+        content_type="image/png",
+        data=chart_png,
+        task_execution_id=executions_by_key["research"][-1].id,
+        produced_by_agent_id=analyst.id,
+        actor_id=owner.id,
+        actor_type=ActorType.USER,
     )
 
-    # 8. Close the project, then generate the closeout report (reflects CLOSED).
-    await closeout_service.close_project(session, project=project, actor_id=owner.id)
+    await closeout_service.close_project(
+        session,
+        project=project,
+        actor_id=owner.id,
+        actor_type=ActorType.USER,
+        acknowledge_unmet_criteria=False,
+    )
     report = await closeout_service.generate_closeout(
         session, org_id=org_id, project_id=project.id, generated_at=now
     )
+    await session.flush()
+
+    evaluations = []
+    for key in execution_order:
+        task_evaluations = await evaluation_service.list_evaluations_for_task(
+            session, org_id=org_id, task_id=tasks_by_key[key].id
+        )
+        evaluations.append(
+            {
+                "task_key": key,
+                "evaluation_ids": [str(item.id) for item in task_evaluations],
+                "verdicts": [item.verdict.value for item in task_evaluations],
+                "final_verdict": task_evaluations[-1].verdict.value,
+                "rubric_sha256": task_evaluations[-1].rubric_sha256,
+            }
+        )
+
+    approval_audits = await _audits(session, org_id=org_id, action="plan.approved")
+    start_audits = await _audits(session, org_id=org_id, action="project.started")
+    remediation_audits = await _audits(session, org_id=org_id, action="remediation.selected")
+    tool_audits = await _audits(session, org_id=org_id, action="tool.invoked")
+    close_audits = await _audits(session, org_id=org_id, action="project.closed")
     await session.commit()
 
     return {
@@ -276,15 +349,62 @@ async def build_and_run_demo(
         "status": project.status.value,
         "task_count": report["task_count"],
         "tasks_completed": report["tasks_completed"],
-        "failures": report["failures"],
-        "remediation_events": len(report["remediation_events"]),
-        "deliverables": report["deliverables"],
+        "execution_order": execution_order,
+        "plan": {
+            "id": str(approved_plan.id),
+            "draft_created": True,
+            "status": approved_plan.status.value,
+            "version": approved_plan.version,
+            "plan_spec_sha256": approved_plan.plan_spec_sha256,
+            "approved_exact_sha256": draft_sha256,
+            "task_keys": plan_task_keys,
+            "materialized_task_ids": [str(task.id) for task in materialized_tasks],
+            "dependency_count": dependency_count,
+            "approval_audit_count": len(approval_audits),
+        },
+        "start": {
+            "status_after_start": started_status,
+            "audit_count": len(start_audits),
+            "plan_id": (start_audits[0].after or {}).get("plan_id") if start_audits else None,
+        },
+        "evaluations": evaluations,
+        "remediation": {
+            "count": len(remediation_audits),
+            "task_key": "deliver",
+            "attempts": len(executions_by_key["deliver"]),
+            "runtime_remediations": len(remediation_audits),
+            "linked_attempts": sum(
+                execution.remediation_of is not None for execution in executions_by_key["deliver"]
+            ),
+            "events": [audit.after for audit in remediation_audits],
+        },
+        "tool_invocations": [audit.after for audit in tool_audits],
+        "artifacts": [
+            {
+                "id": str(brief_artifact.id),
+                "name": brief_artifact.name,
+                "content_type": brief_artifact.content_type,
+                "sha256": brief_artifact.sha256,
+                "storage_key": brief_artifact.storage_key,
+            },
+            {
+                "id": str(chart_artifact.id),
+                "name": chart_artifact.name,
+                "content_type": chart_artifact.content_type,
+                "sha256": chart_artifact.sha256,
+                "storage_key": chart_artifact.storage_key,
+            },
+        ],
         "python_stats": stats,
         "r_stats": r_stats,
-        "deliberate_failure_state": fail_result.final_state.value,
-        "remediated_final_state": ok_result.final_state.value,
+        "acceptance": report["acceptance"],
+        "close": {
+            "audit_count": len(close_audits),
+            "details": close_audits[0].after if close_audits else None,
+        },
+        "mock_provider_disclosure": MOCK_DISCLOSURE,
+        "analysis_mode": "real Python worker and permissioned analysis.summary_stats tool",
         "closeout_markdown": report["markdown"],
-        "artifact_id": str(artifact.id),
     }
 
 
@@ -293,7 +413,7 @@ async def _main() -> None:  # pragma: no cover - manual entrypoint
 
     store = artifact_service.default_store()
     async with SessionFactory() as session:
-        result = await build_and_run_demo(session, store=store, now=datetime.now())
+        result = await build_and_run_demo(session, store=store, now=datetime.now(UTC))
     print(result["closeout_markdown"])  # noqa: T201
 
 

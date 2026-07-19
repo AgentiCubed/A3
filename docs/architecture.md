@@ -74,6 +74,7 @@ edges via dependency injection (FastAPI `Depends` + a small composition root in
 | `WorkflowEngine` | Enqueue/track durable task execution | `CeleryWorkflowEngine` | `TemporalWorkflowEngine` |
 | `ArtifactStore` | Persist project artifacts (binary/text) | `LocalFsArtifactStore` | `S3ArtifactStore` |
 | `Clock` | Time source (testable) | `SystemClock` | `FrozenClock` (tests) |
+| `EventBus` | Live domain-event fan-out (SSE feed) | `InMemoryEventBus`, `RedisEventBus` | NATS / Kafka |
 
 The `WorkflowEngine` port is deliberately narrow:
 
@@ -144,7 +145,12 @@ computations assume an acyclic graph and rely on this invariant.
   task id, execution id, and actor id bound to the log context.
 - **Health checks**: `/healthz` (liveness), `/readyz` (DB + Redis reachability).
 - **Metrics**: project/agent metrics persisted as `ProjectMetric` /
-  `AgentMetric`; Prometheus endpoint deferred to Phase 7.
+  `AgentMetric`; Prometheus `/metrics` exposes request counts and latency
+  histograms labeled by route template.
+- **Live events**: every audited state change is published through the
+  `EventBus` port and streamed per project over SSE
+  (`GET /api/v1/projects/{id}/events`). The stream is advisory (at-most-once,
+  pre-commit); the database remains the source of truth.
 
 ## 10. Security posture (summary)
 

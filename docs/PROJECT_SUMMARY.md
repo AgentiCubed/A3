@@ -8,16 +8,20 @@ A consolidated overview of the delivered platform. For depth, see
 
 ## What it is
 
-AgentiCubed converts a project objective into a structured plan, recommends a
-methodology, decomposes work, matches and assigns specialized agents, executes
-tasks, evaluates outputs, detects failures, applies closed-loop remediation, and
-continues until acceptance criteria are met — running the control loop:
+AgentiCubed converts a project objective into a durable draft plan, waits for
+explicit approval of the exact plan, materializes the approved graph and agent
+policies, executes tasks, evaluates outputs, detects failures, applies bounded
+closed-loop remediation, and closes only when acceptance evidence passes —
+running the control loop:
 
 ```
 Plan → Assign → Execute → Evaluate → Identify Gaps → Remediate → Re-execute
 ```
 
-## Status: all 8 phases complete & verified
+## Status: original 8-phase MVP baseline implemented
+
+"Green" below means the phase-level acceptance evidence exists. It does not
+mean every production-hardening or scale concern has been eliminated.
 
 | Phase | Scope | Verification |
 |---|---|---|
@@ -32,16 +36,17 @@ Plan → Assign → Execute → Evaluate → Identify Gaps → Remediate → Re-
 
 ## Verification at a glance
 
-- **Backend:** 129 pytest tests passing · ruff + black clean
-- **Frontend:** 14 vitest tests passing · tsc + eslint + prettier clean
+- **Backend:** full pytest, Ruff, and Black checks run in CI
+- **Frontend:** Vitest, typecheck, ESLint, and Prettier checks run in CI
 - **Migrations:** `alembic upgrade head` renders 0001→0008 cleanly (verified
   against real Postgres in CI)
 - **CI** (`.github/workflows/ci.yml`): backend against real Postgres 16 + Redis 7
   (migrate + `/readyz` smoke), frontend (format/typecheck/lint/test), and a
   `docker compose config` validation job
-- **Demo** (`make demo`): runs the full loop end-to-end; Python **and** R workers
-  both compute mean=116.25 on the sample dataset; produces a real PNG deliverable
-  and a closeout report
+- **Demo** (`make demo`): objective → durable draft → exact explicit approval →
+  one governed start → permissioned real pandas analysis → evaluation-driven
+  automatic remediation → artifact and acceptance gates → evidence-bound close.
+  Planning and agent text are deterministic fixtures; R is an optional cross-check.
 
 ## Requirements coverage
 
@@ -93,7 +98,7 @@ make check         # backend + frontend lint and tests
 API docs: `http://localhost:8000/docs` · Web: `http://localhost:3000` ·
 Sign in at `/login`, dashboards at `/projects/<id>`.
 
-## Tracked follow-ups (all addressed)
+## Original roadmap follow-ups
 
 | Issue | Outcome |
 |---|---|
@@ -105,3 +110,7 @@ Sign in at `/login`, dashboards at `/projects/<id>`.
 
 Architecture substitutions are recorded as ADRs (0001–0005) in
 [`decisions/`](decisions/).
+
+Post-baseline hardening is tracked separately. In particular, concurrent artifact
+writes versus acceptance snapshots remain open in
+[GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45).

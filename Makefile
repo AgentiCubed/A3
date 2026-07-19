@@ -36,7 +36,7 @@ demo:
 	cd backend && python -m app.seed.demo
 
 backend-lint:
-	cd backend && ruff check app tests alembic/env.py && black --check app tests alembic/env.py
+	cd backend && ruff check . && black --check .
 
 backend-fmt:
 	cd backend && black . && ruff check --fix .

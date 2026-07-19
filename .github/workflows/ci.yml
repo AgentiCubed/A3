@@ -30,6 +30,8 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://agenticubed:agenticubed@localhost:5432/agenticubed
       DATABASE_URL_SYNC: postgresql+psycopg://agenticubed:agenticubed@localhost:5432/agenticubed
       REDIS_URL: redis://localhost:6379/0
+      CELERY_BROKER_URL: redis://localhost:6379/1
+      CELERY_RESULT_BACKEND: redis://localhost:6379/2
     defaults:
       run:
         working-directory: backend
@@ -46,12 +48,19 @@ jobs:
           uv pip install --python .venv -e ".[dev,analysis]"
       - name: Lint (ruff + black)
         run: |
-          .venv/bin/ruff check app tests alembic/env.py
-          .venv/bin/black --check app tests alembic/env.py
+          .venv/bin/ruff check .
+          .venv/bin/black --check .
       - name: Apply migrations against real Postgres
         run: .venv/bin/alembic upgrade head
       - name: Tests
-        run: .venv/bin/python -m pytest -q
+        run: .venv/bin/python -m pytest -q --ignore=tests/integration/test_demo.py
+      - name: Governed objective-to-close proof
+        run: .venv/bin/python -m pytest tests/integration/test_demo.py -q
+      - name: Celery spine smoke (real broker + worker process)
+        env:
+          CELERY_BROKER_SMOKE: "1"
+          WORKFLOW_ENGINE_BACKEND: celery
+        run: .venv/bin/python -m pytest tests/integration/test_celery_broker_smoke.py -q
       - name: Readiness smoke test (db + redis)
         run: |
           .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 &
@@ -63,8 +72,8 @@ jobs:
           BODY=$(curl -sf http://localhost:8000/readyz)
           echo "$BODY"
           echo "$BODY" | python -c "import json,sys; d=json.load(sys.stdin); c=d.get('checks',{}); assert c.get('database')=='ok',f'database not ok: {d}'; assert c.get('redis')=='ok',f'redis not ok: {d}'"
-          kill $SERVER_PID
-          wait $SERVER_PID || true
+          kill "$SERVER_PID" 2>/dev/null || true
+          wait "$SERVER_PID" 2>/dev/null || true
 
   frontend:
     runs-on: ubuntu-latest
@@ -86,6 +95,23 @@ jobs:
         run: npm run lint
       - name: Tests
         run: npm run test
+
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: E2E smoke (Playwright)
+        run: npx playwright test
 
   compose:
     runs-on: ubuntu-latest
