@@ -27,7 +27,7 @@ Every relationship record has:
 | `asserted_by` | Yes | The actor or system that asserted this relationship. |
 | `asserted_at` | Yes | Timestamp when the relationship was asserted. |
 | `authority` | Yes | Governance basis for the relationship's existence (delegation, decision, ratification). |
-| `evidence_refs` | Conditional | Required for `VERIFIES`, `EVIDENCES`, `CONTRADICTS`, and `SUPERSEDES`. |
+| `evidence_refs` | Conditional | Required for `EVIDENCES`, `CONTRADICTS`, `PROMOTES_TO`, and `SUPERSEDES`. |
 | `notes` | Optional | Human-readable annotation; not a substitute for a knowledge record. |
 
 Relationships are append-only once asserted. A relationship is retracted by adding a
