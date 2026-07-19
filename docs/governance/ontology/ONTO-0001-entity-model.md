@@ -121,7 +121,7 @@ are always distinct fields and shall never be conflated.
 | `IdeaEvolutionRecord` | `IER-NNNN` | Chronological record of how a concept changed across stages. | `stage_sequence[]`, `evidence_at_each_stage[]` |
 | `ReasoningLedger` | `RL-NNNN` | Evidence, counter-evidence, confidence history, and review triggers for a claim. | `evidence[]`, `counter_evidence[]`, `confidence_history[]` |
 | `TETCapsule` | `TET-NNNN` | The minimal reusable capsule of a belief change. | `prior_model`, `disturbing_evidence`, `revised_model`, `tested_consequence` |
-| `Pattern` | `PAT-NNNN` | A repeated successful practice with sufficient evidence to recommend reuse. | `application_evidence[]`, `known_exceptions[]`, `knowledge_gravity`, `genome_membership` |
+| `Pattern` | `PAT-NNNN` | A repeated successful practice with sufficient evidence to recommend reuse. | `application_evidence[]`, `known_exceptions[]`, `knowledge_gravity` |
 | `AntiPattern` | `AP-NNNN` | A repeated harmful practice that should be recognized and avoided. | `recurrence_evidence[]`, `recognition_signals[]`, `knowledge_gravity` |
 | `Risk` | `RSK-NNNN` | A material downside with owner, trigger conditions, mitigation, and review interval. | `owner`, `triggers[]`, `mitigation`, `residual_exposure`, `review_interval` |
 | `Assumption` | `ASM-NNNN` | An unverified premise on which active work depends. | `testability_conditions`, `invalidation_triggers[]` |
