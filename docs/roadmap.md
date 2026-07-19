@@ -217,11 +217,15 @@ Comprehensive testing, security hardening, documentation, seed data, end-to-end
 demonstration project.
 
 **Acceptance criteria**
-- [x] E2E demo (`app/seed/demo.py`, `make demo`): research → brief → **real**
-      data analysis (pandas) → **real** visualization (matplotlib PNG artifact) →
-      evaluation (separate evaluator) → one deliberate failure → remediation →
-      completion → closeout report. Verified by `test_demo` (and run via CLI).
-      R worker cross-checks the stats when `Rscript` is present.
+- [x] Governed E2E demo (`app/seed/demo.py`, `make demo`): objective → durable
+      draft → explicit approval of the exact version/hash → two plan-derived tasks
+      → one governed start → permissioned pandas analysis → deterministic
+      evaluation rejection → automatic remediation and re-execution → real
+      matplotlib/artifact outputs → acceptance-gated closeout. Verified by
+      `test_demo`; CI also runs it as **Governed objective-to-close proof**.
+      `MockProvider` makes planning and agent responses reproducible and offline;
+      no live model inference is claimed. R adds an optional cross-check when
+      `Rscript` is present.
 - [x] Security hardening: response security headers, CORS config, and a startup
       guard that refuses the insecure default `SECRET_KEY` in production. Verified
       by `test_security`. See also `docs/security-model.md`.
@@ -231,16 +235,20 @@ demonstration project.
       content-addressed (sha256). Migration 0008.
 - [x] Seed data + docs (`docs/demo.md`); README quickstart updated.
 
-**Verification (run 2026-06-26, local):**
-- backend `pytest` → `120 passed`; frontend `vitest` → `14 passed`, `tsc` clean
-- `ruff` + `black --check` clean; `alembic upgrade head --sql` renders 0001→0008
-- `make demo` (SQLite + live) prints a closeout report; Python **and** R workers
-  both compute mean=116.25 on the sample dataset; one PNG deliverable produced.
+**Verification:**
+- The full backend and frontend suites remain the broad regression gates.
+- `tests/integration/test_demo.py` is the focused objective-to-close proof and is
+  named separately in CI so the product claim remains visible.
+- The proof checks the real pandas result (`mean=116.25`), real PNG and Markdown
+  artifacts, one policy-selected remediation, satisfied acceptance, and governed
+  closure.
 
 **Phase-8 notes:**
-- The demo's agent "thinking" uses the deterministic MockProvider (A15); only the
-  analysis/visualization workers are real. Live Claude runs when an agent is set
-  to `provider=anthropic` with `ANTHROPIC_API_KEY` present.
+- The demo's plan and agent responses use deterministic `MockProvider` fixtures
+  (A15), not live model thinking. The permissioned pandas tool, matplotlib chart
+  generation, content-addressed artifact storage, database writes, and audit
+  evidence are real. A live provider can use the same adapter boundary, but this
+  demo makes no claim about live-model output quality.
 - Remediation-event scoping in the closeout is org-wide for the single-project
   demo; multi-project scoping by joining audit→task is a follow-up.
 

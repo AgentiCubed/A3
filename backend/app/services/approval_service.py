@@ -2,8 +2,8 @@
 
 Deciding an approval is restricted to approvers/admins by the API (Action
 APPROVAL_DECIDE). On a decision linked to a task awaiting approval, the task is
-advanced: approve accepts the deliverable (COMPLETED); reject routes back to
-READY for revision — never a silent proceed.
+advanced. Legacy manual work can still be accepted as complete; governed work
+always returns to READY because its approved rubric must pass on reevaluation.
 """
 
 from __future__ import annotations
@@ -83,13 +83,23 @@ async def decide_approval(
         if execution is not None:
             task = await session.get(Task, execution.task_id)
             if task is not None and task.status == ExecutionState.AWAITING_APPROVAL:
-                target = ExecutionState.COMPLETED if approve else ExecutionState.READY
+                governed = task.source_plan_id is not None
+                if governed:
+                    target = ExecutionState.READY
+                    reason = (
+                        "governed remediation approved; passing reevaluation required"
+                        if approve
+                        else "governed remediation rejected; passing reevaluation required"
+                    )
+                else:
+                    target = ExecutionState.COMPLETED if approve else ExecutionState.READY
+                    reason = "approval " + ("approved" if approve else "rejected")
                 await execution_service.transition_task(
                     session,
                     task,
                     target,
                     actor_id=actor.user_id,
                     actor_type=actor.actor_type,
-                    reason="approval " + ("approved" if approve else "rejected"),
+                    reason=reason,
                 )
     return approval

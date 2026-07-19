@@ -98,6 +98,26 @@ To prevent Knowledge Gravity from becoming arbitrary scoring theater:
 - A `gravity_level` of `foundational` requires a governance decision record as authority; it
   may not be reached by evidence accumulation alone.
 
+### 1.8 Governed Review Protocol
+
+A gravity review is triggered by a new Architectural Candidate, a validated major
+implementation, contradictory evidence, constitutional amendment, quarterly governance review,
+or release retrospective. It considers evidence quality and independence, successful and failed
+reuse, predictive performance, contradictions, staleness, supersession, scope breadth, and
+authority status.
+
+The review records an evidence-backed rationale and one outcome: `retain`, `increase_weight`,
+`decrease_weight`, `promote`, `supersede`, `retire`, or `request_more_evidence`. Numeric
+indicators may inform review but are never the authoritative result.
+
+Promotion of an `ArchitecturalCandidate` to `FoundationalConcept` requires all of:
+
+1. successful application across at least three independent architectural workstreams;
+2. no unresolved constitutional conflict;
+3. a positive TARP-0001 traceability review;
+4. demonstrated improvement in clarity, governance, or engineering quality; and
+5. explicit governance approval.
+
 ---
 
 ## 2. Engineering Genome
@@ -153,6 +173,18 @@ Required for: entities explicitly designated as genome members.
 
 Removal is reversible. A removed genome element's `revision_history` preserves the full
 sequence including the removal event, its evidence, and any reinstatement.
+
+Genome evidence matures independently through:
+
+```
+proposed → observed → validated → incorporated → characteristic → foundational
+                                              ↘ superseded | retired
+```
+
+`membership_status` records whether the element is currently in the genome; this maturity stage
+records the strength and breadth of evidence. `foundational` maturity still requires governance
+approval and cannot be inferred from a single successful use. Every promotion, retirement, or
+reinstatement records TARP traceability, evidence links, rationale, and learned lessons.
 
 ### 2.5 Genome Revision Record
 

@@ -8,19 +8,28 @@
 
 ## 1. Architecture Candidate Evaluations
 
-Issue #16 requires explicit `adopt / modify / reject` candidate decisions for two new
-architectural candidates — **AC-0005 Explicit Relationships** and **AC-0006 Semantic
-Inheritance** — as part of the Ontology design phase.
+Every candidate record has a stable `candidate_id`, canonical name, status, proposer and proposal
+date, definition, problem, scope and non-goals, constitutional and Foundational Concept
+alignment, supporting and contradicting evidence, independent and failed applications, reuse
+events, Knowledge Gravity and Genome states, promotion target, reopening conditions, linked
+issues/decisions/PRs/releases, and last/next review dates. Conversational support alone is never
+promotion evidence.
 
-Per the Architectural Candidate lifecycle (Issue #12), candidates are:
+Issue #16 requires **AC-0005 Explicit Relationships** and **AC-0006 Semantic Inheritance** to
+receive an explicit `adopt / modify / reject` decision only after repeated evaluation. This
+Ontology records their current evaluation and does not substitute initial design support for
+cross-workstream evidence.
+
+The canonical candidate lifecycle is:
 
 ```
-Proposed → Under Review → Adopted → Superseded → Retired
+PROPOSED → OBSERVED → VALIDATING → QUALIFIED → PROMOTION_REVIEW → ADOPTED
 ```
 
-Neither may be promoted to `Adopted` in this document alone. Promotion to `FoundationalConcept`
-requires a separate governance decision by the Principal, supported by evidence from multiple
-architecture phases.
+Alternative outcomes are `REJECTED`, `DEFERRED`, `NEEDS_EVIDENCE`, `WITHDRAWN`,
+`SUPERSEDED`, and `RETIRED`. Neither candidate may be promoted in this document alone.
+Promotion to `FoundationalConcept` requires a separate governance decision supported by repeated
+evidence and every gate in ONTO-0004 §1.8.
 
 ---
 
@@ -41,11 +50,13 @@ proximity, file structure, or prose description.
 | Existing practice | The institutional memory system already uses explicit record linkage (linked FR/RM pairs, IER stage sequences). The Ontology formalizes what was already an emerging pattern. |
 | Negative evidence | No existing design in the repository relies on implicit entity proximity as the primary mechanism for resolving relationships. |
 
-**Candidate status after Ontology phase:** `Under Review`
+**Candidate status after Ontology phase:** `VALIDATING`
+**Current evaluation outcome:** `REQUEST_MORE_EVIDENCE`; adopt/modify/reject is deferred until
+the repeated-evaluation gate is met.
 
 **Promotion criteria:** Demonstrate that explicit relationships reduce implementation ambiguity,
-improve query determinism, and support evidence-backed impact analysis across at least two
-independent engine design phases (e.g., Memory Engine and Governance Engine).
+improve query determinism, and support evidence-backed impact analysis across at least three
+independent architectural workstreams, while satisfying every gate in ONTO-0004 §1.8.
 
 **Modify conditions:** If explicit relationship modeling is found to impose
 disproportionate overhead for well-understood local relationships (e.g., a failure record
@@ -75,13 +86,15 @@ requirements via their parent type.
 |---|---|
 | Natural hierarchy observation | The entity model in ONTO-0001 naturally groups into families: all Knowledge entities share `knowledge_gravity` eligibility; all Actor entities share authority-constraint rules; all Evidence entities share append-only and self-attestation rules. These behaviors would be repeated for each type if inheritance were not used. |
 | DRY argument | Without inheritance, the `VerificationRecord` constraint (requiring an Evidence reference) would need to be stated redundantly for every entity type that might claim verification. |
-| Complexity risk | Deep inheritance hierarchies may cause unclear rule applicability. The entity families are currently shallow (one root + seven families + leaf types). If this depth increases, semantic inheritance may create more confusion than it resolves. |
+| Complexity risk | Deep inheritance hierarchies may cause unclear rule applicability. The entity families are currently shallow (one root + eight families + leaf types). If this depth increases, semantic inheritance may create more confusion than it resolves. |
 | Counter-evidence | The current document-based representation (Markdown files) does not enforce inheritance programmatically. Semantic inheritance is a logical model, not yet an enforced implementation constraint. This is a weakness in its current evidence base. |
 
-**Candidate status after Ontology phase:** `Under Review`
+**Candidate status after Ontology phase:** `VALIDATING`
+**Current evaluation outcome:** `REQUEST_MORE_EVIDENCE`; adopt/modify/reject is deferred until
+the repeated-evaluation gate is met.
 
 **Promotion criteria:** Demonstrate that inheritance-based field sharing reduces specification
-duplication and constraint ambiguity in at least two independent engine specifications. The
+duplication and constraint ambiguity in at least three independent architectural workstreams. The
 inheritance depth must remain manageable (no more than three levels: root → family → leaf type)
 without requiring exceptions.
 
@@ -161,9 +174,9 @@ memory:
 - [ ] determine the lifecycle state and valid transitions for any entity;
 - [ ] determine the Knowledge Gravity level and promotion/demotion rules for any knowledge entity;
 - [ ] determine whether an entity is in the Engineering Genome;
-- [ ] run any of the eleven canonical queries against a populated graph;
+- [ ] run any canonical query against a populated graph;
 - [ ] trace any implementation to its constitutional basis;
-- [ ] identify the status (Under Review, evidence required) of AC-0005 and AC-0006.
+- [ ] identify the status (`VALIDATING`, evidence required) of AC-0005 and AC-0006.
 
 ### 2.6 Reopening Conditions
 
@@ -194,8 +207,8 @@ maintained once the PR establishing it is merged.
 | AC-0002 | Engineering Genome | Adopted (Foundational Concept) | Issue #12 | Already adopted by Principal; see ACR-0001 in PR#14. |
 | AC-0003 | Architectural Contracts | Proposed (Candidate) | Issue #12 | Formalized as entity type `ArchitecturalContract` (CON-NNNN) in ONTO-0001; promotion criteria: demonstrate value in binding subsystem invariants across two engine designs. |
 | AC-0004 | Separation of Decision and Execution | Proposed (Foundational Candidate) | Issue #12 | Supported by GI-005 and the Actor entity constraints in ONTO-0001; promotion requires evidence across multiple design phases. |
-| AC-0005 | Explicit Relationships | Under Review | Issue #16 (this document) | Promote after evidence from two independent engine design phases. |
-| AC-0006 | Semantic Inheritance | Under Review | Issue #16 (this document) | Promote after evidence from two independent engine design phases; modify conditions defined above. |
+| AC-0005 | Explicit Relationships | `VALIDATING` | Issue #16 (this document) | Decide only after the ONTO-0004 §1.8 repeated-evaluation gates; current outcome is request more evidence. |
+| AC-0006 | Semantic Inheritance | `VALIDATING` | Issue #16 (this document) | Decide only after the ONTO-0004 §1.8 repeated-evaluation gates; current outcome is request more evidence. |
 
 ---
 
@@ -205,7 +218,50 @@ maintained once the PR establishing it is merged.
 |---|---|---|---|---|---|
 | RSK-ONT-001 | Ontology entity coverage is incomplete — later engines introduce types that cannot be mapped to existing families | Medium | High — forces retroactive model revision that may break existing relationships | Defined Type Completeness Requirement (ONTO-0001 §4); new types are added via authorized Ontology revision | First instance of a force-fit classification in any subsequent engine design |
 | RSK-ONT-002 | Knowledge Gravity scoring becomes arbitrary — evidence events without inspectable external references inflate gravity scores | Low | High — undermines AC-0001 and the entire knowledge promotion system | Anti-gaming safeguards in ONTO-0004 §1.7; `foundational` level requires governance decision, not evidence count alone | First gravity review that fails to produce inspectable evidence references |
-| RSK-ONT-003 | AC-0005 and AC-0006 accumulate insufficient evidence — both remain `Under Review` indefinitely, leaving a gap in the governing hierarchy between Ontology and Patterns | Medium | Medium — the gap is acknowledged but creates uncertainty for engine designers | Review deadline tied to the third engine design phase; at that point an explicit adopt/modify/reject decision is required regardless of evidence | Completion of the third independent engine design phase |
+| RSK-ONT-003 | AC-0005 and AC-0006 accumulate insufficient evidence — both remain `VALIDATING` indefinitely, leaving a gap in the governing hierarchy between Ontology and Patterns | Medium | Medium — the gap is acknowledged but creates uncertainty for engine designers | Review deadline tied to the third engine design phase; at that point an explicit adopt/modify/reject decision is required regardless of evidence | Completion of the third independent engine design phase |
 | RSK-ONT-004 | Inheritance hierarchies (AC-0006) become a source of classification disputes — entity types are forced into families that don't cleanly fit | Medium | Medium — causes ambiguity in lifecycle and query behavior | Modify conditions for AC-0006 include interface-based contracts as an alternative; shallow hierarchy (≤3 levels) enforced | First classification dispute during an engine design |
 | RSK-ONT-005 | Open PRs (#11, #13, #14, #15) contain overlapping content — merging them after this PR may require reconciliation | High — all 4 PRs exist now | Low to Medium — conflicts are documentation-level, not logic-level | This PR is isolated to `docs/governance/ontology/`; no files modified in `docs/governance/knowledge/` or existing playbook docs | Review of each PR's changed files before merge |
 | RSK-ONT-006 | Traceability chains are broken in early implementations — no mechanism enforces TARP compliance before merge | Medium | Medium — gaps accumulate until an audit discovers them | Q-009 TARP traceability query defined; GI-011 registers broken traceability as a Risk entity | First PR that includes a `TRACES_TO` chain audit in its review packet |
+
+---
+
+## 5. Engine Crosswalk
+
+The shared ontology does not transfer authority between engines. Engine ownership means primary
+responsibility for authoring records; all durable records remain subject to typed relationships,
+provenance, governance, and historical continuity.
+
+| Engine / domain | Primary records authored | Primary relationships | Forbidden authority |
+|---|---|---|---|
+| Memory | entity versions, provenance, FR, RM, IER, RL, TET, checkpoints | `RECORDS`, `DERIVES_FROM`, `LEARNED_FROM` | May not promote knowledge, determine truth, or confer authority. |
+| Knowledge | claims, lessons, patterns, candidates, gravity events, genome revisions | `EXTRACTS`, `STRENGTHENS`, `WEAKENS`, `CONTRADICTS`, `CONTRIBUTED_TO_GENOME` | May not ratify, authorize, or silently promote. |
+| Governance | policy, permission, gate, approval, delegation, governance decisions | `GOVERNS`, `AUTHORIZES`, `PROHIBITS`, `DELEGATES_TO`, `REVOKES`, `SUPERSEDES` | May not fabricate evidence or execute governed work. |
+| Verification | test, CI, review, and verification results | `EVALUATES`, `EVIDENCES`, `SUPPORTS`, `CONTRADICTS`, `SATISFIES`, `FAILS` | May not authorize action or redefine criteria after results are known. |
+| Assurance | assurance results and readiness findings | `ASSURES`, `REOPENS`, `REQUIRES_GATE` | May not execute work, mutate evidence, or replace Principal authority. |
+| Evolution | change proposals, experiments, reopening proposals | `REOPENS`, `DERIVES_FROM`, `APPLIED_IN` | May propose but not amend, ratify, deploy, or promote its own proposal. |
+| Runtime | runtime events, executions, dispatch and telemetry records | `OBSERVES`, `ASSIGNED_TO`, `EXECUTES`, `PRODUCED`, `CONSUMES`, `BLOCKS` | May enforce recorded authority but may not create or resolve it. |
+
+### 5.1 Mutation boundaries
+
+| Entity family | Memory | Knowledge | Governance | Verification | Assurance | Evolution | Runtime |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Entity versions / provenance | C/U | R | R | R | R | propose | R |
+| Knowledge / gravity / genome | R | C/U | authorize/promote | R | R | propose | R |
+| Governance / authority / gates | R | R | C/U/authorize | R | R | propose | enforce |
+| Evidence / verification | preserve | R | R | C/verify | R | R | C/read |
+| Assurance results | R | R | R | R | C/U | R | enforce |
+| Work / execution / artifacts | preserve | R | authorize | verify | assess | propose | C/U |
+
+`C/U` means create or update lifecycle metadata by adding a new version or event, never rewriting
+append-only history. `authorize`, `verify`, and `promote` are intentionally separate capabilities.
+
+### 5.2 Required handoffs
+
+1. Governance gives Runtime a bounded authorization, gates, expiry, and stop conditions.
+2. Runtime gives Verification artifacts, execution evidence, criteria, and provenance.
+3. Verification gives Assurance results, unknowns, contradictions, scope, and confidence limits.
+4. Assurance gives Governance a ready, not-ready, or more-evidence-required result with rationale.
+5. Every engine gives Memory context-complete event and decision records.
+6. Memory gives Knowledge validated records with provenance and lifecycle status.
+7. Knowledge gives Evolution patterns, contradictions, gravity changes, and genome gaps.
+8. Evolution gives Governance proposals only; it never mutates a higher layer directly.

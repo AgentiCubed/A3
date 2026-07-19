@@ -196,3 +196,151 @@ async def test_evaluation_is_immutable(session):
     ev.summary = "tampered"
     with pytest.raises(ImmutableError):
         await session.commit()
+
+
+# ── WS-4: structured evaluator verdict contract, fail-closed ──────────────
+class _ScriptedEvaluator:
+    """Evaluator adapter double returning a fixed response (or raising)."""
+
+    name = "mock"
+
+    def __init__(self, response: str | None = None, error: bool = False) -> None:
+        self.response = response
+        self.error = error
+
+    async def run(self, request):
+        from app.orchestration.ports import AgentRunResult
+
+        if self.error:
+            raise RuntimeError("judge unreachable")
+        return AgentRunResult(output=self.response or "", provider="mock")
+
+
+def _evaluator(client, headers) -> str:
+    return client.post(
+        "/api/v1/agents",
+        json={"name": "Judge", "kind": "ai", "provider": "mock"},
+        headers=headers,
+    ).json()["id"]
+
+
+def test_malformed_evaluator_response_fails_closed(client, monkeypatch):
+    """A prose (contract-violating) judge can never silently PASS work."""
+
+    class _MarkedExecutor:
+        name = "mock"
+
+        async def run(self, request):
+            from app.orchestration.ports import AgentRunResult
+
+            return AgentRunResult(
+                output="[[MALFORMED]] a long and otherwise plausible work product",
+                provider="mock",
+            )
+
+    from app.services import execution_service
+
+    # Executor produces output that trips the mock judge into prose; the real
+    # MockProvider evaluator and the real parser handle the rest.
+    monkeypatch.setattr(execution_service, "get_adapter", lambda name: _MarkedExecutor())
+
+    headers = _auth(client)
+    pid, task_id, _ = _setup(client, headers)
+    resp = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch",
+        json={
+            "rubric": _PASS_RUBRIC,
+            "evaluator_agent_id": _evaluator(client, headers),
+            "max_remediations": 0,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["verdict"] == "needs_revision"  # fail-closed, NOT pass
+    assert body["final_state"] == "awaiting_approval"
+
+    evals = client.get(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/evaluations", headers=headers
+    ).json()
+    assert evals[0]["verdict"] == "needs_revision"
+    assert "[failed closed]" in evals[0]["summary"]
+
+
+def test_evaluator_agent_error_fails_closed(client, monkeypatch):
+    """An unreachable judge gates for human review instead of silently passing."""
+    from app.services import evaluation_service
+
+    monkeypatch.setattr(
+        evaluation_service, "get_adapter", lambda name: _ScriptedEvaluator(error=True)
+    )
+
+    headers = _auth(client)
+    pid, task_id, _ = _setup(client, headers)
+    resp = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch",
+        json={
+            "rubric": _PASS_RUBRIC,
+            "evaluator_agent_id": _evaluator(client, headers),
+            "max_remediations": 0,
+        },
+        headers=headers,
+    )
+    body = resp.json()
+    assert body["verdict"] == "needs_revision"
+    assert body["final_state"] == "awaiting_approval"
+
+
+def test_agent_json_fail_verdict_gates_despite_passing_rubric(client, monkeypatch):
+    """A well-formed FAIL from the judge downgrades a deterministic PASS."""
+    from app.services import evaluation_service
+
+    monkeypatch.setattr(
+        evaluation_service,
+        "get_adapter",
+        lambda name: _ScriptedEvaluator(
+            '{"verdict": "fail", "score": 0.1, "critique": "wrong approach", '
+            '"gaps": ["missing requirement X"]}'
+        ),
+    )
+
+    headers = _auth(client)
+    pid, task_id, _ = _setup(client, headers)
+    resp = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch",
+        json={
+            "rubric": _PASS_RUBRIC,
+            "evaluator_agent_id": _evaluator(client, headers),
+            "max_remediations": 0,
+        },
+        headers=headers,
+    )
+    body = resp.json()
+    assert body["verdict"] == "fail"
+    assert body["final_state"] == "awaiting_approval"
+
+    evals = client.get(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/evaluations", headers=headers
+    ).json()
+    assert "missing requirement X" in (evals[0]["gaps"] or [])
+
+
+def test_wellformed_mock_evaluator_pass_completes(client):
+    """End-to-end through the real mock judge: valid JSON verdict, PASS, done."""
+    headers = _auth(client)
+    pid, task_id, _ = _setup(client, headers)
+    resp = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch",
+        json={"rubric": _PASS_RUBRIC, "evaluator_agent_id": _evaluator(client, headers)},
+        headers=headers,
+    )
+    body = resp.json()
+    assert body["final_state"] == "completed"
+    assert body["verdict"] == "pass"
+
+    evals = client.get(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/evaluations", headers=headers
+    ).json()
+    assert evals[0]["evaluator_kind"] == "agent"
+    assert evals[0]["verdict"] == "pass"
+    assert "[failed closed]" not in evals[0]["summary"]
