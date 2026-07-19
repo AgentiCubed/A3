@@ -53,8 +53,8 @@ process stops before `wait` observes it.
 
 ## Consequences
 
-- `.github/workflows/ci.yml` remains aligned with semantic `/readyz` assertions
-  and tolerant teardown.
+- `.github/workflows/ci.yml` should be updated (or a follow-up PR opened) to use semantic `/readyz` assertions (`checks.database` / `checks.redis`)
+  and tolerant teardown (`kill $SERVER_PID || true; wait $SERVER_PID || true`).
 - `README.md` remains the authoritative top-level entry point for the host-side
   demo command, while `docs/demo.md` carries the detail.
 - PR #1 can be treated as superseded without reopening its combined change set.
