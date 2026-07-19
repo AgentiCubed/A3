@@ -4,21 +4,18 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
 from app.core.capabilities import unknown_capabilities
 from app.core.enums import AgentKind, AgentRole, AgentStatus
 from app.core.roles import ActorType
+from app.db.queries import get_by_org, list_by_org
 from app.models.agent import Agent, AgentCapability
 from app.models.task import Task
 from app.orchestration.adapters.registry import UnknownProvider, get_adapter
+from app.services.errors import NotFound
 from app.services.matching import AgentProfile, MatchResult, match_agents
-
-
-class NotFound(Exception):
-    pass
 
 
 class UnknownCapability(Exception):
@@ -81,8 +78,8 @@ async def register_agent(
 
 
 async def get_agent(session: AsyncSession, org_id: uuid.UUID, agent_id: uuid.UUID) -> Agent:
-    agent = await session.get(Agent, agent_id)
-    if agent is None or agent.organization_id != org_id:
+    agent = await get_by_org(session, Agent, agent_id, org_id)
+    if agent is None:
         raise NotFound("agent")
     return agent
 
@@ -110,15 +107,13 @@ async def add_capability(
 
 
 async def list_agents(session: AsyncSession, org_id: uuid.UUID) -> list[Agent]:
-    stmt = select(Agent).where(Agent.organization_id == org_id)
-    return list((await session.execute(stmt)).scalars().all())
+    return await list_by_org(session, Agent, org_id)
 
 
 async def _profiles(session: AsyncSession, org_id: uuid.UUID) -> list[AgentProfile]:
     agents = await list_agents(session, org_id)
     caps_by_agent: dict[uuid.UUID, dict[str, int]] = {}
-    stmt = select(AgentCapability).where(AgentCapability.organization_id == org_id)
-    for cap in (await session.execute(stmt)).scalars().all():
+    for cap in await list_by_org(session, AgentCapability, org_id):
         caps_by_agent.setdefault(cap.agent_id, {})[cap.capability] = cap.proficiency
     return [
         AgentProfile(

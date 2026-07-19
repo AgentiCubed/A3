@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.audit import record_audit
 from app.core.enums import ProjectStatus
 from app.core.roles import ActorType
+from app.db.queries import get_by_org
 from app.models.project import (
     Milestone,
     Project,
@@ -18,11 +19,8 @@ from app.models.project import (
     ProjectRequirement,
 )
 from app.models.risk import Decision, Risk
+from app.services.errors import NotFound
 from app.services.methodology import ProjectSignals, recommend_methodology
-
-
-class NotFound(Exception):
-    pass
 
 
 class AlreadyHalted(Exception):
@@ -99,8 +97,8 @@ async def resume_project(
 
 
 async def get_project(session: AsyncSession, org_id: uuid.UUID, project_id: uuid.UUID) -> Project:
-    project = await session.get(Project, project_id)
-    if project is None or project.organization_id != org_id:
+    project = await get_by_org(session, Project, project_id, org_id)
+    if project is None:
         raise NotFound("project")
     return project
 

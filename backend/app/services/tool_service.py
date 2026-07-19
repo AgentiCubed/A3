@@ -17,11 +17,9 @@ from app.core.audit import record_audit
 from app.core.enums import ToolKind, ToolSensitivity
 from app.core.rbac import Actor
 from app.core.roles import ActorType
+from app.db.queries import list_by_org
 from app.models.agent import AgentToolPermission, Tool
-
-
-class NotFound(Exception):
-    pass
+from app.services.errors import NotFound
 
 
 class SelfEscalation(Exception):
@@ -67,8 +65,7 @@ async def register_tool(
 
 
 async def list_tools(session: AsyncSession, org_id: uuid.UUID) -> list[Tool]:
-    stmt = select(Tool).where(Tool.organization_id == org_id)
-    return list((await session.execute(stmt)).scalars().all())
+    return await list_by_org(session, Tool, org_id)
 
 
 async def grant_tool_permission(
@@ -172,8 +169,6 @@ async def has_permission(
 async def list_permissions(
     session: AsyncSession, *, org_id: uuid.UUID, agent_id: uuid.UUID
 ) -> list[AgentToolPermission]:
-    stmt = select(AgentToolPermission).where(
-        AgentToolPermission.organization_id == org_id,
-        AgentToolPermission.agent_id == agent_id,
+    return await list_by_org(
+        session, AgentToolPermission, org_id, AgentToolPermission.agent_id == agent_id
     )
-    return list((await session.execute(stmt)).scalars().all())

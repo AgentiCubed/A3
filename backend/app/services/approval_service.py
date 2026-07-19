@@ -17,15 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.audit import record_audit
 from app.core.enums import ApprovalStatus
 from app.core.rbac import Actor
+from app.db.queries import get_by_org
 from app.models.approval import Approval
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
 from app.orchestration.state_machine.states import ExecutionState
 from app.services import execution_service
-
-
-class NotFound(Exception):
-    pass
+from app.services.errors import NotFound
 
 
 class AlreadyDecided(Exception):
@@ -55,8 +53,8 @@ async def decide_approval(
     approve: bool,
     comment: str | None,
 ) -> Approval:
-    approval = await session.get(Approval, approval_id)
-    if approval is None or approval.organization_id != actor.organization_id:
+    approval = await get_by_org(session, Approval, approval_id, actor.organization_id)
+    if approval is None:
         raise NotFound("approval")
     if approval.status != ApprovalStatus.PENDING:
         raise AlreadyDecided()

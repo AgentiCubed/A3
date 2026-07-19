@@ -30,6 +30,7 @@ from app.core.enums import (
     ProjectStatus,
 )
 from app.core.roles import ActorType
+from app.db.queries import get_by_org
 from app.evaluation.specs import normalize_rubric_specs, rubric_sha256
 from app.models.agent import Agent, AgentCapability
 from app.models.audit_event import AuditEvent
@@ -42,6 +43,7 @@ from app.orchestration.state_machine.states import ExecutionState
 from app.scheduling.graph import CycleError, DependencyGraph
 from app.schemas.decomposition import PlanSpec, PlanTaskAssignmentIn
 from app.schemas.project import normalize_deliverable_name, validate_acceptance_criteria
+from app.services.errors import NotFound
 
 PLAN_CONTRACT = "plan_json_v1"
 _SUPPORTED_CHECKS = {
@@ -55,10 +57,6 @@ _SUPPORTED_CHECKS = {
 }
 _GENERATED_CHECKS = _SUPPORTED_CHECKS - {"regex"}
 _FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
-
-
-class NotFound(Exception):
-    pass
 
 
 class PlannerUnavailable(Exception):
@@ -217,8 +215,8 @@ def _validate_plan(spec: PlanSpec) -> None:
 
 
 async def _planner(session: AsyncSession, project: Project, planner_agent_id: uuid.UUID) -> Agent:
-    agent = await session.get(Agent, planner_agent_id)
-    if agent is None or agent.organization_id != project.organization_id:
+    agent = await get_by_org(session, Agent, planner_agent_id, project.organization_id)
+    if agent is None:
         raise NotFound("planner agent")
     if agent.kind != AgentKind.AI or agent.status != AgentStatus.ACTIVE or not agent.provider:
         raise PlannerUnavailable()
