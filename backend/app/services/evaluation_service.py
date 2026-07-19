@@ -22,9 +22,11 @@ from app.evaluation.rubric import evaluate_deterministic
 from app.evaluation.specs import normalize_rubric_specs, rubric_sha256
 from app.models.agent import Agent
 from app.models.evaluation import Evaluation, EvaluationCriterion
+from app.models.task import Task
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
+from app.services import acceptance_boundary_service
 
 
 class EvaluatorConflict(Exception):
@@ -174,6 +176,21 @@ async def evaluate_execution(
         )
 
     combined_gaps = list(outcome.gaps or []) + agent_gaps
+    project_scope = (
+        await session.execute(
+            select(Task.project_id, Task.organization_id)
+            .join(TaskExecution, TaskExecution.task_id == Task.id)
+            .where(TaskExecution.id == execution.id)
+        )
+    ).one_or_none()
+    if project_scope is None:
+        raise acceptance_boundary_service.ProjectNotFound()
+    project_id, project_org_id = project_scope
+    await acceptance_boundary_service.claim_acceptance_write(
+        session,
+        project_id=project_id,
+        org_id=project_org_id,
+    )
     evaluation = Evaluation(
         organization_id=execution.organization_id,
         task_execution_id=execution.id,

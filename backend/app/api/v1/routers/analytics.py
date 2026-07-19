@@ -106,6 +106,40 @@ async def close_project(
             actor_id=user.id,
             acknowledge_unmet_criteria=bool(req and req.acknowledge_unmet_criteria),
         )
+    except closeout_service.ProjectClosed as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "project_already_closed"},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "project_already_closed"},
+        ) from exc
+    except closeout_service.AcceptanceSnapshotChanged as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.close_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "acceptance_snapshot_changed"},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "acceptance_snapshot_changed", "hint": "retry close on current evidence"},
+        ) from exc
     except closeout_service.GovernedPlanApprovalRequired as exc:
         await record_audit(
             session,

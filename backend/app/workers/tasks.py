@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 
+from app.core.audit import record_audit
 from app.core.roles import ActorType
 from app.models.task import Task
 from app.orchestration.engines import get_workflow_engine
@@ -72,6 +73,7 @@ async def _run(task_id: uuid.UUID, params: dict) -> None:
         task = await session.get(Task, task_id)
         if task is None:
             return
+        task_scope = (task.organization_id, task.project_id, task.id)
         parsed = _parse_dispatch_params(params)
         try:
             await execution_service.execute_task(session, task=task, **parsed)
@@ -79,6 +81,24 @@ async def _run(task_id: uuid.UUID, params: dict) -> None:
             # Duplicate broker deliveries are expected in at-least-once
             # transports. The persisted governed claim is the authority.
             await session.rollback()
+            return
+        except execution_service.ProjectClosed:
+            # Closure won the shared acceptance boundary. Roll back every late
+            # task/evidence mutation and retain only the audited refusal.
+            await session.rollback()
+            org_id, project_id, persisted_task_id = task_scope
+            await record_audit(
+                session,
+                organization_id=org_id,
+                project_id=project_id,
+                actor_type=parsed["actor_type"],
+                actor_id=parsed["actor_id"],
+                action="task.execution_refused",
+                entity_type="Task",
+                entity_id=persisted_task_id,
+                after={"reason": "project_closed"},
+            )
+            await session.commit()
             return
         await session.commit()
 

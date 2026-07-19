@@ -33,7 +33,7 @@ from app.models.agent import Agent, AgentCapability
 from app.models.task import Task, TaskDependency
 from app.orchestration.ports import WorkflowEngine
 from app.orchestration.state_machine.states import ExecutionState
-from app.services import execution_service
+from app.services import acceptance_boundary_service, execution_service
 
 _IN_FLIGHT = (ExecutionState.QUEUED, ExecutionState.RUNNING, ExecutionState.EVALUATING)
 _SCHEDULABLE = (ExecutionState.PLANNED, ExecutionState.READY)
@@ -141,6 +141,15 @@ async def dispatch_ready(
             continue
         await session.commit()
         try:
+            await acceptance_boundary_service.lock_acceptance_for_close(
+                session,
+                project_id=project_id,
+                org_id=task.organization_id,
+            )
+        except acceptance_boundary_service.ProjectClosed:
+            await session.rollback()
+            continue
+        try:
             engine.submit_execution(task.id, params)
         except Exception:  # noqa: BLE001 - broker down; park and keep scheduling
             await execution_service.transition_task(
@@ -153,6 +162,7 @@ async def dispatch_ready(
             )
             await session.commit()
             continue
+        await session.commit()
         dispatched.append(TaskOutcome(task_id=task.id, status=task.status))
     return dispatched
 

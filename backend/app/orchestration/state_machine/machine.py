@@ -39,6 +39,7 @@ TRANSITIONS: dict[ExecutionState, frozenset[ExecutionState]] = {
             ExecutionState.FAILED,
             ExecutionState.AWAITING_APPROVAL,
             ExecutionState.READY,
+            ExecutionState.CANCELLED,
         }
     ),
     ExecutionState.AWAITING_APPROVAL: frozenset(

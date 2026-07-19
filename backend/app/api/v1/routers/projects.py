@@ -70,6 +70,7 @@ from app.schemas.task import (
     TimelineResponse,
 )
 from app.services import (
+    acceptance_boundary_service,
     agent_service,
     approval_service,
     decomposition_service,
@@ -388,14 +389,22 @@ async def start_project(
             tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
         )
 
-    outcomes = await scheduler_service.run_inline(
-        session,
-        project_id=project.id,
-        actor_id=user.id,
-        actor_type=ActorType.USER,
-        max_attempts=req.max_attempts,
-        timeout_s=req.timeout_s,
-    )
+    try:
+        outcomes = await scheduler_service.run_inline(
+            session,
+            project_id=project.id,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+        )
+    except execution_service.ProjectClosed as exc:
+        await session.rollback()
+        await audit_refusal("project_closed")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "project_closed"},
+        ) from exc
     await session.commit()
     return ProjectStartResponse(
         engine="inline",
@@ -426,20 +435,34 @@ async def dispatch_task(
     task = next((t for t in tasks if t.id == task_id), None)
     if task is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
+    refusal_scope = (
+        user.organization_id,
+        user.id,
+        project.id,
+        task.id,
+        task.source_plan_id,
+    )
 
-    async def audit_governed_refusal(reason: str) -> None:
-        if task.source_plan_id is None:
-            return
+    async def audit_dispatch_refusal(reason: str) -> None:
+        organization_id, actor_id, persisted_project_id, persisted_task_id, source_plan_id = (
+            refusal_scope
+        )
+        # A failed late evidence claim may leave ORM task transitions pending.
+        # Discard them before retaining the refusal as the only durable change.
+        await session.rollback()
+        details = {"reason": reason}
+        if source_plan_id is not None:
+            details["source_plan_id"] = str(source_plan_id)
         await record_audit(
             session,
-            organization_id=user.organization_id,
-            project_id=project.id,
+            organization_id=organization_id,
+            project_id=persisted_project_id,
             actor_type=ActorType.USER,
-            actor_id=user.id,
+            actor_id=actor_id,
             action="task.dispatch_refused",
             entity_type="Task",
-            entity_id=task.id,
-            after={"reason": reason, "source_plan_id": str(task.source_plan_id)},
+            entity_id=persisted_task_id,
+            after=details,
         )
         await session.commit()
 
@@ -485,14 +508,20 @@ async def dispatch_task(
             ) from exc
         except execution_service.EvaluationConfigConflict as exc:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        except execution_service.ProjectClosed as exc:
+            await audit_dispatch_refusal("project_closed")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {"error": "project_closed"},
+            ) from exc
         except execution_service.GovernedProjectNotActive as exc:
-            await audit_governed_refusal("governed_project_not_active")
+            await audit_dispatch_refusal("governed_project_not_active")
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 {"error": "governed_project_not_active"},
             ) from exc
         except execution_service.GovernedDependenciesIncomplete as exc:
-            await audit_governed_refusal("governed_dependencies_incomplete")
+            await audit_dispatch_refusal("governed_dependencies_incomplete")
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 {"error": "governed_dependencies_incomplete"},
@@ -508,6 +537,20 @@ async def dispatch_task(
             timeout_s=req.timeout_s,
             evaluation=evaluation_cfg,
         )
+        try:
+            # Hold the same project boundary across the quick broker publish so
+            # a message cannot be created after closure has already committed.
+            await acceptance_boundary_service.lock_acceptance_for_close(
+                session,
+                project_id=project.id,
+                org_id=user.organization_id,
+            )
+        except acceptance_boundary_service.ProjectClosed as exc:
+            await audit_dispatch_refusal("project_closed")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {"error": "project_closed"},
+            ) from exc
         try:
             handle = engine.submit_execution(task.id, params)
         except Exception as exc:  # noqa: BLE001 - broker down/unreachable
@@ -526,6 +569,7 @@ async def dispatch_task(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
                 "task queueing failed; task moved to BLOCKED for re-dispatch",
             ) from exc
+        await session.commit()
         return DispatchAcceptedResponse(
             task_id=task.id,
             status=task.status,
@@ -554,14 +598,20 @@ async def dispatch_task(
         ) from exc
     except execution_service.EvaluationConfigConflict as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except execution_service.ProjectClosed as exc:
+        await audit_dispatch_refusal("project_closed")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "project_closed"},
+        ) from exc
     except execution_service.GovernedProjectNotActive as exc:
-        await audit_governed_refusal("governed_project_not_active")
+        await audit_dispatch_refusal("governed_project_not_active")
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             {"error": "governed_project_not_active"},
         ) from exc
     except execution_service.GovernedDependenciesIncomplete as exc:
-        await audit_governed_refusal("governed_dependencies_incomplete")
+        await audit_dispatch_refusal("governed_dependencies_incomplete")
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             {"error": "governed_dependencies_incomplete"},
