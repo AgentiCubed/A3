@@ -475,10 +475,10 @@ The design passes when:
 
 ## 17. Open risks and decision
 
-Open risks include unknown event volume and retention cost, unspecified
-source-of-truth precedence, multi-tenant identity and authorization, clock skew
-and delayed delivery, false precision in priority/gravity models, alert fatigue,
-and unselected durable-workflow technology.
+Open risks include unknown event volume and retention cost, unselected
+source-of-truth precedence policy details (must be explicit per RT-107),
+multi-tenant identity and authorization, clock skew and delayed delivery, false
+precision in priority/gravity models, alert fatigue, and unselected durable-workflow technology.
 
 Reopen this specification when implementation evidence reveals state ambiguity,
 excessive coordination cost, unsafe autonomy, poor recoverability, or inability
