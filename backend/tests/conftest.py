@@ -20,7 +20,10 @@ from app.api.deps import db_session
 from app.db.base import Base
 from app.main import app
 
-TEST_DB_PATH = "/tmp/agenticubed_test.db"
+# Keep concurrent local/CI pytest processes from deleting one another's SQLite
+# database. Tests in this process still share one database through the
+# session-scoped fixture.
+TEST_DB_PATH = f"/tmp/agenticubed_test_{os.getpid()}.db"
 TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
 
 engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)

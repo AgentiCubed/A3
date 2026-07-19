@@ -31,6 +31,7 @@ Every review assignment shall include:
 | **Artifact** | The complete artifact under review, or an exact, immutable reference (repository path + commit SHA) |
 | **Review objective** | What the reviewer is asked to assess |
 | **Scope** | What is in scope and what is explicitly excluded |
+| **Non-goals** | What the review is not being asked to change, assess, or decide |
 | **Constraints** | Applicable constitutional, policy, or technical constraints governing the work |
 | **Governing criteria** | The specific standards or conditions the artifact must satisfy |
 | **Expected deliverables** | What the reviewer must return |

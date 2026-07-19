@@ -72,6 +72,7 @@ cp .env.example .env
 docker compose up --build          # starts db, redis, api, worker, frontend
 # API docs:        http://localhost:8000/docs
 # Health:          http://localhost:8000/healthz
+# Metrics:         http://localhost:8000/metrics  (Prometheus)
 # Frontend:        http://localhost:3000
 ```
 
@@ -88,25 +89,71 @@ pytest
 
 ## Demo
 
-Run the full closed-loop demonstration project (requires a running database):
+The end-to-end demonstration runs **host-side** (not inside a container). Postgres and Redis
+may run through Docker Compose, and the backend Python analysis dependencies are required.
+`Rscript` is optional and adds a cross-check; it is not required for the governed proof.
+
+> **Note:** `docker compose exec api python -m app.seed.demo` is **not** a supported v1.0.x
+> path. The container image intentionally does not include pandas, matplotlib, or R for v1.0.x.
 
 ```bash
-make demo          # python -m app.seed.demo  — prints the closeout markdown
+# 1. Start infrastructure
+docker compose up -d db redis
+
+# 2. Create and activate a host virtualenv
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+
+# 3. Install backend dependencies (including dev and analysis extras)
+pip install -e ".[dev,analysis]"
+
+# 4. Apply migrations (loopback URLs — the compose db is exposed on localhost:5432)
+DATABASE_URL_SYNC="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" \
+  .venv/bin/alembic upgrade head
+
+# 5. Run the demo (artifacts are written outside the repository)
+DATABASE_URL="postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" \
+DATABASE_URL_SYNC="postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}" \
+REDIS_URL="redis://localhost:6379/0" \
+CELERY_BROKER_URL="redis://localhost:6379/1" \
+ARTIFACT_STORE_PATH="/tmp/agenticubed-demo-artifacts" \
+  .venv/bin/python -m app.seed.demo
 ```
+
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` default to `agenticubed` in the
+`.env.example` template.
+
+`make demo` is a convenience shorthand only when the required environment is already
+configured (virtualenv active, env vars exported). A bare `make demo` on a fresh checkout
+is **not** sufficient — follow the steps above first.
+
+The reproducible demo does **not** call a live language model. `MockProvider` produces the
+plan and agent responses deterministically, while the permissioned pandas analysis,
+matplotlib chart generation, and content-addressed artifact storage are real. To include the
+optional R statistics cross-check, install R on the host (for example, `brew install r` or
+`sudo apt install r-base`).
 
 See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, what each step proves, and how to call the demo programmatically in tests.
 
 ## Documentation
 
+- [`docs/system-overview.md`](docs/system-overview.md) — visual, diagram-first tour of the whole platform
 - [`docs/architecture.md`](docs/architecture.md) — system architecture and module boundaries
 - [`docs/data-model.md`](docs/data-model.md) — entities and relationships
 - [`docs/execution-state-machine.md`](docs/execution-state-machine.md) — task execution lifecycle
 - [`docs/security-model.md`](docs/security-model.md) — RBAC, secrets, least-privilege tools
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
+<<<<<<< HEAD
 - [`docs/governance/playbook/`](docs/governance/playbook/) — governance playbook, standards, and procedures
 - [`docs/governance/knowledge/`](docs/governance/knowledge/) — institutional memory system, record templates, and knowledge records
+=======
+- [`docs/governance/playbook/`](docs/governance/playbook/) — engineering governance playbook for gate workflow, reviews, Git procedure, and task packets
+>>>>>>> origin/main
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
+- [`docs/governance/runtime/Runtime-Domain-Specification-v1.0.md`](docs/governance/runtime/Runtime-Domain-Specification-v1.0.md) — continuous Runtime Domain architecture baseline
+- [`docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md`](docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md) — canonical architecture integration skeleton
 
 ## Status
 
@@ -124,6 +171,11 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 
 **Phase 7** (project + agent metrics, a project dashboard with Gantt/dependency/risk-matrix/agent views, and CSV / JSON / Power BI-ready star-schema exports) — **complete & verified** (backend **112/112** pytest, frontend **14/14** vitest + tsc clean, migrations render 0001→0007).
 
-**Phase 8** (security hardening, real Python + R analysis workers, artifact storage, the seeded **end-to-end demonstration** — research → brief → data analysis → visualization → evaluation → deliberate failure → remediation → completion → closeout report, plus docs) — **complete & verified** (backend **120/120** pytest, frontend **14/14** vitest + tsc, ruff + black clean, migrations render 0001→0008).
+**Phase 8** (security hardening, analysis workers, artifact storage, and the seeded **end-to-end demonstration** — objective → durable draft → explicit approval → one governed start → permissioned analysis → deterministic evaluation rejection → automatic remediation → acceptance-gated close) — **complete & verified**. The agent responses are deterministic `MockProvider` fixtures; pandas/matplotlib computation and artifact persistence are real.
 
-**All eight phases are complete.** See **[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md)** for the consolidated overview. Canonical host demo invocation is from repo root: `make demo` (see [`docs/demo.md`](docs/demo.md)). The [`docs/roadmap.md`](docs/roadmap.md) has the full phase-by-phase record; tracked follow-ups (all addressed) are in [`docs/issues/`](docs/issues/).
+**The original eight-phase MVP roadmap is implemented.** This is not a claim that every
+production-hardening gap is closed. The current governed runtime proof is documented in
+[`docs/demo.md`](docs/demo.md); active post-baseline work includes the artifact/acceptance
+serialization boundary tracked in [GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45).
+See [`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md) and
+[`docs/roadmap.md`](docs/roadmap.md) for the full record.

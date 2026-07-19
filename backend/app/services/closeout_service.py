@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
@@ -23,9 +23,62 @@ from app.models.project import Project
 from app.models.risk import Decision, Risk
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
-from app.services import analytics_service, task_service
+from app.orchestration.state_machine.states import ExecutionState
+from app.services import (
+    acceptance_service,
+    analytics_service,
+    decomposition_service,
+    governed_evidence_service,
+    task_service,
+)
 
 _REMEDIATION_ACTIONS = ("remediation.selected", "task.escalated", "task.reassigned")
+
+
+class AcceptanceNotMet(Exception):
+    """Closing was refused: acceptance criteria fail and were not acknowledged."""
+
+    def __init__(
+        self,
+        report: acceptance_service.AcceptanceReport,
+        *,
+        acknowledgement_allowed: bool,
+    ):
+        self.report = report
+        self.acknowledgement_allowed = acknowledgement_allowed
+        super().__init__("acceptance criteria unmet")
+
+
+class GovernedProjectNotActive(Exception):
+    """A governed project must be active before it can close."""
+
+
+class GovernedPlanApprovalRequired(Exception):
+    """A draft plan must be explicitly approved or rejected before close."""
+
+
+class GovernedMaterializationInvalid(Exception):
+    """The approved executable graph no longer matches its immutable provenance."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(reason)
+
+
+class PlanTasksIncomplete(Exception):
+    """At least one approved plan task has not completed."""
+
+    def __init__(self, tasks: list[dict]):
+        self.tasks = tasks
+        super().__init__("approved plan tasks are incomplete")
+
+
+class PlanTaskEvidenceInvalid(Exception):
+    """A completed governed task lacks passing evidence for its approved rubric."""
+
+    def __init__(self, tasks: list[dict]):
+        self.tasks = tasks
+        super().__init__("approved plan task evidence is missing or invalid")
 
 
 async def _scalars(session: AsyncSession, stmt):
@@ -58,6 +111,7 @@ async def generate_closeout(
         select(AuditEvent).where(
             AuditEvent.organization_id == org_id,
             AuditEvent.action.in_(_REMEDIATION_ACTIONS),
+            AuditEvent.entity_id.in_(sorted({t.id for t in tasks} | {e.id for e in executions})),
         ),
     )
 
@@ -65,6 +119,11 @@ async def generate_closeout(
         session, org_id=org_id, project_id=project_id
     )
     failures = [e for e in executions if e.state.value == "failed"]
+    acceptance = (
+        (await acceptance_service.evaluate_project_acceptance(session, project=project)).to_dict()
+        if project
+        else {"evaluated": False, "satisfied": True, "results": []}
+    )
 
     report = {
         "project_id": str(project_id),
@@ -87,6 +146,7 @@ async def generate_closeout(
         ],
         "decisions": [{"title": d.title, "decision": d.decision} for d in decisions],
         "timeline": dashboard["timeline"],
+        "acceptance": acceptance,
     }
     report["markdown"] = _markdown(report)
     return report
@@ -122,6 +182,14 @@ def _markdown(r: dict) -> str:
     lines += [f"- {x['title']} (severity {x['severity']})" for x in r["open_risks"]] or ["- (none)"]
     lines += ["", "## Decisions"]
     lines += [f"- {d['title']}: {d['decision']}" for d in r["decisions"]] or ["- (none)"]
+    lines += ["", "## Acceptance criteria"]
+    acc = r.get("acceptance", {})
+    if not acc.get("evaluated"):
+        lines.append("- (none defined)")
+    else:
+        for c in acc.get("results", []):
+            mark = "met" if c["passed"] else f"UNMET — {c['notes']}"
+            lines.append(f"- [{c['kind']}] {c['key']}: {mark}")
     return "\n".join(lines)
 
 
@@ -131,18 +199,99 @@ async def close_project(
     project: Project,
     actor_id: uuid.UUID | None,
     actor_type: ActorType = ActorType.USER,
+    acknowledge_unmet_criteria: bool = False,
 ) -> Project:
+    """Close the project — gated by its acceptance criteria (WS-4b).
+
+    Governed projects additionally require an active, intact approved graph,
+    completed tasks with passing persisted-rubric evidence, and non-waivable
+    project acceptance. Legacy manual projects retain explicit acknowledged
+    abandonment, recorded in the audit trail.
+    """
+    locked = await session.scalar(select(Project).where(Project.id == project.id).with_for_update())
+    if locked is None:
+        raise GovernedMaterializationInvalid("project is missing")
+    project = locked
+    try:
+        materialization = await decomposition_service.load_approved_materialization(
+            session,
+            project=project,
+            require_executable_assignments=False,
+        )
+    except decomposition_service.PlanApprovalRequired as exc:
+        raise GovernedPlanApprovalRequired() from exc
+    except decomposition_service.MaterializationInvalid as exc:
+        raise GovernedMaterializationInvalid(exc.reason) from exc
+
+    if materialization is not None:
+        if project.status != ProjectStatus.ACTIVE:
+            raise GovernedProjectNotActive()
+        incomplete = [
+            {
+                "task_key": task.source_plan_task_key,
+                "task_id": str(task.id),
+                "status": task.status.value,
+            }
+            for task in materialization.tasks
+            if task.status != ExecutionState.COMPLETED
+        ]
+        if incomplete:
+            raise PlanTasksIncomplete(incomplete)
+        try:
+            evaluation_ids = await governed_evidence_service.passing_evaluation_ids(
+                session,
+                materialization.tasks,
+            )
+        except governed_evidence_service.EvidenceInvalid as exc:
+            raise PlanTaskEvidenceInvalid(exc.tasks) from exc
+    else:
+        evaluation_ids = None
+
+    report = await acceptance_service.evaluate_project_acceptance(session, project=project)
+    unmet = [r.key for r in report.unmet]
+    if unmet and (materialization is not None or not acknowledge_unmet_criteria):
+        raise AcceptanceNotMet(
+            report,
+            acknowledgement_allowed=materialization is None,
+        )
+
     before = project.status.value
-    project.status = ProjectStatus.CLOSED
+    if materialization is not None:
+        result = await session.execute(
+            update(Project)
+            .where(Project.id == project.id, Project.status == ProjectStatus.ACTIVE)
+            .values(status=ProjectStatus.CLOSED)
+        )
+        if result.rowcount != 1:
+            raise GovernedProjectNotActive()
+        await session.refresh(project)
+    else:
+        project.status = ProjectStatus.CLOSED
+    close_details = {
+        "status": ProjectStatus.CLOSED.value,
+        "acceptance_evaluated": report.evaluated,
+        "acceptance_satisfied": report.satisfied,
+        "unmet_criteria": unmet,
+        "unmet_acknowledged": bool(unmet and acknowledge_unmet_criteria),
+    }
+    if materialization is not None:
+        close_details.update(
+            {
+                "plan_id": str(materialization.plan.id),
+                "all_plan_tasks_completed": True,
+                "task_evaluation_ids": evaluation_ids,
+            }
+        )
     await record_audit(
         session,
         organization_id=project.organization_id,
+        project_id=project.id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="project.closed",
         entity_type="Project",
         entity_id=project.id,
         before={"status": before},
-        after={"status": ProjectStatus.CLOSED.value},
+        after=close_details,
     )
     return project

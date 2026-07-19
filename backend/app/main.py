@@ -17,6 +17,7 @@ from app import __version__
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
+from app.core.metrics import MetricsMiddleware, metrics_endpoint
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -74,6 +75,7 @@ app = FastAPI(
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
@@ -83,6 +85,9 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+app.add_api_route("/metrics", metrics_endpoint, methods=["GET"], tags=["health"])
 
 
 @app.get("/healthz", tags=["health"])

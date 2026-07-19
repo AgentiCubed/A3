@@ -33,6 +33,8 @@ services:
     environment:
       POSTGRES_HOST: db
       REDIS_URL: redis://redis:6379/0
+      EVENT_BUS_BACKEND: redis
+      WORKFLOW_ENGINE_BACKEND: celery
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000"
@@ -55,6 +57,10 @@ services:
     environment:
       POSTGRES_HOST: db
       REDIS_URL: redis://redis:6379/0
+      # The worker publishes audit-driven live events and, after completing a
+      # task, submits newly-unblocked successors back through the engine.
+      EVENT_BUS_BACKEND: redis
+      WORKFLOW_ENGINE_BACKEND: celery
     command: celery -A app.workers.celery_app worker --loglevel=INFO
     volumes:
       - ./backend:/app

@@ -24,6 +24,24 @@ _DEFAULT_CREDENTIAL_REF = "ANTHROPIC_API_KEY"
 _API_URL = "https://api.anthropic.com/v1/messages"
 _API_VERSION = "2023-06-01"
 
+# Cost per token in USD for each model (input_cost, output_cost).
+# Rates from Anthropic public pricing; update when pricing changes.
+_RATE_CARD: dict[str, tuple[float, float]] = {
+    "claude-opus-4-5": (15.00 / 1_000_000, 75.00 / 1_000_000),
+    "claude-opus-4": (15.00 / 1_000_000, 75.00 / 1_000_000),
+    "claude-sonnet-4-6": (3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-sonnet-4-5": (3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-sonnet-3-7": (3.00 / 1_000_000, 15.00 / 1_000_000),
+    "claude-haiku-3-5": (0.80 / 1_000_000, 4.00 / 1_000_000),
+    "claude-haiku-3": (0.25 / 1_000_000, 1.25 / 1_000_000),
+}
+
+
+def _estimate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Return USD cost estimate; falls back to sonnet-4-6 rates for unknown models."""
+    in_rate, out_rate = _RATE_CARD.get(model, _RATE_CARD[_DEFAULT_MODEL])
+    return round(input_tokens * in_rate + output_tokens * out_rate, 8)
+
 
 class AnthropicProvider:
     name = "anthropic"
@@ -63,11 +81,13 @@ class AnthropicProvider:
             if block.get("type") == "text"
         )
         usage = data.get("usage", {})
-        tokens = int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0))
+        input_tokens = int(usage.get("input_tokens", 0))
+        output_tokens = int(usage.get("output_tokens", 0))
+        tokens = input_tokens + output_tokens
         return AgentRunResult(
             output=text,
             tokens_used=tokens,
-            cost_estimate=0.0,  # priced by analytics layer from a rate card later
+            cost_estimate=_estimate_cost(model, input_tokens, output_tokens),
             provider=self.name,
             raw_id=str(data.get("id")) if data.get("id") else None,
         )

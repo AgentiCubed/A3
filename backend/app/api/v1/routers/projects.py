@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DbSession, actor_from_user, require
+from app.core.audit import record_audit
 from app.core.rbac import Action
 from app.core.roles import ActorType
 from app.models.project import (
@@ -24,15 +25,21 @@ from app.models.project import (
 )
 from app.models.risk import Decision, Risk
 from app.models.user import User
+from app.orchestration.engines import get_workflow_engine
 from app.orchestration.state_machine.machine import IllegalTransition
+from app.orchestration.state_machine.states import ExecutionState
 from app.schemas.agent import AssignRequest
 from app.schemas.approval import ApprovalDecision, ApprovalResponse
 from app.schemas.execution import (
+    DispatchAcceptedResponse,
     DispatchRequest,
     DispatchResultResponse,
     EvaluationResponse,
     ExecutionResponse,
+    ProjectStartRequest,
+    ProjectStartResponse,
     ReassignRequest,
+    StartedTaskResponse,
 )
 from app.schemas.project import (
     MethodologyResponse,
@@ -65,9 +72,11 @@ from app.schemas.task import (
 from app.services import (
     agent_service,
     approval_service,
+    decomposition_service,
     evaluation_service,
     execution_service,
     project_service,
+    scheduler_service,
     task_service,
 )
 from app.services.methodology import ProjectSignals
@@ -96,7 +105,11 @@ async def create_project(req: ProjectCreate, session: DbSession, user: ProjectCr
         actor_id=user.id,
         name=req.name,
         objective=req.objective,
-        acceptance_criteria=req.acceptance_criteria,
+        acceptance_criteria=(
+            req.acceptance_criteria.model_dump(exclude_none=True)
+            if req.acceptance_criteria
+            else None
+        ),
         signals=signals,
     )
     await session.commit()
@@ -185,17 +198,35 @@ async def list_milestones(project_id: uuid.UUID, session: DbSession, user: Curre
 )
 async def add_task(project_id: uuid.UUID, req: TaskCreate, session: DbSession, user: TaskEditor):
     project = await _load_project(session, user, project_id)
-    task = await task_service.create_task(
-        session,
-        project=project,
-        title=req.title,
-        description=req.description,
-        estimate_hours=req.estimate_hours,
-        required_capabilities=req.required_capabilities,
-        is_human_task=req.is_human_task,
-        milestone_id=req.milestone_id,
-        priority=req.priority,
-    )
+    try:
+        task = await task_service.create_task(
+            session,
+            project=project,
+            title=req.title,
+            description=req.description,
+            estimate_hours=req.estimate_hours,
+            required_capabilities=req.required_capabilities,
+            is_human_task=req.is_human_task,
+            milestone_id=req.milestone_id,
+            priority=req.priority,
+        )
+    except task_service.GovernedGraphLocked as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.graph_mutation_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": "approved_plan_graph_locked", "mutation": "task.create"},
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "approved_plan_graph_locked"},
+        ) from exc
     await session.commit()
     return TaskResponse.model_validate(task)
 
@@ -252,12 +283,130 @@ async def assign_task_agent(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             {"error": "capability_mismatch", "missing": exc.missing},
         ) from exc
+    except agent_service.GovernedAssignmentLocked as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "plan-derived task assignment requires a new governed plan decision",
+        ) from exc
     await session.commit()
     return TaskResponse.model_validate(task)
 
 
-# ── Execution (dispatch, history, reassignment) ───────────────────────────
-@router.post("/{project_id}/tasks/{task_id}/dispatch", response_model=DispatchResultResponse)
+# ── Execution (start, dispatch, history, reassignment) ────────────────────
+@router.post("/{project_id}/start", response_model=ProjectStartResponse)
+async def start_project(
+    project_id: uuid.UUID,
+    req: ProjectStartRequest,
+    session: DbSession,
+    user: TaskEditor,
+):
+    """Start the project's execution loop: dispatch every dependency-satisfied task.
+
+    Celery mode queues the initial wave and returns immediately; the worker
+    dispatches successors as their predecessors complete. Inline mode runs the
+    whole dependency chain in-request. Unassigned, human, and
+    dependency-blocked tasks are left untouched and keep gating their
+    successors.
+    """
+    project = await _load_project(session, user, project_id)
+
+    async def audit_refusal(reason: str, **details: object) -> None:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.start_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={"reason": reason, **details},
+        )
+        await session.commit()
+
+    try:
+        materialization = await decomposition_service.begin_project_execution(
+            session,
+            project=project,
+            actor_id=user.id,
+        )
+    except decomposition_service.PlanApprovalRequired as exc:
+        await audit_refusal("plan_approval_required")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "plan_approval_required"},
+        ) from exc
+    except decomposition_service.MaterializationInvalid as exc:
+        await audit_refusal("approved_materialization_invalid", detail=exc.reason)
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "approved_materialization_invalid", "reason": exc.reason},
+        ) from exc
+    except decomposition_service.GovernedProjectNotStartable as exc:
+        await audit_refusal("governed_project_not_startable")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "governed_project_not_startable"},
+        ) from exc
+
+    if materialization is None:
+        # Preserve the pre-WS-6 manual-project behavior and audit shape.
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.started",
+            entity_type="Project",
+            entity_id=project.id,
+        )
+    else:
+        # Make ACTIVE + project.started durable before any broker, provider,
+        # evaluator, or tool can produce external effects.
+        await session.commit()
+    engine = get_workflow_engine()
+    if engine is not None:
+        params = execution_service.build_dispatch_params(
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+            evaluation=None,
+        )
+        outcomes = await scheduler_service.dispatch_ready(
+            session,
+            project_id=project.id,
+            engine=engine,
+            params=params,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+        )
+        await session.commit()
+        return ProjectStartResponse(
+            engine=engine.name,
+            tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
+        )
+
+    outcomes = await scheduler_service.run_inline(
+        session,
+        project_id=project.id,
+        actor_id=user.id,
+        actor_type=ActorType.USER,
+        max_attempts=req.max_attempts,
+        timeout_s=req.timeout_s,
+    )
+    await session.commit()
+    return ProjectStartResponse(
+        engine="inline",
+        tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
+    )
+
+
+@router.post(
+    "/{project_id}/tasks/{task_id}/dispatch",
+    response_model=DispatchResultResponse | DispatchAcceptedResponse,
+)
 async def dispatch_task(
     project_id: uuid.UUID,
     task_id: uuid.UUID,
@@ -265,18 +414,125 @@ async def dispatch_task(
     session: DbSession,
     user: TaskEditor,
 ):
+    """Dispatch a task to its assigned agent.
+
+    With WORKFLOW_ENGINE_BACKEND=celery (compose/prod) the task is queued
+    through the WorkflowEngine port and this returns immediately with
+    DispatchAcceptedResponse — the worker executes it. In inline mode
+    (dev/tests) execution runs in-request and the full result is returned.
+    """
     project = await _load_project(session, user, project_id)
     tasks = await task_service.list_tasks(session, project.id)
     task = next((t for t in tasks if t.id == task_id), None)
     if task is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "task not found")
+
+    async def audit_governed_refusal(reason: str) -> None:
+        if task.source_plan_id is None:
+            return
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="task.dispatch_refused",
+            entity_type="Task",
+            entity_id=task.id,
+            after={"reason": reason, "source_plan_id": str(task.source_plan_id)},
+        )
+        await session.commit()
+
     evaluation_cfg = None
     if req.rubric is not None or req.evaluator_agent_id is not None:
+        if req.evaluator_agent_id is not None and req.evaluator_agent_id == task.assigned_agent_id:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "evaluator agent must differ from the executor (executor/evaluator separation)",
+            )
         evaluation_cfg = execution_service.EvaluationConfig(
-            rubric_specs=req.rubric or [],
+            rubric_specs=[
+                criterion.model_dump(mode="json", exclude_none=True)
+                for criterion in (req.rubric or [])
+            ],
             evaluator_agent_id=req.evaluator_agent_id,
             max_remediations=req.max_remediations,
         )
+
+    engine = get_workflow_engine()
+    if engine is not None:
+        try:
+            await execution_service.queue_task(
+                session,
+                task=task,
+                actor_id=user.id,
+                actor_type=ActorType.USER,
+                evaluation=evaluation_cfg,
+            )
+        except execution_service.AlreadyQueued as exc:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "task is already queued; re-dispatch would run it twice",
+            ) from exc
+        except execution_service.NotAssigned as exc:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, "task has no assigned agent"
+            ) from exc
+        except execution_service.NotExecutable as exc:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "assigned agent is not currently eligible to execute",
+            ) from exc
+        except execution_service.EvaluationConfigConflict as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        except execution_service.GovernedProjectNotActive as exc:
+            await audit_governed_refusal("governed_project_not_active")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {"error": "governed_project_not_active"},
+            ) from exc
+        except execution_service.GovernedDependenciesIncomplete as exc:
+            await audit_governed_refusal("governed_dependencies_incomplete")
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {"error": "governed_dependencies_incomplete"},
+            ) from exc
+        except IllegalTransition as exc:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+        # Commit BEFORE submitting so the worker sees the QUEUED state.
+        await session.commit()
+        params = execution_service.build_dispatch_params(
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+            evaluation=evaluation_cfg,
+        )
+        try:
+            handle = engine.submit_execution(task.id, params)
+        except Exception as exc:  # noqa: BLE001 - broker down/unreachable
+            # The QUEUED commit already happened but no message exists; park the
+            # task in BLOCKED (re-dispatchable) instead of leaving it stuck.
+            await execution_service.transition_task(
+                session,
+                task,
+                ExecutionState.BLOCKED,
+                actor_id=user.id,
+                actor_type=ActorType.USER,
+                reason=f"engine submit failed: {type(exc).__name__}",
+            )
+            await session.commit()
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "task queueing failed; task moved to BLOCKED for re-dispatch",
+            ) from exc
+        return DispatchAcceptedResponse(
+            task_id=task.id,
+            status=task.status,
+            engine=engine.name,
+            engine_handle=handle,
+        )
+
     try:
         result = await execution_service.execute_task(
             session,
@@ -293,7 +549,22 @@ async def dispatch_task(
         ) from exc
     except execution_service.NotExecutable as exc:
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned agent is not an AI agent"
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "assigned agent is not currently eligible to execute",
+        ) from exc
+    except execution_service.EvaluationConfigConflict as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except execution_service.GovernedProjectNotActive as exc:
+        await audit_governed_refusal("governed_project_not_active")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "governed_project_not_active"},
+        ) from exc
+    except execution_service.GovernedDependenciesIncomplete as exc:
+        await audit_governed_refusal("governed_dependencies_incomplete")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "governed_dependencies_incomplete"},
         ) from exc
     except evaluation_service.EvaluatorConflict as exc:
         raise HTTPException(
@@ -401,6 +672,11 @@ async def reassign_task(
         await execution_service.reassign_task(
             session, task=task, new_agent=agent, actor_id=user.id, actor_type=ActorType.USER
         )
+    except execution_service.GovernedAssignmentLocked as exc:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "plan-derived task assignment requires a new governed plan decision",
+        ) from exc
     except IllegalTransition as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     await session.commit()
@@ -436,6 +712,26 @@ async def add_dependency(
         raise HTTPException(status.HTTP_409_CONFLICT, "dependency already exists") from exc
     except task_service.TaskNotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "task not in project") from exc
+    except task_service.GovernedGraphLocked as exc:
+        await record_audit(
+            session,
+            organization_id=user.organization_id,
+            project_id=project.id,
+            actor_type=ActorType.USER,
+            actor_id=user.id,
+            action="project.graph_mutation_refused",
+            entity_type="Project",
+            entity_id=project.id,
+            after={
+                "reason": "approved_plan_graph_locked",
+                "mutation": "dependency.create",
+            },
+        )
+        await session.commit()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "approved_plan_graph_locked"},
+        ) from exc
     await session.commit()
     return DependencyResponse.model_validate(dep)
 
