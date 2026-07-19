@@ -1,6 +1,6 @@
 # Runtime Domain Specification v1.0
 
-- **Status:** Proposed architecture baseline
+- **Status:** Adopted architecture baseline
 - **Issue:** [AgentiCubed/agenticubed#17](https://github.com/AgentiCubed/agenticubed/issues/17)
 - **Authority:** Subordinate to the Constitution, Foundational Concepts, TARP-0001,
   the Upward Compatibility Rule, and the Agentic³ ontology
