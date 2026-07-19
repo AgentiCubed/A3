@@ -22,9 +22,11 @@ from app.evaluation.rubric import evaluate_deterministic
 from app.evaluation.specs import normalize_rubric_specs, rubric_sha256
 from app.models.agent import Agent
 from app.models.evaluation import Evaluation, EvaluationCriterion
+from app.models.task import Task
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
 from app.orchestration.ports import AgentRunRequest
+from app.services import project_lock_service
 
 
 class EvaluatorConflict(Exception):
@@ -172,6 +174,18 @@ async def evaluate_execution(
             f"{malformed_note}; deterministic={outcome.verdict.value}; "
             f"combined={final_verdict.value}. {agent_verdict.critique}"
         )
+
+    project_id = await session.scalar(select(Task.project_id).where(Task.id == execution.task_id))
+    if project_id is None:
+        raise ValueError("execution task not found")
+    project = await project_lock_service.lock_project(
+        session,
+        project_id=project_id,
+        organization_id=execution.organization_id,
+        require_open=True,
+    )
+    if project is None:
+        raise ValueError("project not found")
 
     combined_gaps = list(outcome.gaps or []) + agent_gaps
     evaluation = Evaluation(

@@ -33,7 +33,12 @@ from app.orchestration.ports import AgentRunRequest
 from app.orchestration.state_machine.machine import IllegalTransition, assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.remediation.policy import RemediationContext, select_remediation
-from app.services import evaluation_service, governed_evidence_service, tool_runtime
+from app.services import (
+    evaluation_service,
+    governed_evidence_service,
+    project_lock_service,
+    tool_runtime,
+)
 
 
 class NotAssigned(Exception):
@@ -1000,6 +1005,15 @@ async def _record(
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
 ) -> uuid.UUID:
+    project = await project_lock_service.lock_project(
+        session,
+        project_id=task.project_id,
+        organization_id=task.organization_id,
+        require_open=True,
+    )
+    if project is None:
+        raise ValueError("project not found")
+
     input_context: dict = {"prompt_chars": prompt_chars}
     if handoff:
         input_context["handoff"] = handoff

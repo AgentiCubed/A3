@@ -12,10 +12,12 @@ import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.enums import EvaluatorKind, Verdict
+from app.models.agent import Agent
 from app.models.audit_event import AuditEvent
 from app.models.evaluation import Evaluation
 from app.models.project import Project
@@ -23,7 +25,12 @@ from app.models.task import Task
 from app.models.task_execution import TaskExecution
 from app.orchestration.ports import AgentRunRequest, AgentRunResult
 from app.orchestration.state_machine.states import ExecutionState
-from app.services import artifact_service, execution_service
+from app.services import (
+    artifact_service,
+    closeout_service,
+    execution_service,
+    project_lock_service,
+)
 from tests.conftest import TestSessionFactory
 
 
@@ -242,6 +249,108 @@ def test_acknowledged_close_records_deliberate_abandonment(client):
     closed = _audits(pid, "project.closed")
     assert closed[0]["unmet_criteria"] == ["report"]
     assert closed[0]["unmet_acknowledged"] is True
+
+
+def test_close_waits_for_concurrent_execution_output_before_accepting(client):
+    headers = _auth(client)
+    project = _project(
+        client,
+        headers,
+        {"criteria": [{"key": "concise", "check": "max_length", "params": {"max": 2}}]},
+    )
+    _seed_evaluated_execution(project, output="OK", verdicts=[])
+    task_id = client.post(
+        f"/api/v1/projects/{project['id']}/tasks",
+        json={"title": "Concurrent output"},
+        headers=headers,
+    ).json()["id"]
+    agent_id = client.post(
+        "/api/v1/agents",
+        json={"name": "Concurrent writer", "kind": "ai", "provider": "mock"},
+        headers=headers,
+    ).json()["id"]
+
+    async def _race() -> None:
+        async with TestSessionFactory() as writer, TestSessionFactory() as closer:
+            task = await writer.get(Task, uuid.UUID(task_id))
+            agent = await writer.get(Agent, uuid.UUID(agent_id))
+            closing_project = await closer.get(Project, uuid.UUID(project["id"]))
+            assert task is not None and agent is not None and closing_project is not None
+
+            await execution_service._record(
+                writer,
+                task=task,
+                agent=agent,
+                attempt=1,
+                state=ExecutionState.COMPLETED,
+                started=datetime.now(UTC),
+                output="TOO LONG",
+                error=None,
+                provider="mock",
+                prompt_chars=1,
+            )
+            close_task = asyncio.create_task(
+                closeout_service.close_project(
+                    closer,
+                    project=closing_project,
+                    actor_id=None,
+                )
+            )
+            await asyncio.sleep(0.05)
+            assert not close_task.done()
+
+            await writer.commit()
+            with pytest.raises(closeout_service.AcceptanceNotMet):
+                await asyncio.wait_for(close_task, timeout=2)
+            await closer.rollback()
+
+    asyncio.run(_race())
+    assert _close(client, headers, project["id"]).status_code == 409
+
+
+def test_artifact_write_loses_race_to_committed_close(client, tmp_path):
+    headers = _auth(client)
+    project = _project(client, headers, None)
+
+    async def _race() -> None:
+        async with TestSessionFactory() as closer, TestSessionFactory() as writer:
+            closing_project = await closer.get(Project, uuid.UUID(project["id"]))
+            assert closing_project is not None
+            close_result = await closeout_service.close_project(
+                closer,
+                project=closing_project,
+                actor_id=None,
+            )
+            closeout = await closeout_service.generate_closeout(
+                closer,
+                org_id=uuid.UUID(project["organization_id"]),
+                project_id=uuid.UUID(project["id"]),
+                generated_at=datetime.now(UTC),
+                acceptance=close_result.acceptance,
+            )
+            assert closeout["acceptance"] == close_result.acceptance.to_dict()
+
+            artifact_task = asyncio.create_task(
+                artifact_service.store_artifact(
+                    writer,
+                    artifact_service.LocalArtifactStore(str(tmp_path)),
+                    org_id=uuid.UUID(project["organization_id"]),
+                    project_id=uuid.UUID(project["id"]),
+                    name="late.txt",
+                    content_type="text/plain",
+                    data=b"late evidence",
+                )
+            )
+            await asyncio.sleep(0.05)
+            assert not artifact_task.done()
+
+            await closer.commit()
+            with pytest.raises(project_lock_service.ProjectClosed):
+                await asyncio.wait_for(artifact_task, timeout=2)
+            await writer.rollback()
+
+    asyncio.run(_race())
+    assert list(tmp_path.rglob("*")) == []
 
 
 def test_close_without_criteria_is_ungated(client):

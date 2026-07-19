@@ -75,6 +75,7 @@ from app.services import (
     decomposition_service,
     evaluation_service,
     execution_service,
+    project_lock_service,
     project_service,
     scheduler_service,
     task_service,
@@ -496,6 +497,12 @@ async def dispatch_task(
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 {"error": "governed_dependencies_incomplete"},
+            ) from exc
+        except project_lock_service.ProjectClosed as exc:
+            await session.rollback()
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                {"error": "project_closed"},
             ) from exc
         except IllegalTransition as exc:
             raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc

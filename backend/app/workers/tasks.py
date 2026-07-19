@@ -20,7 +20,7 @@ from app.core.roles import ActorType
 from app.models.task import Task
 from app.orchestration.engines import get_workflow_engine
 from app.orchestration.state_machine.states import ExecutionState
-from app.services import execution_service, scheduler_service
+from app.services import execution_service, project_lock_service, scheduler_service
 from app.workers.celery_app import celery_app
 
 # Overridable for tests; defaults to the application's async session factory.
@@ -75,7 +75,7 @@ async def _run(task_id: uuid.UUID, params: dict) -> None:
         parsed = _parse_dispatch_params(params)
         try:
             await execution_service.execute_task(session, task=task, **parsed)
-        except execution_service.AlreadyQueued:
+        except (execution_service.AlreadyQueued, project_lock_service.ProjectClosed):
             # Duplicate broker deliveries are expected in at-least-once
             # transports. The persisted governed claim is the authority.
             await session.rollback()

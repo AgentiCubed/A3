@@ -8,6 +8,7 @@ project. Read-only over the immutable execution/evaluation history.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import select, update
@@ -29,6 +30,7 @@ from app.services import (
     analytics_service,
     decomposition_service,
     governed_evidence_service,
+    project_lock_service,
     task_service,
 )
 
@@ -81,12 +83,23 @@ class PlanTaskEvidenceInvalid(Exception):
         super().__init__("approved plan task evidence is missing or invalid")
 
 
+@dataclass(frozen=True)
+class CloseResult:
+    project: Project
+    acceptance: acceptance_service.AcceptanceReport
+
+
 async def _scalars(session: AsyncSession, stmt):
     return list((await session.execute(stmt)).scalars().all())
 
 
 async def generate_closeout(
-    session: AsyncSession, *, org_id: uuid.UUID, project_id: uuid.UUID, generated_at: datetime
+    session: AsyncSession,
+    *,
+    org_id: uuid.UUID,
+    project_id: uuid.UUID,
+    generated_at: datetime,
+    acceptance: acceptance_service.AcceptanceReport | None = None,
 ) -> dict:
     project = await session.get(Project, project_id)
     tasks = await task_service.list_tasks(session, project_id)
@@ -118,10 +131,19 @@ async def generate_closeout(
         session, org_id=org_id, project_id=project_id
     )
     failures = [e for e in executions if e.state.value == "failed"]
-    acceptance = (
-        (await acceptance_service.evaluate_project_acceptance(session, project=project)).to_dict()
-        if project
-        else {"evaluated": False, "satisfied": True, "results": []}
+    acceptance_payload = (
+        acceptance.to_dict()
+        if acceptance is not None
+        else (
+            (
+                await acceptance_service.evaluate_project_acceptance(
+                    session,
+                    project=project,
+                )
+            ).to_dict()
+            if project
+            else {"evaluated": False, "satisfied": True, "results": []}
+        )
     )
 
     report = {
@@ -145,7 +167,7 @@ async def generate_closeout(
         ],
         "decisions": [{"title": d.title, "decision": d.decision} for d in decisions],
         "timeline": dashboard["timeline"],
-        "acceptance": acceptance,
+        "acceptance": acceptance_payload,
     }
     report["markdown"] = _markdown(report)
     return report
@@ -199,7 +221,7 @@ async def close_project(
     actor_id: uuid.UUID | None,
     actor_type: ActorType = ActorType.USER,
     acknowledge_unmet_criteria: bool = False,
-) -> Project:
+) -> CloseResult:
     """Close the project — gated by its acceptance criteria (WS-4b).
 
     Governed projects additionally require an active, intact approved graph,
@@ -207,7 +229,7 @@ async def close_project(
     project acceptance. Legacy manual projects retain explicit acknowledged
     abandonment, recorded in the audit trail.
     """
-    locked = await session.scalar(select(Project).where(Project.id == project.id).with_for_update())
+    locked = await project_lock_service.lock_project(session, project_id=project.id)
     if locked is None:
         raise GovernedMaterializationInvalid("project is missing")
     project = locked
@@ -293,4 +315,4 @@ async def close_project(
         before={"status": before},
         after=close_details,
     )
-    return project
+    return CloseResult(project=project, acceptance=report)

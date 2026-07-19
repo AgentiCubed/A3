@@ -12,6 +12,7 @@ from app.core.audit import record_audit
 from app.core.config import get_settings
 from app.core.roles import ActorType
 from app.models.artifact import Artifact
+from app.services import project_lock_service
 
 
 def default_store() -> LocalArtifactStore:
@@ -32,6 +33,15 @@ async def store_artifact(
     actor_id: uuid.UUID | None = None,
     actor_type: ActorType = ActorType.SYSTEM,
 ) -> Artifact:
+    project = await project_lock_service.lock_project(
+        session,
+        project_id=project_id,
+        organization_id=org_id,
+        require_open=True,
+    )
+    if project is None:
+        raise ValueError("project not found")
+
     key = f"{project_id}/{uuid.uuid4().hex}-{name}"
     stored = store.put(key, data, content_type)
     artifact = Artifact(

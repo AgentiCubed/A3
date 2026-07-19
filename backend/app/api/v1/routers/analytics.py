@@ -100,7 +100,7 @@ async def close_project(
     """
     project = await _project(session, user, project_id)
     try:
-        await closeout_service.close_project(
+        close_result = await closeout_service.close_project(
             session,
             project=project,
             actor_id=user.id,
@@ -224,7 +224,11 @@ async def close_project(
             },
         ) from exc
     report = await closeout_service.generate_closeout(
-        session, org_id=user.organization_id, project_id=project_id, generated_at=datetime.now(UTC)
+        session,
+        org_id=user.organization_id,
+        project_id=project_id,
+        generated_at=datetime.now(UTC),
+        acceptance=close_result.acceptance,
     )
     await session.commit()
     return {"status": project.status.value, "closeout": report}
