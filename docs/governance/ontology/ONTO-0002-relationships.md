@@ -31,7 +31,7 @@ Every relationship record has:
 | `notes` | Optional | Human-readable annotation; not a substitute for a knowledge record. |
 
 Relationships are append-only once asserted. A relationship is retracted by adding a
-`SUPERSEDES` or `REVOKES` relationship, not by deletion.
+`SUPERSEDES` relationship (or a type-specific revocation relationship such as `REVOKES`), not by deletion.
 
 ---
 
