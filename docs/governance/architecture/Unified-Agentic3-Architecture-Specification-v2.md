@@ -1,6 +1,6 @@
 # Unified Agentic³ Architecture Specification v2
 
-- **Status:** Canonical integration skeleton v0.1
+- **Status:** Canonical integration skeleton v2 (draft v0.1)
 - **Purpose:** Integrate approved and proposed Agentic³ architecture artifacts
   without replacing their authority, evidence, or revision history
 
