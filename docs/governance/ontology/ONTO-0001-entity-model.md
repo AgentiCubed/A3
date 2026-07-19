@@ -305,7 +305,7 @@ material to interpretation. They are immutable records of what happened.
 |---|---|---|---|---|
 | Actor | Governance relationship | No — changes create new delegation | No | No |
 | System | Deployed configuration | No — changes audited via AuditEvent | No | No |
-| Knowledge | Authority decision | Supersessions add, never overwrite | Pattern, AntiPattern, FoundationalConcept, ArchitecturalPrinciple, ArchitecturalContract | Pattern, AntiPattern, FoundationalConcept (if in genome) |
+| Knowledge | Authority decision | Supersessions add, never overwrite | Pattern, AntiPattern, FoundationalConcept, ArchitecturalPrinciple, ArchitecturalContract | Only when explicitly designated as a genome member (see ONTO-0004 §2.3). |
 | Artifact | Execution provenance | Content-addressed artifacts immutable | No | No |
 | Evidence | System or human observation | Yes | No | No |
 | Governance | Ratification or delegation | Yes (amendments preserve prior text) | No | No |
