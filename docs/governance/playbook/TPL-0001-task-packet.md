@@ -31,7 +31,7 @@ Copy and fill in the following for each task or review assignment:
 
 ---
 
-### Objective [required]
+### Objective / review objective [required]
 
 <One or two sentences stating precisely what this task must accomplish. State the
 end condition, not the process.>
@@ -48,7 +48,7 @@ end condition, not the process.>
 
 ---
 
-### Acceptance conditions [required]
+### Acceptance / success conditions [required]
 
 <The observable, verifiable criteria that must be satisfied for this gate to be
 considered complete. Each condition should be independently checkable.>
@@ -99,14 +99,14 @@ and return the gap to the principal.>
 
 ---
 
-### Non-goals [recommended]
+### Non-goals [required for reviews]
 
-<Optional but recommended. Explicit statement of what this gate is not trying to
-accomplish, to prevent scope drift.>
+<Explicit statement of what this gate is not trying to accomplish, to prevent
+scope drift. Required for reviews; strongly recommended for tasks.>
 
 ---
 
-### Context and constraints [as needed]
+### Context and constraints [required for reviews; as needed for tasks]
 
 <Background, related issues, governing instruments, known constraints, or
 dependencies the executor/reviewer needs to complete the work. This section must
@@ -118,10 +118,12 @@ be complete enough that no prior conversational context is needed.>
 
 ## Notes on Use
 
-**Be specific about acceptance conditions.** "Looks good" is not a condition. "All 102 backend tests pass with `make check` green" is a condition.
+**Be specific about acceptance / success conditions.** "Looks good" is not a condition. "All 102 backend tests pass with `make check` green" is a condition.
 
-**Be explicit about exclusions.** If you do not want the executor to modify tests, say so. Silence is not restriction.
+**Be explicit about exclusions.** If you do not want the executor to modify tests, say so. Silence is not restriction. Review packets shall always include Non-goals.
 
 **Include exact artifact references for reviews.** A review of "the current version" is not reproducible. A review of `docs/governance/constitution/Constitution-v1.0.md` at commit `e31c444` is.
+
+**Include constraints when assigning reviews.** A reviewer should not have to infer the governing policy, constitutional, or technical limits from prior conversation.
 
 **Stop conditions protect both parties.** Defining when to halt prevents the executor from overstepping and gives the principal a clear signal to look for. Omitting stop conditions places the burden of scope judgment on the executor alone.
