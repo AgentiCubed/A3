@@ -36,7 +36,7 @@ specialize that model for edges. Every relationship record has:
 | `valid_from` | Yes | Time from which the assertion applies. |
 | `valid_to` | Optional | Time at which the assertion ceased to apply. |
 | `confidence` | Conditional | Required for epistemic relationships; includes basis and uncertainty. |
-| `lifecycle_state` | Yes | `draft`, `active`, `superseded`, or `retired`. |
+| `lifecycle_state` | Yes | `draft`, `active`, `validated`, `superseded`, or `retired`. |
 | `superseded_by` | Conditional | Relationship revision replacing this one. |
 | `notes` | Optional | Human-readable annotation; not a substitute for a knowledge record. |
 
