@@ -17,6 +17,10 @@ celery_app = Celery(
     "agenticubed",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
+    # Task modules must be named explicitly: a worker started with
+    # `-A app.workers.celery_app` registers nothing otherwise, and messages
+    # for execution.run would die as unregistered-task errors.
+    include=["app.workers.tasks"],
 )
 
 celery_app.conf.update(

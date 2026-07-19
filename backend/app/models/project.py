@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import CheckConstraint, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
@@ -22,6 +22,12 @@ from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "projects"
+    __table_args__ = (
+        CheckConstraint(
+            "acceptance_revision >= 0",
+            name="ck_projects_acceptance_revision_nonnegative",
+        ),
+    )
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
@@ -39,6 +45,10 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=ProjectStatus.INTAKE,
     )
     acceptance_criteria: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    acceptance_revision: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    closure_acceptance: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
