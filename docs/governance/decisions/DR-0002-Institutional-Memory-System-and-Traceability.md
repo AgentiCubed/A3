@@ -40,7 +40,7 @@ AgentiCubed adopts the following as the canonical institutional memory system:
 The normative specification is recorded in:
 
 - [Institutional Memory System](../knowledge/README.md)
-- [Institutional Knowledge Record Templates](../knowledge/templates.md)
+- [Institutional Memory Record Templates](../knowledge/templates.md)
 - [ACR-0001 — Architectural Candidate Register](../knowledge/ACR-0001-architectural-candidate-register.md)
 - [STD-0002 — Traceable Architecture Reviews](../playbook/STD-0002-traceable-architecture-reviews.md)
 
