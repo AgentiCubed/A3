@@ -49,6 +49,9 @@ class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         Integer, nullable=False, default=0, server_default="0"
     )
     closure_acceptance: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Operator halt switch: non-null means the scheduler must not dispatch any
+    # new work for this project. In-flight tasks conclude; nothing new starts.
+    halted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

@@ -163,6 +163,22 @@ class ProjectResponse(BaseModel):
     objective: str
     status: ProjectStatus
     acceptance_criteria: dict | None
+    # Operator halt switch: non-null means the scheduler dispatches nothing new.
+    halted_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectHaltRequest(BaseModel):
+    """Optional operator context recorded in the project.halted audit event."""
+
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class ProjectHaltResponse(BaseModel):
+    project_id: uuid.UUID
+    status: ProjectStatus
+    halted_at: datetime | None
 
     model_config = {"from_attributes": True}
 

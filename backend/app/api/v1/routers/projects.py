@@ -46,6 +46,8 @@ from app.schemas.project import (
     MilestoneCreate,
     MilestoneResponse,
     ProjectCreate,
+    ProjectHaltRequest,
+    ProjectHaltResponse,
     ProjectResponse,
     ProjectWithMethodology,
     RequirementCreate,
@@ -325,6 +327,13 @@ async def start_project(
         )
         await session.commit()
 
+    if project.halted_at is not None:
+        await audit_refusal("project_halted")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "project_halted", "hint": "resume the project before starting"},
+        )
+
     try:
         materialization = await decomposition_service.begin_project_execution(
             session,
@@ -412,6 +421,99 @@ async def start_project(
     )
 
 
+@router.post("/{project_id}/halt", response_model=ProjectHaltResponse)
+async def halt_project(
+    project_id: uuid.UUID,
+    session: DbSession,
+    user: ProjectEditor,
+    req: ProjectHaltRequest | None = None,
+):
+    """Operator halt: stop the scheduler from dispatching anything new.
+
+    In-flight tasks conclude cleanly; only the intake of new work closes.
+    Reversible via /resume. Audited either way.
+    """
+    project = await _load_project(session, user, project_id)
+    try:
+        await project_service.halt_project(
+            session,
+            project=project,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            reason=req.reason if req else None,
+        )
+    except project_service.AlreadyHalted as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, {"error": "already_halted"}) from exc
+    except project_service.ProjectClosedError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, {"error": "project_closed"}) from exc
+    await session.commit()
+    return ProjectHaltResponse(
+        project_id=project.id, status=project.status, halted_at=project.halted_at
+    )
+
+
+@router.post("/{project_id}/resume", response_model=ProjectStartResponse)
+async def resume_project(
+    project_id: uuid.UUID,
+    req: ProjectStartRequest,
+    session: DbSession,
+    user: ProjectEditor,
+):
+    """Lift an operator halt and run one work-conserving scheduling pass.
+
+    Successors whose predecessors completed while the project was halted are
+    dispatched immediately; in celery mode the worker takes over from there.
+    Does not re-run plan materialization — the project was already started.
+    """
+    project = await _load_project(session, user, project_id)
+    try:
+        await project_service.resume_project(
+            session, project=project, actor_id=user.id, actor_type=ActorType.USER
+        )
+    except project_service.NotHalted as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, {"error": "not_halted"}) from exc
+    except project_service.ProjectClosedError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, {"error": "project_closed"}) from exc
+    await session.commit()
+
+    engine = get_workflow_engine()
+    if engine is not None:
+        params = execution_service.build_dispatch_params(
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+            evaluation=None,
+        )
+        outcomes = await scheduler_service.dispatch_ready(
+            session,
+            project_id=project.id,
+            engine=engine,
+            params=params,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+        )
+        await session.commit()
+        return ProjectStartResponse(
+            engine=engine.name,
+            tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
+        )
+
+    outcomes = await scheduler_service.run_inline(
+        session,
+        project_id=project.id,
+        actor_id=user.id,
+        actor_type=ActorType.USER,
+        max_attempts=req.max_attempts,
+        timeout_s=req.timeout_s,
+    )
+    await session.commit()
+    return ProjectStartResponse(
+        engine="inline",
+        tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
+    )
+
+
 @router.post(
     "/{project_id}/tasks/{task_id}/dispatch",
     response_model=DispatchResultResponse | DispatchAcceptedResponse,
@@ -465,6 +567,13 @@ async def dispatch_task(
             after=details,
         )
         await session.commit()
+
+    if project.halted_at is not None:
+        await audit_dispatch_refusal("project_halted")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "project_halted", "hint": "resume the project before dispatching"},
+        )
 
     evaluation_cfg = None
     if req.rubric is not None or req.evaluator_agent_id is not None:
