@@ -68,6 +68,14 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 addopts = "-q"
 
+[tool.coverage.run]
+# SQLAlchemy's async engine bridges to the sync layer via greenlets, and the
+# Starlette TestClient drives the ASGI app from a worker thread. Without both
+# concurrency modes, coverage does not trace code executed inside request
+# handlers (routers/services) and under-reports it dramatically.
+concurrency = ["greenlet", "thread"]
+source = ["app"]
+
 [tool.mypy]
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
