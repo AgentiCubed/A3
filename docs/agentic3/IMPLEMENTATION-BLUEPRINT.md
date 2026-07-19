@@ -358,8 +358,8 @@ The first adapter uses the existing PostgreSQL boundary:
 Current Project, Task, TaskExecution, Evaluation, Approval, Artifact, and
 AuditEvent rows remain systems of record during migration. Agentic³ entities
 reference them by stable typed reference. Existing UUID primary keys remain;
-canonical IDs use the format `FR-NNNN`, where `NNNN` is a zero-padded
-four-digit sequence (for example, `FR-0001`), and are separately unique in
+canonical IDs use the format `{TYPE}-NNNN`, where `TYPE` is the stable record/entity prefix and `NNNN` is a zero-padded
+four-digit sequence (for example, `FR-0001`, `RM-0002`), and are separately unique in
 their namespace and tenant. A graph database, vector database, and event broker
 are not needed to implement ontology traversal, provenance, contradiction, or
 impact analysis at initial scale.
