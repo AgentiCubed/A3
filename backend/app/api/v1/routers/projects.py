@@ -389,14 +389,22 @@ async def start_project(
             tasks=[StartedTaskResponse(task_id=o.task_id, status=o.status) for o in outcomes],
         )
 
-    outcomes = await scheduler_service.run_inline(
-        session,
-        project_id=project.id,
-        actor_id=user.id,
-        actor_type=ActorType.USER,
-        max_attempts=req.max_attempts,
-        timeout_s=req.timeout_s,
-    )
+    try:
+        outcomes = await scheduler_service.run_inline(
+            session,
+            project_id=project.id,
+            actor_id=user.id,
+            actor_type=ActorType.USER,
+            max_attempts=req.max_attempts,
+            timeout_s=req.timeout_s,
+        )
+    except execution_service.ProjectClosed as exc:
+        await session.rollback()
+        await audit_refusal("project_closed")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            {"error": "project_closed"},
+        ) from exc
     await session.commit()
     return ProjectStartResponse(
         engine="inline",

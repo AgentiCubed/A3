@@ -113,8 +113,8 @@ def test_close_serializes_with_concurrent_execution_output(client, monkeypatch):
         close_task = asyncio.create_task(_close())
         await close_evaluated.wait()
         writer_task = asyncio.create_task(_late_output())
-        await asyncio.sleep(0.05)
-        assert writer_task.done() is False
+        done, _ = await asyncio.wait({writer_task}, timeout=0.05)
+        assert not done, "writer should be blocked while close holds the lock"
         release_close.set()
         await close_task
         assert await writer_task == "rejected"
@@ -195,8 +195,8 @@ def test_close_first_rejects_concurrent_artifact_before_filesystem_write(
         close_task = asyncio.create_task(_close())
         await close_evaluated.wait()
         artifact_task = asyncio.create_task(_late_artifact())
-        await asyncio.sleep(0.05)
-        assert artifact_task.done() is False
+        done, _ = await asyncio.wait({artifact_task}, timeout=0.05)
+        assert not done, "artifact writer should be blocked while close holds the lock"
         release_close.set()
         await close_task
         return await artifact_task
@@ -258,8 +258,8 @@ def test_artifact_first_commits_before_close_evaluates(client, monkeypatch, tmp_
         artifact_task = asyncio.create_task(_artifact())
         await writer_claimed.wait()
         close_task = asyncio.create_task(_close())
-        await asyncio.sleep(0.05)
-        assert close_task.done() is False
+        done, _ = await asyncio.wait({close_task}, timeout=0.05)
+        assert not done, "close should be blocked while writer holds the lock"
         release_writer.set()
         await artifact_task
         await close_task
