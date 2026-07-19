@@ -14,7 +14,9 @@ from app.core import security
 from app.core.rbac import Action, Actor, authorize
 from app.core.roles import ActorType
 from app.db.session import get_session
+from app.models.project import Project
 from app.models.user import User
+from app.services import project_service
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -48,6 +50,14 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def load_project(session: AsyncSession, user: User, project_id: uuid.UUID) -> Project:
+    """Fetch an org-scoped project or raise 404. Shared by the project routers."""
+    try:
+        return await project_service.get_project(session, user.organization_id, project_id)
+    except project_service.NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "project not found") from exc
 
 
 def actor_from_user(user: User) -> Actor:

@@ -13,7 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 
-from app.api.deps import CurrentUser, DbSession, actor_from_user, require
+from app.api.deps import CurrentUser, DbSession, actor_from_user, load_project, require
 from app.core.audit import record_audit
 from app.core.rbac import Action
 from app.core.roles import ActorType
@@ -91,13 +91,6 @@ ProjectCreator = Annotated[User, Depends(require(Action.PROJECT_CREATE))]
 TaskEditor = Annotated[User, Depends(require(Action.TASK_EDIT))]
 
 
-async def _load_project(session, user: User, project_id: uuid.UUID):
-    try:
-        return await project_service.get_project(session, user.organization_id, project_id)
-    except project_service.NotFound as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "project not found") from exc
-
-
 # ── Projects ──────────────────────────────────────────────────────────────
 @router.post("", response_model=ProjectWithMethodology, status_code=status.HTTP_201_CREATED)
 async def create_project(req: ProjectCreate, session: DbSession, user: ProjectCreator):
@@ -130,7 +123,7 @@ async def list_projects(session: DbSession, user: CurrentUser):
 
 @router.get("/{project_id}", response_model=ProjectWithMethodology)
 async def get_project(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     out = ProjectWithMethodology.model_validate(project)
     meth = (
         await session.execute(
@@ -151,7 +144,7 @@ async def get_project(project_id: uuid.UUID, session: DbSession, user: CurrentUs
 async def add_requirement(
     project_id: uuid.UUID, req: RequirementCreate, session: DbSession, user: ProjectEditor
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     row = await project_service.add_requirement(
         session,
         project=project,
@@ -166,7 +159,7 @@ async def add_requirement(
 
 @router.get("/{project_id}/requirements", response_model=list[RequirementResponse])
 async def list_requirements(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     rows = await project_service.list_project_children(session, ProjectRequirement, project.id)
     return [RequirementResponse.model_validate(r) for r in rows]
 
@@ -180,7 +173,7 @@ async def list_requirements(project_id: uuid.UUID, session: DbSession, user: Cur
 async def add_milestone(
     project_id: uuid.UUID, req: MilestoneCreate, session: DbSession, user: ProjectEditor
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     row = await project_service.add_milestone(
         session, project=project, name=req.name, due_date=req.due_date, order_index=req.order_index
     )
@@ -190,7 +183,7 @@ async def add_milestone(
 
 @router.get("/{project_id}/milestones", response_model=list[MilestoneResponse])
 async def list_milestones(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     rows = await project_service.list_project_children(session, Milestone, project.id)
     return [MilestoneResponse.model_validate(r) for r in rows]
 
@@ -200,7 +193,7 @@ async def list_milestones(project_id: uuid.UUID, session: DbSession, user: Curre
     "/{project_id}/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED
 )
 async def add_task(project_id: uuid.UUID, req: TaskCreate, session: DbSession, user: TaskEditor):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         task = await task_service.create_task(
             session,
@@ -236,7 +229,7 @@ async def add_task(project_id: uuid.UUID, req: TaskCreate, session: DbSession, u
 
 @router.get("/{project_id}/tasks", response_model=list[TaskResponse])
 async def list_tasks(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     rows = await task_service.list_tasks(session, project.id)
     return [TaskResponse.model_validate(t) for t in rows]
 
@@ -249,7 +242,7 @@ async def move_task(
     session: DbSession,
     user: TaskEditor,
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         task = await task_service.set_kanban_column(
             session, project=project, actor_id=user.id, task_id=task_id, column=req.kanban_column
@@ -268,7 +261,7 @@ async def assign_task_agent(
     session: DbSession,
     user: Annotated[User, Depends(require(Action.AGENT_ASSIGN))],
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     tasks = await task_service.list_tasks(session, project.id)
     task = next((t for t in tasks if t.id == task_id), None)
     if task is None:
@@ -311,7 +304,7 @@ async def start_project(
     dependency-blocked tasks are left untouched and keep gating their
     successors.
     """
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
 
     async def audit_refusal(reason: str, **details: object) -> None:
         await record_audit(
@@ -433,7 +426,7 @@ async def halt_project(
     In-flight tasks conclude cleanly; only the intake of new work closes.
     Reversible via /resume. Audited either way.
     """
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         await project_service.halt_project(
             session,
@@ -465,7 +458,7 @@ async def resume_project(
     dispatched immediately; in celery mode the worker takes over from there.
     Does not re-run plan materialization — the project was already started.
     """
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         await project_service.resume_project(
             session, project=project, actor_id=user.id, actor_type=ActorType.USER
@@ -532,7 +525,7 @@ async def dispatch_task(
     DispatchAcceptedResponse — the worker executes it. In inline mode
     (dev/tests) execution runs in-request and the full result is returned.
     """
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     tasks = await task_service.list_tasks(session, project.id)
     task = next((t for t in tasks if t.id == task_id), None)
     if task is None:
@@ -748,7 +741,7 @@ async def dispatch_task(
 async def list_executions(
     project_id: uuid.UUID, task_id: uuid.UUID, session: DbSession, user: CurrentUser
 ):
-    await _load_project(session, user, project_id)
+    await load_project(session, user, project_id)
     rows = await execution_service.list_executions(
         session, org_id=user.organization_id, task_id=task_id
     )
@@ -759,7 +752,7 @@ async def list_executions(
 async def list_task_evaluations(
     project_id: uuid.UUID, task_id: uuid.UUID, session: DbSession, user: CurrentUser
 ):
-    await _load_project(session, user, project_id)
+    await load_project(session, user, project_id)
     rows = await evaluation_service.list_evaluations_for_task(
         session, org_id=user.organization_id, task_id=task_id
     )
@@ -769,7 +762,7 @@ async def list_task_evaluations(
 # ── Approvals ─────────────────────────────────────────────────────────────
 @router.get("/{project_id}/approvals", response_model=list[ApprovalResponse])
 async def list_approvals(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     rows = await approval_service.list_approvals(
         session, org_id=user.organization_id, project_id=project.id
     )
@@ -784,7 +777,7 @@ async def decide_approval(
     session: DbSession,
     user: Annotated[User, Depends(require(Action.APPROVAL_DECIDE))],
 ):
-    await _load_project(session, user, project_id)
+    await load_project(session, user, project_id)
     try:
         approval = await approval_service.decide_approval(
             session,
@@ -809,7 +802,7 @@ async def reassign_task(
     session: DbSession,
     user: Annotated[User, Depends(require(Action.AGENT_ASSIGN))],
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     tasks = await task_service.list_tasks(session, project.id)
     task = next((t for t in tasks if t.id == task_id), None)
     if task is None:
@@ -851,7 +844,7 @@ async def reassign_task(
 async def add_dependency(
     project_id: uuid.UUID, req: DependencyCreate, session: DbSession, user: TaskEditor
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         dep = await task_service.add_dependency(
             session,
@@ -898,7 +891,7 @@ async def add_dependency(
 # ── Timeline (CPM) + dependency graph ─────────────────────────────────────
 @router.get("/{project_id}/timeline", response_model=TimelineResponse)
 async def get_timeline(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     timeline = await task_service.compute_timeline(session, project.id)
     return TimelineResponse(
         project_duration=timeline.project_duration,
@@ -909,7 +902,7 @@ async def get_timeline(project_id: uuid.UUID, session: DbSession, user: CurrentU
 
 @router.get("/{project_id}/graph", response_model=GraphResponse)
 async def get_graph(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     tasks = await task_service.list_tasks(session, project.id)
     edges = await task_service.dependency_edges(session, project.id)
     timeline = await task_service.compute_timeline(session, project.id)
@@ -933,7 +926,7 @@ async def get_graph(project_id: uuid.UUID, session: DbSession, user: CurrentUser
     "/{project_id}/risks", response_model=RiskResponse, status_code=status.HTTP_201_CREATED
 )
 async def add_risk(project_id: uuid.UUID, req: RiskCreate, session: DbSession, user: ProjectEditor):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     row = await project_service.add_risk(
         session,
         project=project,
@@ -950,7 +943,7 @@ async def add_risk(project_id: uuid.UUID, req: RiskCreate, session: DbSession, u
 
 @router.get("/{project_id}/risks", response_model=list[RiskResponse])
 async def list_risks(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     rows = await project_service.list_project_children(session, Risk, project.id)
     return [RiskResponse.model_validate(r) for r in rows]
 
@@ -963,7 +956,7 @@ async def list_risks(project_id: uuid.UUID, session: DbSession, user: CurrentUse
 async def add_decision(
     project_id: uuid.UUID, req: DecisionCreate, session: DbSession, user: ProjectEditor
 ):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     row = await project_service.add_decision(
         session,
         project=project,
@@ -979,6 +972,6 @@ async def add_decision(
 
 @router.get("/{project_id}/decisions", response_model=list[DecisionResponse])
 async def list_decisions(project_id: uuid.UUID, session: DbSession, user: CurrentUser):
-    project = await _load_project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     rows = await project_service.list_project_children(session, Decision, project.id)
     return [DecisionResponse.model_validate(r) for r in rows]

@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 
-from app.api.deps import CurrentUser, DbSession, require
+from app.api.deps import CurrentUser, DbSession, load_project, require
 from app.core.enums import DecompositionPlanStatus
 from app.core.rbac import Action
 from app.models.user import User
@@ -20,19 +20,12 @@ from app.schemas.decomposition import (
     PlanGenerateRequest,
     PlanRejectRequest,
 )
-from app.services import decomposition_service, project_service
+from app.services import decomposition_service
 
 router = APIRouter(prefix="/projects/{project_id}/plans", tags=["plans"])
 
 ProjectEditor = Annotated[User, Depends(require(Action.PROJECT_EDIT))]
 PlanApprover = Annotated[User, Depends(require(Action.APPROVAL_DECIDE))]
-
-
-async def _project(session: DbSession, user: User, project_id: uuid.UUID):
-    try:
-        return await project_service.get_project(session, user.organization_id, project_id)
-    except project_service.NotFound as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "project not found") from exc
 
 
 @router.post("", response_model=DecompositionPlanResponse, status_code=status.HTTP_201_CREATED)
@@ -42,7 +35,7 @@ async def generate_plan(
     session: DbSession,
     user: ProjectEditor,
 ):
-    project = await _project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         plan = await decomposition_service.generate_plan(
             session,
@@ -86,7 +79,7 @@ async def list_plans(
     session: DbSession,
     user: CurrentUser,
 ):
-    project = await _project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     plans = await decomposition_service.list_plans(session, project=project)
     return [DecompositionPlanResponse.model_validate(plan) for plan in plans]
 
@@ -98,7 +91,7 @@ async def get_plan(
     session: DbSession,
     user: CurrentUser,
 ):
-    project = await _project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         plan = await decomposition_service.get_plan(session, project=project, plan_id=plan_id)
     except decomposition_service.NotFound as exc:
@@ -114,7 +107,7 @@ async def approve_plan(
     session: DbSession,
     user: PlanApprover,
 ):
-    project = await _project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         plan, tasks, dependency_count = await decomposition_service.approve_plan(
             session,
@@ -169,7 +162,7 @@ async def reject_plan(
     session: DbSession,
     user: PlanApprover,
 ):
-    project = await _project(session, user, project_id)
+    project = await load_project(session, user, project_id)
     try:
         plan = await decomposition_service.reject_plan(
             session,
