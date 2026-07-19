@@ -3,7 +3,7 @@
 **Type:** Standard  
 **Version:** 1.0  
 **Authority:** [Constitution v1.0](../constitution/Constitution-v1.0.md); [DR-0002 — Institutional Memory System and Traceability](../decisions/DR-0002-Institutional-Memory-System-and-Traceability.md)  
-**Source:** Issue #12 owner comments approving TARP-0001, Foundational Concepts, and the Upward Compatibility Rule on 2026-07-16  
+**Source:** [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12) owner comments approving TARP-0001, Foundational Concepts, and the Upward Compatibility Rule on 2026-07-16
 **Status:** Active
 
 ---
