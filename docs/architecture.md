@@ -70,7 +70,7 @@ edges via dependency injection (FastAPI `Depends` + a small composition root in
 
 | Port | Purpose | MVP adapter(s) | Future swap |
 |------|---------|----------------|-------------|
-| `AgentAdapter` | Run a prompt/tool-call against a model | `MockProvider`, `AnthropicAdapter` | Any provider |
+| `AgentAdapter` | Run a prompt/tool-call against a model | `MockProvider`, `AnthropicProvider`, `GitHubModelsProvider` | Any provider |
 | `WorkflowEngine` | Enqueue/track durable task execution | `CeleryWorkflowEngine` | `TemporalWorkflowEngine` |
 | `ArtifactStore` | Persist project artifacts (binary/text) | `LocalFsArtifactStore` | `S3ArtifactStore` |
 | `Clock` | Time source (testable) | `SystemClock` | `FrozenClock` (tests) |

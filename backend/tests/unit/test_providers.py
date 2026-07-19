@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from app.core.secrets import CredentialNotConfigured
 from app.orchestration.adapters.anthropic_provider import AnthropicProvider, _estimate_cost
+from app.orchestration.adapters.github_models_provider import GitHubModelsProvider
 from app.orchestration.adapters.mock_provider import MockProvider
 from app.orchestration.adapters.registry import (
     UnknownProvider,
@@ -93,7 +95,9 @@ def test_registry_resolution():
     assert get_adapter(None).name == "mock"
     assert get_adapter("mock").name == "mock"
     assert get_adapter("anthropic").name == "anthropic"
+    assert get_adapter("github_models").name == "github_models"
     assert "anthropic" in available_providers()
+    assert "github_models" in available_providers()
     with pytest.raises(UnknownProvider):
         get_adapter("does-not-exist")
 
@@ -104,6 +108,55 @@ async def test_anthropic_resolves_credential_before_network(monkeypatch):
     provider = AnthropicProvider()
     with pytest.raises(CredentialNotConfigured):
         await provider.run(AgentRunRequest(prompt="hi"))
+
+
+async def test_github_models_resolves_credential_before_network(monkeypatch):
+    monkeypatch.delenv("GITHUB_MODELS_TOKEN", raising=False)
+    provider = GitHubModelsProvider()
+    with pytest.raises(CredentialNotConfigured):
+        await provider.run(AgentRunRequest(prompt="hi"))
+
+
+async def test_github_models_maps_live_response_without_persisting_token(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "test-token")
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["authorization"] == "Bearer test-token"
+        payload = __import__("json").loads(request.content)
+        assert payload["model"] == "openai/gpt-4.1"
+        assert payload["messages"] == [{"role": "user", "content": "Say hello"}]
+        return httpx.Response(
+            200,
+            json={
+                "id": "chatcmpl-receipt",
+                "choices": [{"message": {"role": "assistant", "content": "hello"}}],
+                "usage": {"prompt_tokens": 4, "completion_tokens": 2, "total_tokens": 6},
+            },
+        )
+
+    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    result = await provider.run(AgentRunRequest(prompt="Say hello"))
+    assert result.output == "hello"
+    assert result.provider == "github_models"
+    assert result.tokens_used == 6
+    assert result.raw_id == "chatcmpl-receipt"
+    assert "test-token" not in repr(result)
+
+
+async def test_github_models_uses_documented_request_header_as_receipt(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "test-token")
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"x-github-request-id": "request-receipt"},
+            json={"choices": [{"message": {"role": "assistant", "content": "hello"}}]},
+        )
+
+    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    result = await provider.run(AgentRunRequest(prompt="Say hello"))
+    assert result.tokens_used == 0
+    assert result.raw_id == "request-receipt"
 
 
 def test_estimate_cost_known_model():

@@ -87,7 +87,8 @@ length, WIP limits, buffer sizing for CCPM).
 `task_id`, `agent_id`, `attempt_number`, `state` (terminal snapshot),
 `input_context` (JSON, secret-free), `output` (JSON/text), `tokens_used`,
 `cost_estimate`, `started_at`, `finished_at`, `error` (nullable),
-`workflow_handle` (engine reference), `remediation_of` (nullable →
+`provider_request_id` (internal provider receipt), `workflow_handle` (engine
+reference), `remediation_of` (nullable →
 prior TaskExecution that this attempt remediates).
 
 ### Agent
