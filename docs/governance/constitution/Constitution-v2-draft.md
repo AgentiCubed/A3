@@ -139,9 +139,10 @@ resumption, acceptance, abandonment, or termination.
 An **Emergency** is a temporary condition in which waiting for ordinarily
 required authority creates an immediate risk of Material harm.
 
-The **Runtime Domain** is the continuously operating coordination domain that
-may observe events, schedule and dispatch bounded work, synchronize state,
-record checkpoints, report health, and request authorized decisions.
+The **Runtime Domain** (hereafter "**Runtime**") is the continuously operating
+coordination domain that may observe events, schedule and dispatch bounded work,
+synchronize state, record checkpoints, report health, and request authorized
+decisions.
 
 **Memory** is preserved context about prior or current work. **Knowledge** is
 Memory or other information whose claims, relationships, provenance, and
@@ -458,11 +459,11 @@ Runtime shall not:
 * treat conversation or transient state as authoritative history;
 * conceal conflict, failure, uncertainty, or stale authority;
 * silently mutate authoritative records; or
-* perform an Irreversible Action except under Article VI or Article XII.
+* perform an Irreversible Action except as explicitly authorized under Article VI or Article XII.
 
 ## Section 4 — Continuity and Failure
 
-Runtime authority shall use bounded duration or reviewable continuation.
+Runtime authority shall be limited to a bounded duration or subject to reviewable continuation.
 Persistent operation does not create persistent authority.
 
 Each retry is a new bounded attempt under the same or a narrower Boundary and
