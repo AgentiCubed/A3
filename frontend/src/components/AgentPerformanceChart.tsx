@@ -23,7 +23,7 @@ export function AgentPerformanceChart({ rows }: { rows: AgentMetricRow[] }) {
   const data = rows.map((r) => ({
     name: r.agent_name.length > 12 ? r.agent_name.slice(0, 12) + "…" : r.agent_name,
     "Success %": Math.round((r.metrics.success_rate ?? 0) * 100),
-    "Avg score": Math.round((r.metrics.avg_score ?? 0) * 100),
+    "Avg score": r.metrics.avg_score ?? 0,
   }));
 
   return (
