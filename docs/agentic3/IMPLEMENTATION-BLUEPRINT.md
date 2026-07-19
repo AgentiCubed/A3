@@ -99,7 +99,7 @@ backend/
     integration/agentic3/        # DB, API, outbox, worker boundary tests
 docs/
   agentic3/
-    ARCHITECTURE-v2.md
+    ARCHITECTURE-v2.md          # planned: commit Issue #19 spec into the repo in Phase 0
     IMPLEMENTATION-BLUEPRINT.md
   governance/
     ontology/                    # canonical ontology specifications
