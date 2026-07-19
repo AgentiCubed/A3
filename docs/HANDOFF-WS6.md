@@ -48,17 +48,18 @@ WS-6's definition-of-done test composes these: the generated plan's tasks run
 through the WS-2 scheduler, hand results forward via WS-3, and the project
 closes through the WS-4b gate against the *generated* criteria.
 
-## 3. Prerequisite: PR #42
+## 3. Prerequisite: PR #42 — **satisfied (merged 2026-07-18)**
 
-Open draft PR #42 (`fix(governance): harden acceptance gate integrity`)
-hardens the acceptance-criteria contract — excluding evaluation-rejected
-outputs from the acceptance corpus, validating criteria shapes at creation,
-and failing closed on malformed persisted criteria. Its own rationale states
-the dependency: *"WS-6 will generate these specifications, so the contract
-must be trustworthy before decomposition lands."*
+PR #42 (`fix acceptance gate integrity`) hardened the acceptance-criteria
+contract — evaluation-rejected outputs are excluded from the acceptance
+corpus, criteria shapes are validated at creation (typed `AcceptanceCriteriaIn`
+schema on `ProjectCreate`), and malformed persisted criteria fail closed. Its
+rationale stated the dependency: *"WS-6 will generate these specifications, so
+the contract must be trustworthy before decomposition lands."*
 
-**Do not start WS-6 implementation against a base that predates #42's merge.**
-The criteria shapes WS-6 generates must satisfy #42's validation.
+It is on `main`; WS-6 is unblocked. The criteria WS-6 generates must satisfy
+`acceptance_service._malformed_spec_reason` and the creation-time schema
+validation, or the plan must be rejected at generation time.
 
 ## 4. Suggested implementation shape *(planned — nothing below exists yet)*
 
@@ -136,10 +137,5 @@ These apply regardless of which assistant or human does the work:
 
 ## 7. Known stale spots (do not inherit as fact)
 
-- The WS-1..WS-5 status blocks in `docs/REMEDIATION-2026-07.md` still carry
-  pre-merge phrasing ("companion PR", "pending merge"). All of WS-1 through
-  WS-5 and WS-4b are merged to `main` as of 2026-07-18; a separate
-  status-refresh PR is planned to update those blocks with post-merge test
-  citations.
 - `docs/architecture.md`'s decomposition reference remains aspirational until
   WS-6 lands (see section 1).
