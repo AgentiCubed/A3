@@ -44,7 +44,7 @@ The readiness smoke test teardown shall tolerate the server process already
 having exited:
 
 ```bash
-kill $SERVER_PID
+kill $SERVER_PID || true
 wait $SERVER_PID || true
 ```
 
