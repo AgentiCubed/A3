@@ -12,6 +12,7 @@ from app.core.audit import record_audit
 from app.core.config import get_settings
 from app.core.roles import ActorType
 from app.models.artifact import Artifact
+from app.services import acceptance_boundary_service
 
 
 def default_store() -> LocalArtifactStore:
@@ -32,6 +33,14 @@ async def store_artifact(
     actor_id: uuid.UUID | None = None,
     actor_type: ActorType = ActorType.SYSTEM,
 ) -> Artifact:
+    # Claim the project's acceptance boundary before touching external storage.
+    # A close that won the same boundary therefore leaves neither a database row
+    # nor orphaned bytes from a late artifact attempt.
+    await acceptance_boundary_service.claim_acceptance_write(
+        session,
+        project_id=project_id,
+        org_id=org_id,
+    )
     key = f"{project_id}/{uuid.uuid4().hex}-{name}"
     stored = store.put(key, data, content_type)
     artifact = Artifact(
@@ -50,6 +59,7 @@ async def store_artifact(
     await record_audit(
         session,
         organization_id=org_id,
+        project_id=project_id,
         actor_type=actor_type,
         actor_id=actor_id,
         action="artifact.created",

@@ -23,8 +23,10 @@ from app.models.project import Project
 from app.models.risk import Decision, Risk
 from app.models.task import Task
 from app.models.task_execution import TaskExecution
+from app.orchestration.state_machine.machine import assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.services import (
+    acceptance_boundary_service,
     acceptance_service,
     analytics_service,
     decomposition_service,
@@ -33,6 +35,7 @@ from app.services import (
 )
 
 _REMEDIATION_ACTIONS = ("remediation.selected", "task.escalated", "task.reassigned")
+ProjectClosed = acceptance_boundary_service.ProjectClosed
 
 
 class AcceptanceNotMet(Exception):
@@ -47,6 +50,10 @@ class AcceptanceNotMet(Exception):
         self.report = report
         self.acknowledgement_allowed = acknowledgement_allowed
         super().__init__("acceptance criteria unmet")
+
+
+class AcceptanceSnapshotChanged(Exception):
+    """Acceptance evidence changed after evaluation but before final close."""
 
 
 class GovernedProjectNotActive(Exception):
@@ -118,11 +125,16 @@ async def generate_closeout(
         session, org_id=org_id, project_id=project_id
     )
     failures = [e for e in executions if e.state.value == "failed"]
-    acceptance = (
-        (await acceptance_service.evaluate_project_acceptance(session, project=project)).to_dict()
-        if project
-        else {"evaluated": False, "satisfied": True, "results": []}
-    )
+    if project is None:
+        acceptance = {"evaluated": False, "satisfied": True, "results": []}
+    elif project.status == ProjectStatus.CLOSED and isinstance(project.closure_acceptance, dict):
+        # Closed projects report the exact immutable snapshot that authorized
+        # closure rather than independently evaluating a later view.
+        acceptance = dict(project.closure_acceptance)
+    else:
+        acceptance = (
+            await acceptance_service.evaluate_project_acceptance(session, project=project)
+        ).to_dict()
 
     report = {
         "project_id": str(project_id),
@@ -192,6 +204,67 @@ def _markdown(r: dict) -> str:
     return "\n".join(lines)
 
 
+async def _commit_close_snapshot(
+    session: AsyncSession,
+    *,
+    project: Project,
+    acceptance_revision: int,
+    acceptance_snapshot: dict,
+) -> None:
+    """Close only if the evaluated acceptance revision is still current."""
+    closed_id = await session.scalar(
+        update(Project)
+        .where(
+            Project.id == project.id,
+            Project.organization_id == project.organization_id,
+            Project.status == project.status,
+            Project.acceptance_revision == acceptance_revision,
+        )
+        .values(
+            status=ProjectStatus.CLOSED,
+            closure_acceptance=acceptance_snapshot,
+        )
+        .returning(Project.id)
+        .execution_options(synchronize_session=False)
+    )
+    if closed_id is None:
+        raise AcceptanceSnapshotChanged()
+    await session.refresh(project)
+
+
+async def _cancel_open_legacy_tasks(
+    session: AsyncSession,
+    *,
+    project: Project,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType,
+) -> list[str]:
+    """Leave a manually closed project with no queued or running work."""
+    cancelled: list[str] = []
+    for task in await task_service.list_tasks(session, project.id):
+        if task.status in {ExecutionState.COMPLETED, ExecutionState.CANCELLED}:
+            continue
+        before = task.status
+        assert_transition(before, ExecutionState.CANCELLED)
+        task.status = ExecutionState.CANCELLED
+        await record_audit(
+            session,
+            organization_id=task.organization_id,
+            project_id=task.project_id,
+            actor_type=actor_type,
+            actor_id=actor_id,
+            action="task.transition",
+            entity_type="Task",
+            entity_id=task.id,
+            before={"status": before.value},
+            after={"status": ExecutionState.CANCELLED.value, "reason": "project closed"},
+        )
+        cancelled.append(str(task.id))
+    if cancelled:
+        await session.flush()
+    return cancelled
+
+
 async def close_project(
     session: AsyncSession,
     *,
@@ -207,10 +280,15 @@ async def close_project(
     project acceptance. Legacy manual projects retain explicit acknowledged
     abandonment, recorded in the audit trail.
     """
-    locked = await session.scalar(select(Project).where(Project.id == project.id).with_for_update())
-    if locked is None:
-        raise GovernedMaterializationInvalid("project is missing")
-    project = locked
+    try:
+        acceptance_revision = await acceptance_boundary_service.lock_acceptance_for_close(
+            session,
+            project_id=project.id,
+            org_id=project.organization_id,
+        )
+    except acceptance_boundary_service.ProjectNotFound as exc:
+        raise GovernedMaterializationInvalid("project is missing") from exc
+    await session.refresh(project)
     try:
         materialization = await decomposition_service.load_approved_materialization(
             session,
@@ -254,22 +332,34 @@ async def close_project(
             acknowledgement_allowed=materialization is None,
         )
 
-    before = project.status.value
-    if materialization is not None:
-        result = await session.execute(
-            update(Project)
-            .where(Project.id == project.id, Project.status == ProjectStatus.ACTIVE)
-            .values(status=ProjectStatus.CLOSED)
+    cancelled_task_ids = (
+        []
+        if materialization is not None
+        else await _cancel_open_legacy_tasks(
+            session,
+            project=project,
+            actor_id=actor_id,
+            actor_type=actor_type,
         )
-        if result.rowcount != 1:
-            raise GovernedProjectNotActive()
-        await session.refresh(project)
-    else:
-        project.status = ProjectStatus.CLOSED
+    )
+    before = project.status.value
+    acceptance_snapshot = {
+        **report.to_dict(),
+        "acceptance_revision": acceptance_revision,
+    }
+    await _commit_close_snapshot(
+        session,
+        project=project,
+        acceptance_revision=acceptance_revision,
+        acceptance_snapshot=acceptance_snapshot,
+    )
     close_details = {
         "status": ProjectStatus.CLOSED.value,
         "acceptance_evaluated": report.evaluated,
         "acceptance_satisfied": report.satisfied,
+        "acceptance_revision": acceptance_revision,
+        "acceptance": acceptance_snapshot,
+        "cancelled_task_ids": cancelled_task_ids,
         "unmet_criteria": unmet,
         "unmet_acknowledged": bool(unmet and acknowledge_unmet_criteria),
     }

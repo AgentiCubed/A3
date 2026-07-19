@@ -33,7 +33,14 @@ from app.orchestration.ports import AgentRunRequest
 from app.orchestration.state_machine.machine import IllegalTransition, assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.remediation.policy import RemediationContext, select_remediation
-from app.services import evaluation_service, governed_evidence_service, tool_runtime
+from app.services import (
+    acceptance_boundary_service,
+    evaluation_service,
+    governed_evidence_service,
+    tool_runtime,
+)
+
+ProjectClosed = acceptance_boundary_service.ProjectClosed
 
 
 class NotAssigned(Exception):
@@ -382,6 +389,11 @@ async def transition_task(
     reason: str | None = None,
 ) -> None:
     """Public, audited transition used by approval handling."""
+    await acceptance_boundary_service.claim_acceptance_write(
+        session,
+        project_id=task.project_id,
+        org_id=task.organization_id,
+    )
     await _transition(session, task, to, actor_id=actor_id, actor_type=actor_type, reason=reason)
 
 
@@ -420,15 +432,13 @@ async def _require_executable(session: AsyncSession, task: Task) -> Agent:
 
 
 async def _require_active_governed_project(session: AsyncSession, task: Task) -> None:
-    """Prevent every dispatch path from bypassing the one governed start gate."""
-    if task.source_plan_id is None:
-        return
+    """Reject all closed projects and enforce the governed start gate."""
     project = await session.get(Project, task.project_id)
-    if (
-        project is None
-        or project.organization_id != task.organization_id
-        or project.status != ProjectStatus.ACTIVE
-    ):
+    if project is None or project.organization_id != task.organization_id:
+        raise GovernedProjectNotActive()
+    if project.status == ProjectStatus.CLOSED:
+        raise ProjectClosed()
+    if task.source_plan_id is not None and project.status != ProjectStatus.ACTIVE:
         raise GovernedProjectNotActive()
 
 
@@ -594,6 +604,11 @@ async def queue_task(
     await resolve_evaluation_config(
         session, task=task, executor=executor, request_overlay=evaluation
     )
+    await acceptance_boundary_service.claim_acceptance_write(
+        session,
+        project_id=task.project_id,
+        org_id=task.organization_id,
+    )
     if task.source_plan_id is not None:
         await _move_governed_to_queued(
             session,
@@ -704,20 +719,32 @@ async def execute_task(
         for i in handoff_items
     ] or None
 
-    first_attempt_claimed = task.source_plan_id is not None
-    if first_attempt_claimed:
+    await acceptance_boundary_service.claim_acceptance_write(
+        session,
+        project_id=task.project_id,
+        org_id=task.organization_id,
+    )
+    if task.source_plan_id is not None:
         await _claim_governed_execution(
             session,
             task,
             actor_id=actor_id,
             actor_type=actor_type,
         )
-        # Persist the exclusive RUNNING claim before any provider or tool can
-        # produce an external side effect. A later failure may leave recovery
-        # work, but it cannot erase the claim and silently execute twice.
-        await session.commit()
     else:
         await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
+        await _transition(
+            session,
+            task,
+            ExecutionState.RUNNING,
+            actor_id=actor_id,
+            actor_type=actor_type,
+        )
+    # Persist the exclusive/open-project RUNNING claim before any provider or
+    # tool can produce an external side effect. This also releases the project
+    # boundary so model latency never holds a database lock.
+    await session.commit()
+    first_attempt_claimed = True
 
     while True:
         attempt += 1
@@ -747,6 +774,11 @@ async def execute_task(
                 ),
                 timeout=timeout_s,
             )
+        except ProjectClosed:
+            # A concurrent close won before a tool/output write could claim the
+            # project boundary. Do not turn that governed refusal into a failed
+            # execution record after closure.
+            raise
         except TimeoutError:
             execution_ids.append(
                 await _record(
@@ -1000,6 +1032,11 @@ async def _record(
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
 ) -> uuid.UUID:
+    await acceptance_boundary_service.claim_acceptance_write(
+        session,
+        project_id=task.project_id,
+        org_id=task.organization_id,
+    )
     input_context: dict = {"prompt_chars": prompt_chars}
     if handoff:
         input_context["handoff"] = handoff
