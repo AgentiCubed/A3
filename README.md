@@ -169,9 +169,15 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 
 **Phase 8** (security hardening, analysis workers, artifact storage, and the seeded **end-to-end demonstration** — objective → durable draft → explicit approval → one governed start → permissioned analysis → deterministic evaluation rejection → automatic remediation → acceptance-gated close) — **complete & verified**. The agent responses are deterministic `MockProvider` fixtures; pandas/matplotlib computation and artifact persistence are real.
 
-**The original eight-phase MVP roadmap is implemented.** This is not a claim that every
-production-hardening gap is closed. The current governed runtime proof is documented in
-[`docs/demo.md`](docs/demo.md); active post-baseline work includes the artifact/acceptance
-serialization boundary tracked in [GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45).
-See [`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md) and
+**The original eight-phase MVP roadmap is implemented**, and the July 2026
+remediation workstreams WS-1..WS-7 — culminating in the unchoreographed
+objective-to-close loop proof (`tests/integration/test_objective_to_close.py`)
+— are merged. The artifact/acceptance serialization boundary
+([GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45)) was closed by
+making project closure atomic (PR #52, proof `test_atomic_close.py`). This is
+not a claim that every production-hardening gap is closed: the remaining gaps
+(operator UI write paths, halt switch, dependency-audit CI, live-provider
+smoke, deployment story) and their recommended sequence are recorded in
+[`docs/NEXT-STEPS-2026-07.md`](docs/NEXT-STEPS-2026-07.md). See
+[`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md) and
 [`docs/roadmap.md`](docs/roadmap.md) for the full record.

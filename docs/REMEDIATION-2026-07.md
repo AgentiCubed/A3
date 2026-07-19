@@ -204,10 +204,16 @@ documents outrun our enforcement.
 - **Done when:** integration test: objective in → approved plan →
   WS-2 scheduler runs it → project completes against generated criteria.
   This test **is** the product claim, in CI, unchoreographed.
-- **Status: READY TO START *(planned — no implementation exists)*.** All
-  prerequisites are on `main`: the WS-1..WS-5 machinery above and the
-  hardened acceptance contract (PR #42). Executor handoff brief:
-  `docs/HANDOFF-WS6.md` (PR #43).
+- **Status: DELIVERED — merged to `main` in PRs #47, #48, #49 (2026-07-18).**
+  Proof: `tests/integration/test_decomposition.py` (objective → fail-closed
+  `plan_json_v1` draft), `test_plan_approval.py` (draft → audited human
+  approve/reject; rejection leaves no executable residue),
+  `test_plan_runtime.py` + `test_plan_history_gate.py` +
+  `test_persisted_task_rubrics.py` (approved plan materializes through
+  `task_service` and runs through the WS-2 scheduler against the *generated*
+  criteria). Implementation: `services/decomposition_service.py`,
+  `api/v1/routers/plans.py`, `models/decomposition_plan.py` — the
+  `architecture.md` decomposition reference is now true (claim 3 cleared).
 
 ### WS-7 — Honest demo and loop-level CI
 *Clears claim 9; the proof that clears the "as advertised" verdict.*
@@ -216,6 +222,13 @@ documents outrun our enforcement.
   objective, let WS-2..6 run it with the mock provider, including one
   genuine failure remediated by the remediation policy without scripted
   rescue. Promote to a CI job. Delete the choreography.
+- **Status: DELIVERED — merged to `main` in PRs #49, #50, #51 (2026-07-18).**
+  Proof: `tests/integration/test_objective_to_close.py` (unchoreographed
+  objective → plan → approval → scheduled execution → evaluation-driven
+  remediation → acceptance-gated close) and `test_demo.py`, which CI runs as
+  the named **Governed objective-to-close proof** step. Post-baseline
+  follow-up: project closure made atomic against concurrent execution and
+  artifact writes in PR #52 (issue #45), proof `test_atomic_close.py`.
 
 ### WS-8 — Hardening ledger (security, concurrency, deploy, UI)
 *Clears claims 1 and 10 progressively.*
@@ -226,6 +239,11 @@ documents outrun our enforcement.
   deployment story past compose (out of scope until WS-1..6 land), UI
   write-paths (approve/reject, dispatch, halt) so the dashboard stops
   being read-only.
+- **Status: OPEN — the only remaining workstream.** WS-1..WS-7 have all
+  merged, so the WS-8 checklist (plus the project-level halt switch WS-2
+  deferred) is now the gap between "loop proven in CI" and "completed
+  product." The verified gap register and recommended sequencing live in
+  `docs/NEXT-STEPS-2026-07.md` (2026-07-19).
 
 ## 5. Sequence and why
 

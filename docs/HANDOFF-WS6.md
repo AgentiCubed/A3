@@ -1,5 +1,11 @@
 # Handoff brief — WS-6: Objective-to-plan decomposition
 
+> **Historical record (2026-07-19):** WS-6 was delivered and merged to `main`
+> in PRs #47, #48, and #49. This brief is retained as the executor handoff
+> record; do not inherit its "planned / does not exist yet" statements as
+> current fact. Current status: `docs/REMEDIATION-2026-07.md` (WS-6) and
+> `docs/NEXT-STEPS-2026-07.md`.
+
 **Record type:** executor handoff brief. Written so that any executor — human
 or AI assistant — can implement WS-6 from repository artifacts alone, with no
 conversational memory required. Every capability claim below cites the test
