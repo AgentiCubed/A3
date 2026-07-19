@@ -57,5 +57,5 @@ export function MermaidDiagram({ source }: { source: string }) {
     };
   }, [source]);
 
-  return <div ref={ref} aria-label="Dependency diagram" />;
+  return <div ref={ref} role="img" aria-label="Dependency diagram" />;
 }
