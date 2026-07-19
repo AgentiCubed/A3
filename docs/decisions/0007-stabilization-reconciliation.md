@@ -49,8 +49,9 @@ wait "$SERVER_PID" 2>/dev/null || true
 ```
 
 This keeps cleanup deterministic while avoiding false CI failures when the
-process stops before `wait` observes it. Stderr is suppressed to prevent
-spurious "no such process" messages from surfacing as warnings in CI logs.
+process stops before `wait` observes it. Stderr is suppressed so that
+expected "no such process" messages — normal when the server has already
+exited — do not surface as misleading warnings in CI logs.
 
 ## Consequences
 
