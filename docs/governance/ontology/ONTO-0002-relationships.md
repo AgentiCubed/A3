@@ -23,7 +23,7 @@ specialize that model for edges. Every relationship record has:
 
 | Field | Required | Description |
 |---|---|---|
-| `relationship_id` | Yes | Stable identifier for this relationship across revisions. |
+| `entity_id` | Yes | Stable identifier for this relationship across revisions (relationship entities are first-class `Entity` records). |
 | `version_id` | Yes | Stable identifier for this immutable relationship revision. |
 | `relationship_type` | Yes | One of the named types below. |
 | `source` | Yes | The entity initiating or holding the relationship. |
