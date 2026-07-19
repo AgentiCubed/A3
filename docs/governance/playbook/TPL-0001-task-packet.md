@@ -120,7 +120,7 @@ be complete enough that no prior conversational context is needed.>
 
 **Be specific about acceptance / success conditions.** "Looks good" is not a condition. "All 102 backend tests pass with `make check` green" is a condition.
 
-**Be explicit about exclusions.** If you do not want the executor to modify tests, say so. Silence is not restriction. Review packets shall always include non-goals.
+**Be explicit about exclusions.** If you do not want the executor to modify tests, say so. Silence is not restriction. Review packets shall always include Non-goals.
 
 **Include exact artifact references for reviews.** A review of "the current version" is not reproducible. A review of `docs/governance/constitution/Constitution-v1.0.md` at commit `e31c444` is.
 
