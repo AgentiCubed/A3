@@ -499,3 +499,68 @@ the posture is buildable, not the posture itself.
   undefined until #17 lands. *Reopen §5 on #17 closure.*
 - **R4 — Amendment interactions:** future amendments (post A-0001) may alter
   halt semantics assumed in §6/§9. *Reopen on any Article VII/IX/X amendment.*
+## 17. Unresolved risks
+
+- Relationship vocabulary and metadata may become too broad or costly to curate.
+- Engine ownership may become ambiguous for composite artifacts.
+- Knowledge Gravity may degrade into false precision or popularity scoring.
+- Genome membership may become difficult to reverse in practice.
+- Semantic contradiction detection may overstate conflict without scope and
+  temporal context.
+- Legacy records may be incomplete for historical reconstruction.
+- Ontology evolution may require compatibility mappings and migrations.
+- Source-of-truth precedence across repositories, CI, Runtime, and memory needs
+  an explicit policy.
+- Event volume, retention cost, delayed delivery, and clock skew are unknown.
+- Multi-scope identity and authorization semantics need implementation evidence.
+- Physical consolidation of engines may erode logical independence.
+- Notifications may create alert fatigue or be mistaken for acknowledged
+  authority.
+- Continuous coordination may cost more than the value of the work it schedules.
+- A vendor-specific implementation may accidentally harden into policy.
+
+These are active design risks, not implied defects in a selected implementation.
+
+## 18. Reopening conditions
+
+Reopen this specification when any of the following occurs:
+
+- constitutional amendment or authorized interpretation changes an applicable
+  authority boundary;
+- a Foundational Concept is superseded or a candidate is promoted;
+- two engines require conflicting write or decision authority;
+- a material engineering question cannot be expressed by the ontology;
+- relationship capture costs exceed demonstrated retrieval and assurance value;
+- graph integrity rules block legitimate historical or epistemic representation;
+- query explanations are insufficient for independent review;
+- gravity becomes opaque scoring or Genome membership becomes irreversible;
+- implementation cannot preserve engine separation, historical continuity,
+  idempotency, or safe degradation;
+- Runtime state is ambiguous, unrecoverable, or enables unsafe autonomy;
+- a simpler architecture demonstrates equal traceability and safety at lower
+  coordination cost;
+- this specification conflicts with the reviewed implementation blueprint or
+  repeated implementation evidence.
+
+Revision must preserve the prior version, evidence that triggered reopening,
+the authorized decision, compatibility impact, and migration or supersession
+path.
+
+## 19. Acceptance tests for this architecture
+
+The architecture is context-complete only if a reviewer can answer:
+
+- Who authorized a Material Action, under what Boundary, and until when?
+- Which engine planned, executed, verified, assured, governed, and accepted it?
+- Which constitutional and Foundational Concepts constrain an implementation?
+- Which evidence supports a claim and what remains unknown or contradictory?
+- What failure, success, or experiment produced a lesson?
+- Why did knowledge gain or lose gravity?
+- Which Genome version contained a member and how can it be reversed?
+- What is affected when a principle, contract, or entity is superseded?
+- Which candidates remain unpromoted and what evidence would qualify them?
+- Can the complete decision be reconstructed from durable links without
+  conversational memory?
+
+If any answer requires hidden context, inferred authority, or an opaque model
+result, the relevant architecture record is incomplete.
