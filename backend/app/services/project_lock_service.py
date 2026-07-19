@@ -34,11 +34,9 @@ async def lock_project(
     if require_open:
         predicates.append(Project.status != ProjectStatus.CLOSED)
 
-    # The self-assignments are intentional: acquire the database write lock
-    # without changing project data or its update timestamp.
     result = await session.execute(
-        update(Project)
-        .where(*predicates)
+        update(Project).where(*predicates)
+        # Self-assign to acquire the write lock without changing project data.
         .values(status=Project.status, updated_at=Project.updated_at)
     )
     if result.rowcount != 1:

@@ -131,20 +131,16 @@ async def generate_closeout(
         session, org_id=org_id, project_id=project_id
     )
     failures = [e for e in executions if e.state.value == "failed"]
-    acceptance_payload = (
-        acceptance.to_dict()
-        if acceptance is not None
-        else (
-            (
-                await acceptance_service.evaluate_project_acceptance(
-                    session,
-                    project=project,
-                )
-            ).to_dict()
-            if project
-            else {"evaluated": False, "satisfied": True, "results": []}
+    if acceptance is not None:
+        acceptance_payload = acceptance.to_dict()
+    elif project is not None:
+        live_acceptance = await acceptance_service.evaluate_project_acceptance(
+            session,
+            project=project,
         )
-    )
+        acceptance_payload = live_acceptance.to_dict()
+    else:
+        acceptance_payload = {"evaluated": False, "satisfied": True, "results": []}
 
     report = {
         "project_id": str(project_id),
