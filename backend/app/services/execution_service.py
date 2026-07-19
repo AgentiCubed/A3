@@ -1012,7 +1012,7 @@ async def _record(
         require_open=True,
     )
     if project is None:
-        raise ValueError("project not found")
+        raise ValueError("project missing or belongs to another organization")
 
     input_context: dict = {"prompt_chars": prompt_chars}
     if handoff:

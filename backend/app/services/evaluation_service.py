@@ -185,7 +185,7 @@ async def evaluate_execution(
         require_open=True,
     )
     if project is None:
-        raise ValueError("project not found")
+        raise ValueError("project missing or belongs to another organization")
 
     combined_gaps = list(outcome.gaps or []) + agent_gaps
     evaluation = Evaluation(

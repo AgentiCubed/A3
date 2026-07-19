@@ -36,7 +36,7 @@ async def lock_project(
 
     result = await session.execute(
         update(Project).where(*predicates)
-        # Self-assign to acquire the write lock without changing project data.
+        # SQL column expressions self-assign the stored values to acquire the lock.
         .values(status=Project.status, updated_at=Project.updated_at)
     )
     if result.rowcount != 1:

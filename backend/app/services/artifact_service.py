@@ -40,7 +40,7 @@ async def store_artifact(
         require_open=True,
     )
     if project is None:
-        raise ValueError("project not found")
+        raise ValueError("project missing or belongs to another organization")
 
     key = f"{project_id}/{uuid.uuid4().hex}-{name}"
     stored = store.put(key, data, content_type)

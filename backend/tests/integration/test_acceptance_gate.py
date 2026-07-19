@@ -33,8 +33,6 @@ from app.services import (
 )
 from tests.conftest import TestSessionFactory
 
-LOCK_ACQUISITION_SLEEP_SECONDS = 0.05
-
 
 def _auth(client) -> dict[str, str]:
     email = f"ag-{uuid.uuid4().hex[:10]}@example.com"
@@ -253,7 +251,7 @@ def test_acknowledged_close_records_deliberate_abandonment(client):
     assert closed[0]["unmet_acknowledged"] is True
 
 
-def test_close_waits_for_concurrent_execution_output_before_accepting(client):
+def test_close_waits_for_concurrent_execution_output_before_accepting(client, monkeypatch):
     headers = _auth(client)
     project = _project(
         client,
@@ -291,6 +289,15 @@ def test_close_waits_for_concurrent_execution_output_before_accepting(client):
                 provider="mock",
                 prompt_chars=1,
             )
+            lock_attempted = asyncio.Event()
+            original_lock = project_lock_service.lock_project
+
+            async def _observe_close_lock(*args, **kwargs):
+                if not kwargs.get("require_open"):
+                    lock_attempted.set()
+                return await original_lock(*args, **kwargs)
+
+            monkeypatch.setattr(project_lock_service, "lock_project", _observe_close_lock)
             close_task = asyncio.create_task(
                 closeout_service.close_project(
                     closer,
@@ -298,7 +305,7 @@ def test_close_waits_for_concurrent_execution_output_before_accepting(client):
                     actor_id=None,
                 )
             )
-            await asyncio.sleep(LOCK_ACQUISITION_SLEEP_SECONDS)
+            await asyncio.wait_for(lock_attempted.wait(), timeout=1)
             assert not close_task.done()
 
             await writer.commit()
@@ -310,7 +317,7 @@ def test_close_waits_for_concurrent_execution_output_before_accepting(client):
     assert _close(client, headers, project["id"]).status_code == 409
 
 
-def test_artifact_write_loses_race_to_committed_close(client, tmp_path):
+def test_artifact_write_loses_race_to_committed_close(client, monkeypatch, tmp_path):
     headers = _auth(client)
     project = _project(client, headers, None)
 
@@ -332,6 +339,15 @@ def test_artifact_write_loses_race_to_committed_close(client, tmp_path):
             )
             assert closeout["acceptance"] == close_result.acceptance.to_dict()
 
+            lock_attempted = asyncio.Event()
+            original_lock = project_lock_service.lock_project
+
+            async def _observe_evidence_lock(*args, **kwargs):
+                if kwargs.get("require_open"):
+                    lock_attempted.set()
+                return await original_lock(*args, **kwargs)
+
+            monkeypatch.setattr(project_lock_service, "lock_project", _observe_evidence_lock)
             artifact_task = asyncio.create_task(
                 artifact_service.store_artifact(
                     writer,
@@ -343,7 +359,7 @@ def test_artifact_write_loses_race_to_committed_close(client, tmp_path):
                     data=b"late evidence",
                 )
             )
-            await asyncio.sleep(LOCK_ACQUISITION_SLEEP_SECONDS)
+            await asyncio.wait_for(lock_attempted.wait(), timeout=1)
             assert not artifact_task.done()
 
             await closer.commit()
