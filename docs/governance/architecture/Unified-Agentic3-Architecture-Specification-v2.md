@@ -36,7 +36,7 @@ evidence as automatic promotion.
 ## 5. Ontology
 
 Integrate the canonical ontology vocabulary, entity taxonomy, relationship
-semantics, identity rules, and versioning policy when available in this branch.
+semantics, identity rules, and versioning policy when available in this repository.
 
 ## 6. Executive, Intelligence, Assurance, and Runtime Domains
 
