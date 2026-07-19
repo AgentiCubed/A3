@@ -145,12 +145,8 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 - [`docs/security-model.md`](docs/security-model.md) — RBAC, secrets, least-privilege tools
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
-<<<<<<< HEAD
-- [`docs/governance/playbook/`](docs/governance/playbook/) — governance playbook, standards, and procedures
-- [`docs/governance/knowledge/`](docs/governance/knowledge/) — institutional memory system, record templates, and knowledge records
-=======
 - [`docs/governance/playbook/`](docs/governance/playbook/) — engineering governance playbook for gate workflow, reviews, Git procedure, and task packets
->>>>>>> origin/main
+- [`docs/governance/knowledge/`](docs/governance/knowledge/) — institutional memory system, record templates, and knowledge records
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
 - [`docs/governance/runtime/Runtime-Domain-Specification-v1.0.md`](docs/governance/runtime/Runtime-Domain-Specification-v1.0.md) — continuous Runtime Domain architecture baseline
 - [`docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md`](docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md) — canonical architecture integration skeleton
