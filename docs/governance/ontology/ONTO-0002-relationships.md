@@ -32,7 +32,7 @@ specialize that model for edges. Every relationship record has:
 | `asserted_by` | Yes | The actor or system that asserted this relationship. |
 | `asserted_at` | Yes | Timestamp when the relationship was asserted. |
 | `authority` | Conditional | Required governance basis when the relationship claims authority or changes standing. |
-| `evidence_refs` | Conditional | Required for `VERIFIES`, `EVIDENCES`, `CONTRADICTS`, and `SUPERSEDES`. |
+| `evidence_refs` | Conditional | Required for relationship types whose integrity constraints mandate it (e.g. `CONTRADICTS`, `SUPERSEDES`, `PROMOTES_TO`). |
 | `valid_from` | Yes | Time from which the assertion applies. |
 | `valid_to` | Optional | Time at which the assertion ceased to apply. |
 | `confidence` | Conditional | Required for epistemic relationships; includes basis and uncertainty. |
