@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit
+from app.core.enums import ProjectStatus
 from app.core.roles import ActorType
 from app.models.project import (
     Milestone,
@@ -21,6 +23,79 @@ from app.services.methodology import ProjectSignals, recommend_methodology
 
 class NotFound(Exception):
     pass
+
+
+class AlreadyHalted(Exception):
+    """Halt requested on a project that is already halted."""
+
+
+class NotHalted(Exception):
+    """Resume requested on a project that is not halted."""
+
+
+class ProjectClosedError(Exception):
+    """Halt/resume requested on a CLOSED project (nothing left to control)."""
+
+
+async def halt_project(
+    session: AsyncSession,
+    *,
+    project: Project,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType = ActorType.USER,
+    reason: str | None = None,
+) -> Project:
+    """Operator halt: the scheduler dispatches nothing new for this project.
+
+    In-flight tasks conclude cleanly; the halt only closes the intake of new
+    work. Audited, reversible via ``resume_project``.
+    """
+    if project.status == ProjectStatus.CLOSED:
+        raise ProjectClosedError()
+    if project.halted_at is not None:
+        raise AlreadyHalted()
+    project.halted_at = datetime.now(UTC)
+    await record_audit(
+        session,
+        organization_id=project.organization_id,
+        project_id=project.id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action="project.halted",
+        entity_type="Project",
+        entity_id=project.id,
+        after={"halted_at": project.halted_at.isoformat(), "reason": reason},
+    )
+    return project
+
+
+async def resume_project(
+    session: AsyncSession,
+    *,
+    project: Project,
+    actor_id: uuid.UUID | None,
+    actor_type: ActorType = ActorType.USER,
+) -> Project:
+    """Lift an operator halt. The caller decides whether to re-kick dispatch."""
+    if project.status == ProjectStatus.CLOSED:
+        raise ProjectClosedError()
+    if project.halted_at is None:
+        raise NotHalted()
+    halted_since = project.halted_at.isoformat()
+    project.halted_at = None
+    await record_audit(
+        session,
+        organization_id=project.organization_id,
+        project_id=project.id,
+        actor_type=actor_type,
+        actor_id=actor_id,
+        action="project.resumed",
+        entity_type="Project",
+        entity_id=project.id,
+        before={"halted_at": halted_since},
+        after={"halted_at": None},
+    )
+    return project
 
 
 async def get_project(session: AsyncSession, org_id: uuid.UUID, project_id: uuid.UUID) -> Project:

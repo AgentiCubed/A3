@@ -30,6 +30,7 @@ from app.core.config import get_settings
 from app.core.enums import AgentKind, AgentRole, AgentStatus
 from app.core.roles import ActorType
 from app.models.agent import Agent, AgentCapability
+from app.models.project import Project
 from app.models.task import Task, TaskDependency
 from app.orchestration.ports import WorkflowEngine
 from app.orchestration.state_machine.states import ExecutionState
@@ -46,7 +47,16 @@ class TaskOutcome:
 
 
 async def find_dispatchable(session: AsyncSession, project_id: uuid.UUID) -> list[Task]:
-    """Return dispatchable tasks, in order_index order, up to spare capacity."""
+    """Return dispatchable tasks, in order_index order, up to spare capacity.
+
+    A halted project is never dispatchable. This is the single choke point for
+    every scheduling consumer — /start, the worker's post-completion pass, and
+    inline chaining — so the operator halt switch closes all of them at once
+    while in-flight tasks conclude untouched.
+    """
+    halted_at = await session.scalar(select(Project.halted_at).where(Project.id == project_id))
+    if halted_at is not None:
+        return []
     tasks = list(
         (
             await session.execute(
