@@ -50,7 +50,7 @@ export function AgentPerformanceChart({ rows }: { rows: AgentMetricRow[] }) {
             border: "1px solid #30363d",
             color: "#e6edf3",
           }}
-          formatter={(value: unknown, name: string) =>
+          formatter={(value: unknown, name: string | number | undefined) =>
             name === "Success %"
               ? `${value}%`
               : typeof value === "number"
