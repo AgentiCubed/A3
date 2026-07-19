@@ -44,17 +44,18 @@ The readiness smoke test teardown shall tolerate the server process already
 having exited:
 
 ```bash
-kill $SERVER_PID || true
-wait $SERVER_PID || true
+kill "$SERVER_PID" 2>/dev/null || true
+wait "$SERVER_PID" 2>/dev/null || true
 ```
 
 This keeps cleanup deterministic while avoiding false CI failures when the
-process stops before `wait` observes it.
+process stops before `wait` observes it. Stderr is suppressed to prevent
+spurious "no such process" messages from surfacing as warnings in CI logs.
 
 ## Consequences
 
-- `.github/workflows/ci.yml` should be updated (or a follow-up PR opened) to use semantic `/readyz` assertions (`checks.database` / `checks.redis`)
-  and tolerant teardown (`kill $SERVER_PID || true; wait $SERVER_PID || true`).
+- `.github/workflows/ci.yml` has been updated to use semantic `/readyz` assertions (`checks.database` / `checks.redis`)
+  and tolerant teardown (`kill "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true`).
 - `README.md` remains the authoritative top-level entry point for the host-side
   demo command, while `docs/demo.md` carries the detail.
 - PR #1 can be treated as superseded without reopening its combined change set.
