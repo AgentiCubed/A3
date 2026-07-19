@@ -62,7 +62,7 @@ jobs:
           done
           BODY=$(curl -sf http://localhost:8000/readyz)
           echo "$BODY"
-          echo "$BODY" | python -c "import json,sys; d=json.load(sys.stdin); assert d.get('database')=='ok',f'database not ok: {d}'; assert d.get('redis')=='ok',f'redis not ok: {d}'"
+          echo "$BODY" | python -c "import json,sys; d=json.load(sys.stdin); c=d.get('checks',{}); assert c.get('database')=='ok',f'database not ok: {d}'; assert c.get('redis')=='ok',f'redis not ok: {d}'"
           kill $SERVER_PID
           wait $SERVER_PID || true
 
