@@ -32,9 +32,17 @@ export function AgentPerformanceChart({ rows }: { rows: AgentMetricRow[] }) {
         <CartesianGrid strokeDasharray="3 3" stroke="#30363d" />
         <XAxis dataKey="name" tick={{ fill: "#9fb0c0", fontSize: 11 }} />
         <YAxis
+          yAxisId="success"
           domain={[0, 100]}
           tick={{ fill: "#9fb0c0", fontSize: 11 }}
           tickFormatter={(v: number) => `${v}%`}
+        />
+        <YAxis
+          yAxisId="score"
+          orientation="right"
+          domain={[0, 1]}
+          tick={{ fill: "#9fb0c0", fontSize: 11 }}
+          tickFormatter={(v: number) => v.toFixed(2)}
         />
         <Tooltip
           contentStyle={{
@@ -42,10 +50,16 @@ export function AgentPerformanceChart({ rows }: { rows: AgentMetricRow[] }) {
             border: "1px solid #30363d",
             color: "#e6edf3",
           }}
-          formatter={(value: unknown) => `${value}%`}
+          formatter={(value: unknown, name: string) =>
+            name === "Success %"
+              ? `${value}%`
+              : typeof value === "number"
+                ? value.toFixed(2)
+                : String(value)
+          }
         />
-        <Bar dataKey="Success %" fill="#2f6fed" radius={[3, 3, 0, 0]} />
-        <Bar dataKey="Avg score" fill="#5ad17a" radius={[3, 3, 0, 0]} />
+        <Bar yAxisId="success" dataKey="Success %" fill="#2f6fed" radius={[3, 3, 0, 0]} />
+        <Bar yAxisId="score" dataKey="Avg score" fill="#5ad17a" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
