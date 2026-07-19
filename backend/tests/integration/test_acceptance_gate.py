@@ -33,6 +33,8 @@ from app.services import (
 )
 from tests.conftest import TestSessionFactory
 
+LOCK_WAIT_PROBE_SECONDS = 0.05
+
 
 def _auth(client) -> dict[str, str]:
     email = f"ag-{uuid.uuid4().hex[:10]}@example.com"
@@ -296,7 +298,7 @@ def test_close_waits_for_concurrent_execution_output_before_accepting(client):
                     actor_id=None,
                 )
             )
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(LOCK_WAIT_PROBE_SECONDS)
             assert not close_task.done()
 
             await writer.commit()
@@ -341,7 +343,7 @@ def test_artifact_write_loses_race_to_committed_close(client, tmp_path):
                     data=b"late evidence",
                 )
             )
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(LOCK_WAIT_PROBE_SECONDS)
             assert not artifact_task.done()
 
             await closer.commit()
