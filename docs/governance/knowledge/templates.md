@@ -33,7 +33,7 @@ Evidence that the correction worked.
 What remains unknown.
 
 ## Linked Records
-Related RM, IER, RL, issue, PR, or release.
+Related RM, IER, RL, TET, issue, PR, or release.
 ```
 
 ## Rumination — `RM-NNNN`
@@ -99,7 +99,7 @@ What is accepted now and by whom.
 Evidence or context that would justify reconsideration.
 
 ## Linked Records
-Related FR, RM, RL, ADR, issue, PR, or release.
+Related FR, RM, RL, TET, ADR, issue, PR, or release.
 ```
 
 ## Reasoning Ledger — `RL-NNNN`
@@ -147,6 +147,228 @@ Accepted | Accepted with Modification | Deferred | Rejected
 When or under what condition the ledger must be revisited.
 ```
 
+## Traceable Epistemic Transition capsule — `TET-NNNN`
+
+```markdown
+# TET-NNNN — Title
+
+## Prior Model
+The belief or operating model before the transition.
+
+## Disturbing Evidence
+The observation, failure, experiment, or argument that contradicted the prior model.
+
+## Revised Model
+The updated understanding after considering the evidence.
+
+## Tested Consequence
+What was done to test the revised model and what happened.
+
+## Confidence Change
+How confidence changed and why.
+
+## Reopening Conditions
+What new evidence would require another update.
+
+## Linked Records
+Related FR, RM, IER, RL, Pattern, ADR, issue, PR, or release.
+```
+
+## Pattern — `PAT-NNNN`
+
+```markdown
+# PAT-NNNN — Title
+
+## Status
+Active | Validated | Superseded | Retired
+
+## Problem
+What recurring situation this pattern addresses.
+
+## Pattern
+The reusable behavior or structure.
+
+## Why It Works
+The mechanism believed to produce the benefit.
+
+## Evidence
+Independent uses, metrics, or linked records.
+
+## Applicability
+When to use it.
+
+## Boundaries
+When not to use it.
+
+## Failure Modes
+How misuse can go wrong.
+
+## Linked Records
+Related FR, RM, IER, RL, TET, Anti-pattern, ADR, issue, or PR.
+```
+
+## Anti-pattern — `AP-NNNN`
+
+```markdown
+# AP-NNNN — Title
+
+## Status
+Active | Validated | Superseded | Retired
+
+## Signal
+What recurring harmful behavior or structure should be recognized.
+
+## Why It Fails
+The mechanism that creates the harm.
+
+## Evidence
+Observed recurrences, incidents, or linked records.
+
+## Early Warning Signs
+How to detect it before damage grows.
+
+## Safer Alternative
+Pattern or behavior that should replace it.
+
+## Known Exceptions
+Cases where the anti-pattern label does not apply.
+
+## Linked Records
+Related FR, RM, IER, RL, TET, Pattern, ADR, issue, or PR.
+```
+
+## Risk — `RSK-NNNN`
+
+```markdown
+# RSK-NNNN — Title
+
+## Status
+Open | Watching | Mitigated | Realized | Retired
+
+## Risk Statement
+The material downside being tracked.
+
+## Context
+Where and why the risk matters.
+
+## Trigger
+What condition would activate or worsen the risk.
+
+## Evidence
+Signals, prior incidents, measurements, or linked records.
+
+## Likelihood / Confidence
+Qualitative or quantitative estimate with basis.
+
+## Impact
+What is at stake.
+
+## Mitigation
+What reduces likelihood or impact.
+
+## Owner
+Who is responsible for watching it.
+
+## Review Trigger
+When the risk must be reassessed.
+```
+
+## Assumption — `ASM-NNNN`
+
+```markdown
+# ASM-NNNN — Title
+
+## Status
+Open | Monitoring | Validated | Rejected | Superseded
+
+## Assumption
+The unverified premise currently being relied on.
+
+## Why It Is Being Assumed
+Why work is proceeding before proof exists.
+
+## Supporting Indications
+Weak evidence or rationale that makes the assumption plausible.
+
+## Invalidating Signals
+Evidence that would show the assumption is wrong.
+
+## Consequence If Wrong
+What work, design, or governance would be affected.
+
+## Owner
+Who is responsible for re-checking it.
+
+## Review Trigger
+When it must be revisited.
+```
+
+## Experiment — `EXP-NNNN`
+
+```markdown
+# EXP-NNNN — Title
+
+## Status
+Planned | Running | Observed | Closed | Superseded
+
+## Question
+What uncertainty the experiment is intended to reduce.
+
+## Hypothesis
+What is expected and why.
+
+## Method
+How the test will be run.
+
+## Guardrails
+Limits that keep the experiment safe and interpretable.
+
+## Evidence
+Data, artifacts, or observations produced.
+
+## Result
+What happened.
+
+## Decision Impact
+How the result changes design, policy, or confidence.
+
+## Follow-up
+What should happen next.
+```
+
+## Unexpected Success Record — `USR-NNNN`
+
+```markdown
+# USR-NNNN — Title
+
+## Status
+Observed | Reused | Validated | Superseded
+
+## Context
+What work was being attempted.
+
+## Expected Difficulty or Outcome
+What was expected instead.
+
+## Observed Success
+What worked materially better than expected.
+
+## Evidence
+Commands, metrics, diffs, logs, feedback, or linked records.
+
+## Candidate Explanation
+Why the success may have happened.
+
+## Reuse Conditions
+When it may be safe to try again.
+
+## Overgeneralization Risk
+How this success could mislead future work if copied too broadly.
+
+## Linked Records
+Related Pattern, Experiment, RL, issue, PR, or release.
+```
+
 ## Record Quality Gate
 
 A record passes only when:
@@ -155,5 +377,7 @@ A record passes only when:
 - all external references are stable and inspectable;
 - a reviewer needs no conversational memory;
 - responsibility is preserved without blame theater;
+- the record states authority or ownership where relevant;
 - the record produces a reusable decision, heuristic, or open question;
+- reopening conditions or review triggers are explicit;
 - omissions and uncertainty are stated rather than hidden.
