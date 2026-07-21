@@ -6,6 +6,7 @@ import { DependencyDiagram } from "@/components/DependencyDiagram";
 import { GanttChart } from "@/components/GanttChart";
 import { LiveActivity } from "@/components/LiveActivity";
 import { MetricCard } from "@/components/MetricCard";
+import { PlanPanel } from "@/components/PlanPanel";
 import { RiskMatrix } from "@/components/RiskMatrix";
 import { Wordmark } from "@/components/Wordmark";
 import { api, type Dashboard, type ProjectGraph } from "@/lib/api";
@@ -91,6 +92,8 @@ export default async function ProjectDashboard({
           accent={(m.pending_approvals ?? 0) > 0 ? "#e0883a" : undefined}
         />
       </section>
+
+      <PlanPanel projectId={id} />
 
       <section style={{ marginTop: 32 }}>
         <h2 style={{ fontSize: 18 }}>Timeline (critical path)</h2>
