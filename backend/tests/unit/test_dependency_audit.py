@@ -60,9 +60,7 @@ def _npm_report() -> dict:
 
 
 def test_npm_fails_on_unwaived_critical_only():
-    failures = dependency_audit.npm_failures(
-        _npm_report(), waivers=set(), fail_level="critical"
-    )
+    failures = dependency_audit.npm_failures(_npm_report(), waivers=set(), fail_level="critical")
     # The critical advisory fails; the high advisory and the moderate package
     # are below the threshold; the chain-only entry is skipped (reported at
     # its root).
@@ -85,9 +83,7 @@ def test_npm_waiver_suppresses_exactly_its_advisory():
 
 
 def test_npm_fail_level_moderate_catches_moderate():
-    failures = dependency_audit.npm_failures(
-        _npm_report(), waivers=set(), fail_level="moderate"
-    )
+    failures = dependency_audit.npm_failures(_npm_report(), waivers=set(), fail_level="moderate")
     assert any("postcss" in f for f in failures)
 
 
