@@ -110,7 +110,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install backend (hermetic API for full-stack e2e)
-        run: pip install ../backend
+        # [dev] carries aiosqlite — the e2e backend runs on SQLite (no Postgres
+        # service in this job), same hermetic surface as the integration suite.
+        run: pip install "../backend[dev]"
       - name: Install
         run: npm ci
       - name: Install Playwright browsers
