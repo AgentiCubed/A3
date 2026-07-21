@@ -45,6 +45,7 @@ def test_live_provider_via_real_celery_and_redis():
     from app.api.deps import db_session
     from app.main import app
     from app.orchestration.engines import get_workflow_engine, reset_workflow_engine
+    from app.orchestration.ports import parse_provider_diagnostic
     from app.workers.celery_app import celery_app
 
     _required_env("GITHUB_MODELS_TOKEN")
@@ -189,7 +190,36 @@ def test_live_provider_via_real_celery_and_redis():
             ).json()
             assert len(executions) == 1
             execution = executions[0]
-            assert execution["state"] == "completed"
+            if execution["state"] != "completed":
+                http_status, error_category = parse_provider_diagnostic(execution.get("error"))
+                failure_evidence = {
+                    "schema_version": 2,
+                    "proof_status": "failed",
+                    "generated_at": datetime.now(UTC).isoformat(),
+                    "git_sha": os.environ.get("GITHUB_SHA", "local"),
+                    "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+                    "github_run_url": (
+                        f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/"
+                        f"{os.environ['GITHUB_RUN_ID']}"
+                        if os.environ.get("GITHUB_REPOSITORY") and os.environ.get("GITHUB_RUN_ID")
+                        else None
+                    ),
+                    "execution_state": execution["state"],
+                    "provider_http_status": http_status,
+                    "provider_error_category": error_category,
+                }
+                evidence_path.parent.mkdir(parents=True, exist_ok=True)
+                evidence_path.write_text(
+                    json.dumps(failure_evidence, indent=2, sort_keys=True) + "\n"
+                )
+                status_text = str(http_status) if http_status is not None else "none"
+                category_text = error_category or "unknown"
+                pytest.fail(
+                    "live provider request failed "
+                    f"(provider_http_status={status_text} "
+                    f"provider_error_category={category_text})",
+                    pytrace=False,
+                )
             assert execution["provider"] == "github_models"
             assert execution["error"] is None
             assert execution["output"]
@@ -231,7 +261,8 @@ def test_live_provider_via_real_celery_and_redis():
                 receipt_engine.dispose()
             assert provider_request_id
             evidence = {
-                "schema_version": 1,
+                "schema_version": 2,
+                "proof_status": "passed",
                 "generated_at": datetime.now(UTC).isoformat(),
                 "git_sha": os.environ.get("GITHUB_SHA", "local"),
                 "github_run_id": os.environ.get("GITHUB_RUN_ID"),
