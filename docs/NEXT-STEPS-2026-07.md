@@ -42,7 +42,7 @@ Each gap was checked against the working tree, not inherited from prior docs.
 | # | Gap | Evidence | Severity |
 | --- | --- | --- | --- |
 | G1 | **Dashboard is read-only.** No UI write path exists for any governed action: plan approve/reject, project start, approval-gate decisions, or halt. The only frontend POSTs are login/session and SSE plumbing (`frontend/src/app/api/session/route.ts`, `lib/api.ts`). The backend endpoints exist (`plans.py`: generate/approve/reject; `projects.py`: `/start`; `approvals` flow) — the UI simply never calls them. | grep of `frontend/src` — zero calls to plan/start/approval endpoints | **High** — a human cannot operate the governed loop without curl |
-| G2 | **No project-level halt switch.** WS-2 named "a project-level concurrency cap and a halt switch." The concurrency cap exists (`scheduler_service.py`); no halt/pause path exists anywhere in `app/` — an approved, started project cannot be stopped mid-flight through any API. | grep `halt`/`pause` over `backend/app` — only tool-runtime internals | **High** — an autonomy product needs an off switch |
+| G2 | **No project-level halt switch.** WS-2 named "a project-level concurrency cap and a halt switch." The concurrency cap exists (`scheduler_service.py`); no halt/pause path exists anywhere in `app/` — an approved, started project cannot be stopped mid-flight through any API. **CLOSED 2026-07-19 (PR #56):** `POST /projects/{id}/halt` + `/resume` (audited, optional reason), single scheduler gate in `find_dispatchable`, audited refusals on start/dispatch; proof `tests/integration/test_halt.py`. | grep `halt`/`pause` over `backend/app` — only tool-runtime internals | ~~High~~ closed |
 | G3 | **No dependency-audit CI job.** WS-8 called for `pip-audit`/`npm audit` failing on critical. CI has no such job; the Next.js CVE (#53) was caught by an external audit, not by our pipeline. | `.github/workflows/ci.yml` — no audit step | Medium |
 | G4 | **Live-provider path is unproven.** `AnthropicProvider` exists (`orchestration/adapters/anthropic_provider.py`) and resolves credentials by reference, but no test — not even an opt-in, secret-gated smoke — has ever exercised it. Every proof of the loop is `MockProvider`. This is honest (assumption A15) but means the product has never once run its real inference path end-to-end. | no live-marked test; no workflow with provider secret | Medium — blocks calling the product "usable," not "correct" |
 | G5 | **Optimistic-locking review under scheduler concurrency** (WS-8 item) has no recorded outcome: no ADR, no version-column usage on task transitions, no concurrency test beyond `test_atomic_close.py` (which covers closure only). | grep `version`/locking over models + state machine | Medium |
@@ -67,6 +67,10 @@ Make the dashboard the place where the governed loop is actually operated:
    dispatching further work for the project, audited, with a state-machine-legal
    story for in-flight tasks. Done when an integration test proves a halted
    project dispatches nothing new while in-flight work concludes cleanly.
+   **Done (2026-07-19, PR #56):** proof `tests/integration/test_halt.py` —
+   halted projects refuse start and manual dispatch, the scheduler's
+   chain-advance pass selects nothing, in-flight work concludes, and
+   resume + start continues the chain.
 2. **UI write paths, one focused PR per flow, in this order:**
    a. objective in → generated plan rendered → **approve / reject** buttons
       (`POST /plans`, `/plans/{id}/approve|reject`);
