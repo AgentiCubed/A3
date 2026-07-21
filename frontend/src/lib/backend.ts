@@ -116,3 +116,14 @@ export interface StartResult {
   engine: string;
   tasks: StartedTask[];
 }
+
+export interface ApprovalInfo {
+  id: string;
+  project_id: string;
+  task_execution_id: string | null;
+  requested_action: string;
+  risk_level: string;
+  status: string;
+  comment: string | null;
+  decided_at: string | null;
+}
