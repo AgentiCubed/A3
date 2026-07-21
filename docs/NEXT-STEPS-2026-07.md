@@ -43,7 +43,7 @@ Each gap was checked against the working tree, not inherited from prior docs.
 | --- | --- | --- | --- |
 | G1 | **Dashboard is read-only.** No UI write path exists for any governed action: plan approve/reject, project start, approval-gate decisions, or halt. The only frontend POSTs are login/session and SSE plumbing (`frontend/src/app/api/session/route.ts`, `lib/api.ts`). The backend endpoints exist (`plans.py`: generate/approve/reject; `projects.py`: `/start`; `approvals` flow) — the UI simply never calls them. | grep of `frontend/src` — zero calls to plan/start/approval endpoints | **High** — a human cannot operate the governed loop without curl |
 | G2 | **No project-level halt switch.** WS-2 named "a project-level concurrency cap and a halt switch." The concurrency cap exists (`scheduler_service.py`); no halt/pause path exists anywhere in `app/` — an approved, started project cannot be stopped mid-flight through any API. **CLOSED 2026-07-19 (PR #56):** `POST /projects/{id}/halt` + `/resume` (audited, optional reason), single scheduler gate in `find_dispatchable`, audited refusals on start/dispatch; proof `tests/integration/test_halt.py`. | grep `halt`/`pause` over `backend/app` — only tool-runtime internals | ~~High~~ closed |
-| G3 | **No dependency-audit CI job.** WS-8 called for `pip-audit`/`npm audit` failing on critical. CI has no such job; the Next.js CVE (#53) was caught by an external audit, not by our pipeline. | `.github/workflows/ci.yml` — no audit step | Medium |
+| G3 | **No dependency-audit CI job.** WS-8 called for `pip-audit`/`npm audit` failing on critical. CI has no such job; the Next.js CVE (#53) was caught by an external audit, not by our pipeline. **CLOSED 2026-07-21:** `dependency-audit` CI job + `scripts/dependency_audit.py` with expiring waivers; proof `backend/tests/unit/test_dependency_audit.py` and the gate itself, which caught two live criticals (`next`, `vitest`) on arrival — both fixed in the same change. | `.github/workflows/ci.yml` — no audit step | ~~Medium~~ closed |
 | G4 | **Live-provider path is unproven.** `AnthropicProvider` exists (`orchestration/adapters/anthropic_provider.py`) and resolves credentials by reference, but no test — not even an opt-in, secret-gated smoke — has ever exercised it. Every proof of the loop is `MockProvider`. This is honest (assumption A15) but means the product has never once run its real inference path end-to-end. | no live-marked test; no workflow with provider secret | Medium — blocks calling the product "usable," not "correct" |
 | G5 | **Optimistic-locking review under scheduler concurrency** (WS-8 item) has no recorded outcome: no ADR, no version-column usage on task transitions, no concurrency test beyond `test_atomic_close.py` (which covers closure only). | grep `version`/locking over models + state machine | Medium |
 | G6 | **No deployment story past Docker Compose.** Explicitly deferred by the remediation plan "until WS-1..6 land" — they have now landed, so this is unblocked, not incomplete. | `infra/`, compose only | Low-Medium (sequenced) |
@@ -90,6 +90,17 @@ Add a CI job running `pip-audit` (backend) and `npm audit --audit-level=critical
 (an allowlist file with expiry dates, so waivers cannot rot silently). Done
 when the job is green on `main` and demonstrably fails on a seeded known-bad
 pin in a scratch branch.
+
+**Done (2026-07-21):** `dependency-audit` CI job + `scripts/dependency_audit.py`
++ expiring waivers in `scripts/dependency-audit-waivers.json`; decision logic
+proven hermetically by `backend/tests/unit/test_dependency_audit.py`. The
+failure mode was demonstrated on real data, not a seed: on arrival the gate
+caught two live critical advisories on `main` — `next@15.1.12`
+(GHSA-f82v-jwr5-mffw, middleware authorization bypass) and `vitest`
+(GHSA-5xrq-8626-4rwp) — fixed in the same change by bumping to
+`next@15.5.20` and `vitest@4.1.10`. One waiver is active: `ecdsa`
+(PYSEC-2026-1325, no fix released, EC path unused — JWTs are HS256), expiring
+2026-10-31.
 
 ### Step 3 — Live-provider opt-in smoke (closes G4)
 

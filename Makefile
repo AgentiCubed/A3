@@ -1,5 +1,5 @@
 .PHONY: help up down logs check backend-install backend-lint backend-fmt backend-test \
-        frontend-install frontend-lint frontend-test migrate revision demo
+        frontend-install frontend-lint frontend-test migrate revision demo audit
 
 help:
 	@echo "AgentiCubed make targets:"
@@ -17,6 +17,7 @@ help:
 	@echo "  migrate          alembic upgrade head"
 	@echo "  revision m=msg   alembic autogenerate revision"
 	@echo "  demo             run the end-to-end demonstration project"
+	@echo "  audit            dependency-audit gate (pip-audit + npm audit + waivers)"
 
 up:
 	docker compose up --build
@@ -52,6 +53,10 @@ frontend-lint:
 
 frontend-test:
 	cd frontend && npm run test
+
+audit:
+	python scripts/dependency_audit.py backend
+	python scripts/dependency_audit.py frontend
 
 migrate:
 	cd backend && alembic upgrade head
