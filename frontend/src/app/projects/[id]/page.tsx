@@ -7,6 +7,7 @@ import { GanttChart } from "@/components/GanttChart";
 import { LiveActivity } from "@/components/LiveActivity";
 import { MetricCard } from "@/components/MetricCard";
 import { PlanPanel } from "@/components/PlanPanel";
+import { ProjectControls } from "@/components/ProjectControls";
 import { RiskMatrix } from "@/components/RiskMatrix";
 import { Wordmark } from "@/components/Wordmark";
 import { api, type Dashboard, type ProjectGraph } from "@/lib/api";
@@ -67,6 +68,7 @@ export default async function ProjectDashboard({
         <Wordmark size={22} />
       </div>
       <h1 style={{ marginTop: 0 }}>Project dashboard</h1>
+      <ProjectControls projectId={id} />
 
       <section style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
         <MetricCard

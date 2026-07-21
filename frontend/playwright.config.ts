@@ -12,6 +12,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
+  // Specs share one backend and one dev server; serial execution keeps the
+  // dev server's lazy page compilation from stampeding under parallel load.
+  workers: 1,
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     trace: "on-first-retry",
