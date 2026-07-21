@@ -9,6 +9,7 @@ See docs/architecture.md §3 and ADR-0002 / ADR-0003.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -17,6 +18,65 @@ from uuid import UUID
 
 
 # ── AgentAdapter (model provider seam) ────────────────────────────────────
+class ProviderErrorCategory(StrEnum):
+    """Bounded, public-safe reasons for a provider call failure."""
+
+    AUTHENTICATION = "authentication"
+    AUTHORIZATION = "authorization"
+    INVALID_REQUEST = "invalid_request"
+    NOT_FOUND = "not_found"
+    RATE_LIMITED = "rate_limited"
+    PROVIDER_UNAVAILABLE = "provider_unavailable"
+    TIMEOUT = "timeout"
+    NETWORK_ERROR = "network_error"
+
+
+_PROVIDER_DIAGNOSTIC_RE = re.compile(
+    "provider_http_status=(none|[1-5][0-9]{2}) "
+    "provider_error_category=("
+    + "|".join(category.value for category in ProviderErrorCategory)
+    + ")"
+)
+
+
+class ProviderCallError(RuntimeError):
+    """A provider failure safe to persist, return, and print.
+
+    Raw requests, responses, URLs, headers, prompts, outputs, credentials, and
+    underlying exceptions must never be attached to this exception.
+    """
+
+    def __init__(
+        self,
+        *,
+        http_status: int | None,
+        category: ProviderErrorCategory,
+    ) -> None:
+        if http_status is not None and not 100 <= http_status <= 599:
+            raise ValueError("provider HTTP status must be between 100 and 599")
+        self.http_status = http_status
+        self.category = category
+        status = str(http_status) if http_status is not None else "none"
+        self.public_message = (
+            f"provider_http_status={status} provider_error_category={category.value}"
+        )
+        super().__init__(self.public_message)
+
+
+def parse_provider_diagnostic(message: str | None) -> tuple[int | None, str | None]:
+    """Return only an exact allowlisted provider diagnostic.
+
+    Unknown or embellished strings deliberately return null fields instead of
+    copying any raw error text into logs or evidence.
+    """
+
+    match = _PROVIDER_DIAGNOSTIC_RE.fullmatch(message or "")
+    if match is None:
+        return None, None
+    raw_status, category = match.groups()
+    return (None if raw_status == "none" else int(raw_status), category)
+
+
 @dataclass(frozen=True)
 class ToolSchema:
     name: str

@@ -71,7 +71,35 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_SHA: ${{ github.sha }}
         run: .venv/bin/python -m pytest tests/integration/test_live_provider_celery_smoke.py -q
+      - name: Ensure sanitized proof receipt exists
+        if: always()
+        env:
+          PROOF_PATH: ${{ github.workspace }}/live-provider-proof.json
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = process.env.PROOF_PATH;
+          if (!fs.existsSync(path)) {
+            const repository = process.env.GITHUB_REPOSITORY;
+            const runId = process.env.GITHUB_RUN_ID;
+            const receipt = {
+              schema_version: 2,
+              proof_status: 'failed',
+              generated_at: new Date().toISOString(),
+              git_sha: process.env.GITHUB_SHA || null,
+              github_run_id: runId || null,
+              github_run_url: repository && runId
+                ? `https://github.com/${repository}/actions/runs/${runId}`
+                : null,
+              execution_state: null,
+              provider_http_status: null,
+              provider_error_category: null,
+            };
+            fs.writeFileSync(path, `${JSON.stringify(receipt, null, 2)}\n`);
+          }
+          NODE
       - name: Upload sanitized proof receipt
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: live-provider-proof-${{ github.sha }}

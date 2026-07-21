@@ -29,7 +29,7 @@ from app.models.project import Project
 from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
-from app.orchestration.ports import AgentRunRequest
+from app.orchestration.ports import AgentRunRequest, ProviderCallError
 from app.orchestration.state_machine.machine import IllegalTransition, assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.remediation.policy import RemediationContext, select_remediation
@@ -804,6 +804,11 @@ async def execute_task(
                 return DispatchResult(outcome, attempt, escalated=True, execution_ids=execution_ids)
             continue
         except Exception as exc:  # noqa: BLE001 - any provider error is a failed attempt
+            error = (
+                exc.public_message
+                if isinstance(exc, ProviderCallError)
+                else f"{type(exc).__name__}: {exc}"
+            )
             execution_ids.append(
                 await _record(
                     session,
@@ -813,7 +818,7 @@ async def execute_task(
                     state=ExecutionState.FAILED,
                     started=started,
                     output=None,
-                    error=f"{type(exc).__name__}: {exc}",
+                    error=error,
                     provider=agent.provider,
                     prompt_chars=len(prompt),
                     handoff=handoff_meta,

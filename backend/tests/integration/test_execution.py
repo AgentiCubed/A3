@@ -9,6 +9,8 @@ import pytest
 
 from app.db.base import ImmutableError
 from app.models.task_execution import TaskExecution
+from app.orchestration.ports import ProviderCallError, ProviderErrorCategory
+from app.services import execution_service
 
 
 def _auth(client) -> dict[str, str]:
@@ -96,6 +98,35 @@ def test_dispatch_retries_then_escalates(client):
     # The task is now BLOCKED (escalated to a human).
     tasks = client.get(f"/api/v1/projects/{pid}/tasks", headers=headers).json()
     assert next(t for t in tasks if t["id"] == task_id)["status"] == "blocked"
+
+
+def test_provider_failure_persists_only_safe_diagnostic(client, monkeypatch):
+    class _FailingProvider:
+        async def run(self, _request):
+            raise ProviderCallError(
+                http_status=403,
+                category=ProviderErrorCategory.AUTHORIZATION,
+            )
+
+    monkeypatch.setattr(execution_service, "get_adapter", lambda _name: _FailingProvider())
+    headers = _auth(client)
+    pid = _project(client, headers)
+    task_id = _task(client, headers, pid)
+    agent_id = _agent(client, headers, provider="github_models")
+    _assign(client, headers, pid, task_id, agent_id)
+
+    response = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch",
+        json={"max_attempts": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    executions = client.get(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/executions", headers=headers
+    ).json()
+    assert executions[0]["error"] == (
+        "provider_http_status=403 provider_error_category=authorization"
+    )
 
 
 def test_dispatch_timeout_escalates(client):

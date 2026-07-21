@@ -14,7 +14,12 @@ from app.orchestration.adapters.registry import (
     available_providers,
     get_adapter,
 )
-from app.orchestration.ports import AgentRunRequest
+from app.orchestration.ports import (
+    AgentRunRequest,
+    ProviderCallError,
+    ProviderErrorCategory,
+    parse_provider_diagnostic,
+)
 from app.services.decomposition_service import parse_plan
 
 
@@ -113,8 +118,59 @@ async def test_anthropic_resolves_credential_before_network(monkeypatch):
 async def test_github_models_resolves_credential_before_network(monkeypatch):
     monkeypatch.delenv("GITHUB_MODELS_TOKEN", raising=False)
     provider = GitHubModelsProvider()
-    with pytest.raises(CredentialNotConfigured):
+    with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="hi"))
+    assert str(caught.value) == ("provider_http_status=none provider_error_category=authentication")
+
+
+async def test_github_models_redacts_missing_credential_reference(monkeypatch):
+    credential_ref = "secret-credential-reference-sentinel"
+    monkeypatch.delenv(credential_ref, raising=False)
+    provider = GitHubModelsProvider()
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="hi", credential_ref=credential_ref))
+
+    assert str(caught.value) == ("provider_http_status=none provider_error_category=authentication")
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert credential_ref not in repr(caught.value)
+
+
+async def test_github_models_redacts_malformed_credential_reference():
+    provider = GitHubModelsProvider()
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(
+            AgentRunRequest(
+                prompt="secret-prompt-sentinel",
+                credential_ref=123,  # type: ignore[arg-type]
+            )
+        )
+
+    assert str(caught.value) == (
+        "provider_http_status=none provider_error_category=invalid_request"
+    )
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert "secret" not in repr(caught.value)
+
+
+async def test_github_models_redacts_invalid_request_inputs(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+    provider = GitHubModelsProvider()
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(
+            AgentRunRequest(
+                prompt="secret-prompt-sentinel",
+                params={"max_tokens": "secret-invalid-token-count"},
+            )
+        )
+
+    assert str(caught.value) == (
+        "provider_http_status=none provider_error_category=invalid_request"
+    )
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert "secret" not in repr(caught.value)
 
 
 async def test_github_models_maps_live_response_without_persisting_token(monkeypatch):
@@ -157,6 +213,136 @@ async def test_github_models_uses_documented_request_header_as_receipt(monkeypat
     result = await provider.run(AgentRunRequest(prompt="Say hello"))
     assert result.tokens_used == 0
     assert result.raw_id == "request-receipt"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "category"),
+    [
+        (400, ProviderErrorCategory.INVALID_REQUEST),
+        (401, ProviderErrorCategory.AUTHENTICATION),
+        (403, ProviderErrorCategory.AUTHORIZATION),
+        (404, ProviderErrorCategory.NOT_FOUND),
+        (408, ProviderErrorCategory.TIMEOUT),
+        (409, ProviderErrorCategory.INVALID_REQUEST),
+        (429, ProviderErrorCategory.RATE_LIMITED),
+        (500, ProviderErrorCategory.PROVIDER_UNAVAILABLE),
+        (504, ProviderErrorCategory.TIMEOUT),
+    ],
+)
+async def test_github_models_maps_http_errors_to_safe_diagnostics(
+    monkeypatch, status_code, category
+):
+    token = "secret-token-sentinel"
+    prompt = "secret-prompt-sentinel"
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", token)
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            status_code,
+            headers={"x-secret-sentinel": "secret-header-sentinel"},
+            json={"error": "secret-body-sentinel"},
+        )
+
+    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt=prompt))
+
+    expected = f"provider_http_status={status_code} " f"provider_error_category={category.value}"
+    assert str(caught.value) == expected
+    assert caught.value.args == (expected,)
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert not hasattr(caught.value, "request")
+    assert not hasattr(caught.value, "response")
+    rendered = repr(caught.value)
+    for secret in (
+        token,
+        prompt,
+        "secret-header-sentinel",
+        "secret-body-sentinel",
+        "models.github.ai",
+    ):
+        assert secret not in rendered
+
+
+@pytest.mark.parametrize(
+    ("transport_error", "category"),
+    [
+        (httpx.ReadTimeout, ProviderErrorCategory.TIMEOUT),
+        (httpx.ConnectError, ProviderErrorCategory.NETWORK_ERROR),
+    ],
+)
+async def test_github_models_redacts_transport_errors(monkeypatch, transport_error, category):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        raise transport_error("secret-network-sentinel", request=request)
+
+    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="secret-prompt-sentinel"))
+
+    expected = f"provider_http_status=none provider_error_category={category.value}"
+    assert str(caught.value) == expected
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert "secret" not in repr(caught.value)
+
+
+async def test_github_models_redacts_invalid_success_response(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="secret-invalid-json-sentinel")
+
+    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="secret-prompt-sentinel"))
+
+    assert str(caught.value) == (
+        "provider_http_status=200 provider_error_category=provider_unavailable"
+    )
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert "secret" not in repr(caught.value)
+
+
+async def test_github_models_redacts_unexpected_response_parse_error(monkeypatch):
+    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            content=(
+                b'{"choices":[{"message":{"content":"secret-output-sentinel"}}],'
+                b'"usage":{"total_tokens":1e999}}'
+            ),
+        )
+
+    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="secret-prompt-sentinel"))
+
+    assert str(caught.value) == (
+        "provider_http_status=200 provider_error_category=provider_unavailable"
+    )
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
+    assert "secret" not in repr(caught.value)
+
+
+def test_provider_diagnostic_parser_fails_closed():
+    assert parse_provider_diagnostic(
+        "provider_http_status=403 provider_error_category=authorization"
+    ) == (403, "authorization")
+    assert parse_provider_diagnostic(
+        "provider_http_status=none provider_error_category=network_error"
+    ) == (None, "network_error")
+    assert parse_provider_diagnostic(
+        "provider_http_status=403 provider_error_category=authorization secret=leak"
+    ) == (None, None)
+    assert parse_provider_diagnostic("HTTPStatusError: raw provider failure") == (None, None)
 
 
 def test_estimate_cost_known_model():
