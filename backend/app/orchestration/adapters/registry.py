@@ -8,12 +8,14 @@ directly. Add new providers here (ADR-0003).
 from __future__ import annotations
 
 from app.orchestration.adapters.anthropic_provider import AnthropicProvider
+from app.orchestration.adapters.github_models_provider import GitHubModelsProvider
 from app.orchestration.adapters.mock_provider import MockProvider
 from app.orchestration.ports import AgentAdapter
 
 _REGISTRY: dict[str, AgentAdapter] = {
     MockProvider.name: MockProvider(),
     AnthropicProvider.name: AnthropicProvider(),
+    GitHubModelsProvider.name: GitHubModelsProvider(),
 }
 
 

@@ -44,6 +44,9 @@ class TaskExecution(UUIDPrimaryKeyMixin, Immutable, Base):
     tokens_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cost_estimate: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     provider: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    # Provider-issued receipt for tracing a persisted execution to the external
+    # inference request. It is retained internally and omitted from API output.
+    provider_request_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

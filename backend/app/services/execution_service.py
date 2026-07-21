@@ -845,6 +845,7 @@ async def execute_task(
             remediation_of=remediation_of,
             tokens_used=result.tokens_used,
             cost_estimate=result.cost_estimate,
+            provider_request_id=result.raw_id,
         )
         execution_ids.append(execution_id)
         await _transition(
@@ -1031,6 +1032,7 @@ async def _record(
     remediation_of: uuid.UUID | None = None,
     tokens_used: int = 0,
     cost_estimate: float = 0.0,
+    provider_request_id: str | None = None,
 ) -> uuid.UUID:
     await acceptance_boundary_service.claim_acceptance_write(
         session,
@@ -1052,6 +1054,7 @@ async def _record(
         output=output,
         error=error,
         provider=provider,
+        provider_request_id=provider_request_id,
         tokens_used=tokens_used,
         cost_estimate=cost_estimate,
         started_at=started,

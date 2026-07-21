@@ -1,0 +1,80 @@
+name: Live Provider Celery Proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: GitHub Models model identifier
+        required: true
+        default: openai/gpt-4.1
+        type: string
+
+permissions:
+  contents: read
+  models: read
+
+concurrency:
+  group: live-provider-celery-proof
+  cancel-in-progress: false
+
+jobs:
+  live-provider-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agenticubed
+          POSTGRES_PASSWORD: agenticubed
+          POSTGRES_DB: agenticubed
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agenticubed"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://agenticubed:agenticubed@localhost:5432/agenticubed
+      DATABASE_URL_SYNC: postgresql+psycopg://agenticubed:agenticubed@localhost:5432/agenticubed
+      REDIS_URL: redis://localhost:6379/10
+      CELERY_BROKER_URL: redis://localhost:6379/11
+      CELERY_RESULT_BACKEND: redis://localhost:6379/12
+      WORKFLOW_ENGINE_BACKEND: celery
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: pipx install uv
+      - name: Create venv and install
+        run: |
+          uv venv .venv
+          uv pip install --python .venv -e ".[dev]"
+      - name: Apply migrations
+        run: .venv/bin/alembic upgrade head
+      - name: Run one live provider task through Celery and Redis
+        env:
+          GITHUB_MODELS_TOKEN: ${{ github.token }}
+          LIVE_PROVIDER_SMOKE: "1"
+          LIVE_PROVIDER_MODEL: ${{ inputs.model }}
+          LIVE_PROVIDER_EVIDENCE_PATH: ${{ github.workspace }}/live-provider-proof.json
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: .venv/bin/python -m pytest tests/integration/test_live_provider_celery_smoke.py -q
+      - name: Upload sanitized proof receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-provider-proof-${{ github.sha }}
+          path: live-provider-proof.json
+          if-no-files-found: error
+          retention-days: 30
