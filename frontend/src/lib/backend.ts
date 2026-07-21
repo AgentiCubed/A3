@@ -98,3 +98,21 @@ export interface DecompositionPlan {
   decision_comment: string | null;
   created_at: string;
 }
+
+export interface ProjectInfo {
+  id: string;
+  name: string;
+  objective: string;
+  status: string;
+  halted_at: string | null;
+}
+
+export interface StartedTask {
+  task_id: string;
+  status: string;
+}
+
+export interface StartResult {
+  engine: string;
+  tasks: StartedTask[];
+}
