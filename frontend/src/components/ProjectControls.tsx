@@ -96,7 +96,17 @@ export function ProjectControls({ projectId }: { projectId: string }) {
     }
   }
 
+  async function close() {
+    const body = await act(() =>
+      backend(`projects/${projectId}/close`, { method: "POST", body: {} }),
+    );
+    if (body) {
+      setNotice("Project closed — acceptance verified and recorded.");
+    }
+  }
+
   const halted = Boolean(project?.halted_at);
+  const closed = project?.status === "closed";
 
   return (
     <section
@@ -116,7 +126,7 @@ export function ProjectControls({ projectId }: { projectId: string }) {
         </span>
       )}
 
-      {!halted && (
+      {!closed && !halted && (
         <>
           <button
             style={{ ...buttonStyle, borderColor: "#5ad17a" }}
@@ -139,9 +149,12 @@ export function ProjectControls({ projectId }: { projectId: string }) {
           >
             Halt
           </button>
+          <button style={buttonStyle} disabled={busy} onClick={() => void close()}>
+            Close project
+          </button>
         </>
       )}
-      {halted && (
+      {!closed && halted && (
         <button
           style={{ ...buttonStyle, borderColor: "#5ad17a" }}
           disabled={busy}

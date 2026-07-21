@@ -45,6 +45,13 @@ export function errorDetail(body: unknown): string {
       return JSON.stringify(detail);
     }
   }
+  // The auth proxy returns `{error: "not signed in"}` on a missing session
+  // (frontend/src/app/api/backend/[...path]/route.ts); surface it rather than
+  // the generic fallback so an expired session reads as a sign-in prompt.
+  if (body && typeof body === "object" && "error" in body) {
+    const error = (body as { error: unknown }).error;
+    if (typeof error === "string") return error;
+  }
   return "request failed";
 }
 
@@ -115,4 +122,15 @@ export interface StartedTask {
 export interface StartResult {
   engine: string;
   tasks: StartedTask[];
+}
+
+export interface ApprovalInfo {
+  id: string;
+  project_id: string;
+  task_execution_id: string | null;
+  requested_action: string;
+  risk_level: string;
+  status: string;
+  comment: string | null;
+  decided_at: string | null;
 }

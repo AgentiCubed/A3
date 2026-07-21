@@ -6,6 +6,7 @@ import { DependencyDiagram } from "@/components/DependencyDiagram";
 import { GanttChart } from "@/components/GanttChart";
 import { LiveActivity } from "@/components/LiveActivity";
 import { MetricCard } from "@/components/MetricCard";
+import { ApprovalsPanel } from "@/components/ApprovalsPanel";
 import { PlanPanel } from "@/components/PlanPanel";
 import { ProjectControls } from "@/components/ProjectControls";
 import { RiskMatrix } from "@/components/RiskMatrix";
@@ -96,6 +97,7 @@ export default async function ProjectDashboard({
       </section>
 
       <PlanPanel projectId={id} />
+      <ApprovalsPanel projectId={id} />
 
       <section style={{ marginTop: 32 }}>
         <h2 style={{ fontSize: 18 }}>Timeline (critical path)</h2>

@@ -1,4 +1,5 @@
 import { HealthBadge, type HealthState } from "@/components/HealthBadge";
+import { NewProjectForm } from "@/components/NewProjectForm";
 import { Wordmark } from "@/components/Wordmark";
 import { api, type ApiMeta, type ReadyStatus } from "@/lib/api";
 
@@ -40,6 +41,8 @@ export default async function Home() {
         Agentic project-orchestration platform. Plan → Assign → Execute → Evaluate →
         Identify Gaps → Remediate → Re-execute.
       </p>
+
+      <NewProjectForm />
 
       <section style={{ marginTop: 32 }}>
         <h2 style={{ fontSize: 18 }}>API readiness</h2>
