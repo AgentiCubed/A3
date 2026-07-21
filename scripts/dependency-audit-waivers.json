@@ -1,0 +1,8 @@
+[
+  {
+    "id": "PYSEC-2026-1325",
+    "ecosystem": "python",
+    "reason": "ecdsa is a transitive dependency of python-jose[cryptography]; its elliptic-curve signing path is never exercised (JWTs are HS256-only, app/core/security.py) and upstream has released no fixed version. Re-evaluate at expiry or when python-jose drops the dependency.",
+    "expires": "2026-10-31"
+  }
+]
