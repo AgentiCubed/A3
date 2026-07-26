@@ -95,6 +95,8 @@ services:
       - artifacts:/var/artifacts
     tmpfs:
       - /tmp
+    healthcheck:
+      disable: true
     depends_on:
       api:
         condition: service_healthy
