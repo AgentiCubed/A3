@@ -63,7 +63,7 @@ jobs:
         run: .venv/bin/alembic upgrade head
       - name: Run one live provider task through Celery and Redis
         env:
-          GITHUB_MODELS_TOKEN: ${{ github.token }}
+          GITHUB_MODELS_TOKEN: ${{ secrets.A3_MODELS_TOKEN }}
           LIVE_PROVIDER_SMOKE: "1"
           LIVE_PROVIDER_MODEL: ${{ inputs.model }}
           LIVE_PROVIDER_EVIDENCE_PATH: ${{ github.workspace }}/live-provider-proof.json
