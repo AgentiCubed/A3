@@ -7,20 +7,22 @@ the dispatcher verifies this artifact's stable ID, version, digest, scope,
 and expiry through a read-only policy adapter before issuing any lease).
 
 - **Stable ID:** DR-0003
-- **Version:** 1.0.0-draft
-- **Ratification status:** **Proposed — awaiting explicit ratification by the
-  Principal.** Per DR-0001: agreement among Executors, Evaluators, advisers,
-  reviewers, or automated systems does not constitute ratification. **This
-  policy confers no authority while Proposed.**
-- **Digest:** computed over this file's bytes at ratification and recorded in
-  the ratification record (RR series); recomputed and re-recorded on every
-  ratified version change. A dispatcher must reject a registration whose
-  digest does not match the ratified record.
+- **Version:** 1.0.0
+- **Ratification status:** **Ratified 2026-07-26 by the Principal (James
+  Richmond); recorded in
+  [RR-0002](../ratification/RR-0002.md).** Per DR-0001, the operative act is
+  the Principal's explicit ratification; Executor agreement is not
+  ratification.
+- **Digest:** the SHA-256 of this file's bytes at ratification is recorded
+  in RR-0002 (the record, not this file, carries it — a file cannot contain
+  its own hash); it is recomputed and re-recorded on every ratified version
+  change. A dispatcher must reject a registration whose digest does not
+  match the ratified record.
 - **Scope:** the Agentic³ Runtime Domain (RT-101–RT-110) operating within
   this repository's governance; one work class (§Decision 3)
-- **Expiry:** 180 days from ratification date, or upon supersession or
-  revocation, whichever is first. Expiry removes standing authority; it does
-  not stop observation and recording.
+- **Expiry:** **2027-01-22** (180 days from ratification), or upon
+  supersession or revocation, whichever is first. Expiry removes standing
+  authority; it does not stop observation and recording.
 
 ## Purpose
 

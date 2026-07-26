@@ -35,20 +35,16 @@ No Architectural Principle, Pattern, Implementation, or subsystem may contradict
 | **AC-0005** | Explicit Relationships | Candidate | Proposed | Connections between entities are permitted only through the controlled relationship vocabulary; implicit connection by proximity is prohibited. Candidate-lifecycle state is `VALIDATING` (more evidence requested), which the register summarizes as `Proposed` per the ONTO-0003 §8 Status Vocabulary Map. **No concept document has landed** — the candidate thesis lives in ONTO-0006 §1; this row records the gap. | [Issue #16](https://github.com/AgentiCubed/agenticubed/issues/16); ONTO-0002 (the vocabulary the candidate governs). | Land the concept document; decide only after the ONTO-0004 §1.8 repeated-evaluation gates. |
 | **AC-0006** | Semantic Inheritance | Candidate | Proposed | Entity families inherit constraints and semantics from their family root. Candidate-lifecycle state is `VALIDATING` (more evidence requested), which the register summarizes as `Proposed` per the ONTO-0003 §8 Status Vocabulary Map. **No concept document has landed** — the candidate thesis lives in ONTO-0006 §1; this row records the gap. | [Issue #16](https://github.com/AgentiCubed/agenticubed/issues/16); ONTO-0001 (the family model the candidate governs). | Land the concept document; decide only after the ONTO-0004 §1.8 repeated-evaluation gates. |
 
-### Recorded status dispute (AC-0001, AC-0002)
+### Status dispute — RESOLVED (2026-07-26)
 
-This register records AC-0001 and AC-0002 as Adopted per the Issue #12 owner
-comments. The concept documents themselves
-([`AC-0001`](../../agentic3/concepts/AC-0001-knowledge-gravity.md),
-[`AC-0002`](../../agentic3/concepts/AC-0002-engineering-genome.md)) declare
-**Proposed — awaiting Principal review and an explicit adoption decision**,
-and state that no adoption record exists in the repository. Two of
-AC-0001's reopening conditions are additionally already met. The
-contradiction and its resolution path are recorded in
-[`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2
-(decisions **P-1**/**P-2**, reserved to the Principal). Until those
-decisions land, readers should treat the adoption status as **disputed**;
-this note changes no status.
+The former discrepancy (this register said Adopted; the concept documents
+said Proposed with no adoption record) is resolved:
+[DR-0004](../decisions/DR-0004-Phase-0-Reconciliation-Decisions.md) P-1/P-2
+record the Principal's explicit adoption of AC-0001 and AC-0002, **as
+amended**, with ratification preserved in
+[RR-0002](../ratification/RR-0002.md). The concept documents and the
+ontology now carry matching statuses; AC-0001's two previously met
+reopening conditions were actioned and closed by the same decision.
 
 ## Review Requirement
 

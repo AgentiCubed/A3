@@ -11,10 +11,12 @@
 
 ### 1.1 Governing Principle
 
-**AC-0001 — Knowledge Gravity:** Knowledge gains or loses authority through accumulated
+**AC-0001 — Knowledge Gravity:** Knowledge gains or loses justified weight through accumulated
 evidence and successful reuse rather than age or author. The Ontology must make this principle
 operational: every entity to which Knowledge Gravity applies must carry metadata sufficient to
-evaluate its current authority level from inspectable evidence alone.
+evaluate its current justified weight from inspectable evidence alone. Per
+AC-0001 Rule 2 (adopted, DR-0004 P-1): gravity is not authority and never
+outranks a Delegation, an acceptance condition, or a Principal decision.
 
 Knowledge Gravity is not an arbitrary score. Every change to it must be traceable to a specific
 event: evidence arrived, reuse occurred, contradiction was recorded, or supersession happened.
@@ -28,7 +30,7 @@ ONTO-0001 §3 (Entity Family Summary): `Pattern`, `AntiPattern`,
 
 | Field | Type | Description |
 |---|---|---|
-| `gravity_level` | GravityLevel | Current authority level: `observation`, `lesson`, `pattern`, `principle`, `foundational`. |
+| `gravity_level` | GravityLevel | Current justified-weight level: `observation`, `lesson`, `pattern`, `principle`, `foundational`. |
 | `evidence_events` | []GravityEvent | Ordered list of events that caused gravity to increase or decrease. |
 | `positive_evidence_count` | Integer | Count of supporting evidence items since last validation. |
 | `reuse_count` | Integer | Count of distinct reuse events (independent tasks, subsystems, phases). |
@@ -60,7 +62,8 @@ A `GravityEvent` records every cause of a gravity change.
 
 | Field | Description |
 |---|---|
-| `event_type` | `evidence_added`, `reuse_recorded`, `contradiction_recorded`, `supersession_occurred`, `review_triggered`, `demotion_applied`, `promotion_applied` |
+| `event_type` | `evidence_added`, `reuse_recorded`, `contradiction_recorded`, `supersession_occurred` — the four bounded sources of AC-0001 Rule 1 (adopted as amended, DR-0004 P-1). Reviews, promotions, and demotions are governed **outcomes** recorded via `review_outcome`/level fields on an event from one of the four sources, never source event types of their own. |
+| `review_outcome` | Optional; present when a governed review acted on this event: one of the ONTO-0004 §1.8 outcomes, with `authority_basis`. |
 | `occurred_at` | Timestamp |
 | `triggered_by` | Reference to the evidence entity, reuse record, or governance decision causing the change |
 | `prior_gravity_level` | Gravity level before this event |
@@ -71,7 +74,7 @@ A `GravityEvent` records every cause of a gravity change.
 
 | Promotion path | Required GravityEvents | Authority required |
 |---|---|---|
-| `observation` → `lesson` | One `evidence_added` + one `review_triggered` confirming the lesson | Any authorized reviewer |
+| `observation` → `lesson` | One `evidence_added` carrying a confirming `review_outcome` | Any authorized reviewer |
 | `lesson` → `pattern` | Two or more `reuse_recorded` events from independent contexts | Authorized reviewer; documented in a knowledge record |
 | `pattern` → `principle` | Multiple `reuse_recorded` events across subsystems; exceptions explicitly bounded | Governance decision or authorized architecture review |
 | `principle` → `foundational` | Sustained application across the project; prior Principal approval | Explicit Principal ratification; governance decision record |

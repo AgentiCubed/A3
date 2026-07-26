@@ -29,18 +29,18 @@ missing context they were supposed to have.
 | Amendment A-0001 (halt on insufficient/ambiguous authority) | [`../governance/constitution/Amendment-A-0001.md`](../governance/constitution/Amendment-A-0001.md) | Ratified |
 | Amendment procedure | [`../governance/decisions/DR-0001-Constitutional-Amendment-Procedure.md`](../governance/decisions/DR-0001-Constitutional-Amendment-Procedure.md) | Adopted |
 | Institutional memory system (issue #12) | [`../governance/knowledge/`](../governance/knowledge/) (README, record types, templates, transmission) | Landed; issue closed complete |
-| AC-0001 Knowledge Gravity | [`concepts/AC-0001-knowledge-gravity.md`](concepts/AC-0001-knowledge-gravity.md) | Proposed — landed as a reconstruction from issue-text usage; Principal adoption decision pending (§7 state 1) |
-| AC-0002 Engineering Genome | [`concepts/AC-0002-engineering-genome.md`](concepts/AC-0002-engineering-genome.md) | Proposed — same condition as AC-0001 |
+| AC-0001 Knowledge Gravity | [`concepts/AC-0001-knowledge-gravity.md`](concepts/AC-0001-knowledge-gravity.md) | **Adopted, as amended** (DR-0004 P-1, RR-0002, 2026-07-26) |
+| AC-0002 Engineering Genome | [`concepts/AC-0002-engineering-genome.md`](concepts/AC-0002-engineering-genome.md) | **Adopted, as amended** (DR-0004 P-2, RR-0002, 2026-07-26) |
 | AC-0003 Architectural Contracts | **none** | Candidate — must land with candidate status explicit |
 | AC-0004 Separation of Decision and Execution | **none** | Candidate — note: the *shipped platform* already enforces executor/evaluator separation (ADR-0004); the candidate generalizes it |
 | AC-0005 Explicit Relationships | **none** | Candidate — adopt/modify/reject decision owned by #16 |
 | AC-0006 Semantic Inheritance | **none** | Candidate — adopt/modify/reject decision owned by #16 |
-| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | Proposed — chain and review rules landed; the **Upward Compatibility Rule** still unlanded; relation to active STD-0002 is decision **P-4** |
+| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | **Adopted** (DR-0004 P-4) as the protocol STD-0002 implements; the **Upward Compatibility Rule** still unlanded |
 | Ontology & semantic graph | [`../governance/ontology/`](../governance/ontology/) ONTO-0001…0006 | Landed as **Drafts** (no owner/version declared); adoption review pending; known conflicts recorded in [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2–§5 |
 | Runtime Domain & continuous operation | [`../governance/runtime/Runtime-Domain-Specification-v1.0.md`](../governance/runtime/Runtime-Domain-Specification-v1.0.md) | **Adopted architecture baseline** (issue #17 closed) |
 | Implementation Blueprint | [`IMPLEMENTATION-BLUEPRINT.md`](IMPLEMENTATION-BLUEPRINT.md) | Landed; divergences from the Runtime spec reconciled as rulings R-1…R-18 in [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §4 |
-| Phase 0 Reconciliation Record | [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) | Proposed — mechanical rulings applied by this revision; decisions P-1…P-7 reserved for the Principal |
-| Reversible-work standing policy | [`../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md`](../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md) | Proposed — confers no authority until ratified |
+| Phase 0 Reconciliation Record | [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) | Accepted — mechanical rulings applied; decisions P-1…P-7 **decided** (DR-0004, 2026-07-26) |
+| Reversible-work standing policy | [`../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md`](../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md) | **Ratified v1.0.0** (RR-0002, 2026-07-26; expires 2027-01-22) |
 
 ### 0.2 Relationship to the shipped platform
 
@@ -342,7 +342,7 @@ substitutes for constitutional duty (§0.2).
 **Authority limits:** verification determines whether conditions are
 satisfied; acceptance remains the Principal's (Art. IV §1, Art. IX §3).
 
-### 5.5 Assurance engine **[DECISION PENDING: P-5]**
+### 5.5 Assurance engine
 
 *Continuous-operation assurance: how the institution stays confident in an
 always-on system between explicit verification events.*
@@ -353,10 +353,9 @@ tri-state readiness decisions (`ready | not_ready | more_evidence_required`)
 over an evidence set, unresolved risks, a confidence statement, a validity
 window, and reopening conditions — and it **cannot execute, mutate evidence,
 grant authority, or replace human acceptance**. The proposed boundary with
-§5.4 (harvested from the superseded skeleton, consistent with both Runtime
-sources): *Verification evaluates evidence; Assurance evaluates readiness
-and unresolved risk; Governance supplies authority.* Adopting that sentence
-closes risk R3 and is decision **P-5**.
+§5.4 is **adopted** (DR-0004 P-5, 2026-07-26): *Verification evaluates
+evidence; Assurance evaluates readiness and unresolved risk; Governance
+supplies authority.* Risk R3 is closed.
 
 ### 5.6 Evolution engine
 
@@ -448,18 +447,19 @@ ideas at the moment of enthusiasm.
   belongs in the Constitution, that is an Art. XII amendment with its own
   procedure.
 
-**Proposed governance decision GD-P1 — applicability to Foundational
-Concepts.** This section was written for Architectural Candidates (chain
+**Governance decision GD-P1 — DECIDED (DR-0004 P-3, 2026-07-26): the §7
+lifecycle governs layer-2 Foundational Concepts and Engineering Genome
+membership exactly as it governs layer-4 candidates.** The original
+question, preserved for context: This section was written for Architectural Candidates (chain
 layer 4). Whether the same lifecycle formally governs **Foundational
 Concepts** (chain layer 2 — AC-0001, AC-0002) has never been decided; the
 landed concept proposals *assume* it does, and flag that assumption. The
 proposal: **the §7 lifecycle governs layer-2 Foundational Concepts and
 Engineering Genome membership exactly as it governs layer-4 candidates.**
-Alternatives the Principal may prefer: a stricter procedure for layer 2
-(closer to Art. XII amendment discipline, since concepts sit directly under
-the Constitution), or a distinct lightweight track. Until decided, no
-lifecycle claim about a Foundational Concept is enforceable. Decision owner:
-the Principal (Art. III).
+Alternatives considered and not taken: a stricter layer-2 procedure, or a
+distinct lightweight track. The decision is the Principal's recorded act
+(DR-0004); lifecycle claims about Foundational Concepts are now
+enforceable.
 
 **Current registry:** AC-0001 and AC-0002 have landed as proposals (state 1;
 see §0.1) with every rule labeled supported/reconstructed/proposed;
@@ -564,14 +564,16 @@ the posture is buildable, not the posture itself.
   intent; four documents record AC-0001/0002 as "adopted" while the concept
   documents themselves say "proposed"; and **two of AC-0001's reopening
   conditions are already met**
-  ([`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2). *Resolution is
-  decisions P-1…P-3.*
+  ([`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2). **RESOLVED
+  (DR-0004 P-1…P-3):** AC-0001/AC-0002 Adopted as amended; the met reopening
+  conditions actioned; GD-P1 decided. Residual risk narrows to faithful
+  application of the amendments.*
 - **R2 — Platform/spec conflation:** the shipped platform's seams look like
   the candidate principles; treating shipped code as proof of adoption would
   promote candidates without governance. *Reopen §0.2 if any engine section
   starts citing code as authority.*
-- **R3 — Engine overlap:** the Verification/Assurance boundary has a
-  proposed resolution (§5.5). *Closes on decision P-5.*
+- **R3 — Engine overlap: CLOSED (DR-0004 P-5).** The Verification/Assurance
+  boundary is adopted in §5.5.
 - **R4 — Amendment interactions:** future amendments (post A-0001) may alter
   halt semantics assumed in §6/§9. *Reopen on any Article VII/IX/X amendment.*
 

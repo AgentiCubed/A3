@@ -62,7 +62,7 @@ dispute** is resolved by Principal decisions P-1/P-2, see
 [`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2):
 
 **AC-0001 — Knowledge Gravity**
-Knowledge gains authority through verified evidence and successful reuse, not author seniority or
+Knowledge gains justified weight through verified evidence and successful reuse, not author seniority or
 document age. The Ontology must preserve Knowledge Gravity metadata on the appropriate entity
 types and support evidence-based promotion and demotion.
 

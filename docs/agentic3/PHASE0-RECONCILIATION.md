@@ -1,8 +1,10 @@
 # Agentic³ Phase 0 — Reconciliation Record
 
-- **Status:** Proposed — Executor-drafted working record; rulings marked
-  *(mechanical)* are correction proposals, rulings marked *(Principal)* are
-  reserved decisions awaiting the Principal
+- **Status:** Accepted — mechanical rulings applied (PRs #79, #80); the
+  reserved decisions P-1…P-7 were **decided by the Principal on 2026-07-26**
+  and recorded as
+  [DR-0004](../governance/decisions/DR-0004-Phase-0-Reconciliation-Decisions.md)
+  (ratification in RR-0002, which also ratifies DR-0003 v1.0.0)
 - **Date:** 2026-07-26
 - **Scope:** the Phase 0 "merge or explicitly reconcile v2, ontology, memory,
   and Runtime sources" deliverable (`IMPLEMENTATION-BLUEPRINT.md` §10);
