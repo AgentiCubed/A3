@@ -31,6 +31,7 @@ worker (Celery) ─▶ same Postgres/Redis; executes dispatched tasks
 ```bash
 git clone <your fork> agenticubed && cd agenticubed
 cp .env.prod.example .env.prod
+chmod 600 .env.prod
 openssl rand -hex 32   # → paste as SECRET_KEY
 $EDITOR .env.prod      # SITE_ADDRESS, DATABASE_URL(s), REDIS_URL, CORS_ORIGINS
 ```
@@ -38,12 +39,12 @@ $EDITOR .env.prod      # SITE_ADDRESS, DATABASE_URL(s), REDIS_URL, CORS_ORIGINS
 Notes that bite:
 
 - `SECRET_KEY` signs sessions. The app **refuses to start** in production
-  when it is blank, the template default, or shorter than 32 characters.
+  when it is blank, a template value, or shorter than 32 characters.
   Rotating it logs every user out (no data loss).
 - `DATABASE_URL` (async, `+asyncpg`) and `DATABASE_URL_SYNC` (Alembic,
   `+psycopg`) must point at the **same** database.
 - `CORS_ORIGINS` is just `https://<your domain>` — the deployment is
-  same-origin by construction.
+  same-origin by construction, and production rejects a wildcard.
 - Provider keys (`GITHUB_MODELS_TOKEN`, `ANTHROPIC_API_KEY`, …) are optional
   at boot: agents reference them by name (`api_key_ref`) and resolution
   happens at call time. Blank keys mean those providers refuse cleanly.
@@ -62,6 +63,7 @@ are applied automatically on every deploy. Verify:
 ```bash
 curl -fsS https://<domain>/healthz     # {"status":"ok"}
 docker compose -f docker-compose.prod.yml --env-file .env.prod ps
+scripts/prod_smoke.sh https://<domain>
 ```
 
 Then open `https://<domain>`, register the first user (first registration
@@ -74,29 +76,31 @@ Everything that matters (projects, tasks, executions, evaluations, approvals,
 the audit ledger) lives in Postgres. Artifacts live in the `artifacts` volume.
 
 **With a managed database (recommended):** enable the provider's automated
-daily snapshots + point-in-time recovery, and *still* keep an off-provider
-logical dump:
+daily snapshots + point-in-time recovery, and *still* keep an encrypted,
+off-provider logical dump. Set `DATABASE_BACKUP_URL` in `.env.prod` to a
+standard `postgresql://` URL for a read-capable backup role, then run:
 
 ```bash
-# nightly, e.g. from cron on the host — dumps over the wire
-pg_dump --format=custom --no-owner --dbname="$DATABASE_URL_SYNC_DSN" \
-        --file="a3-$(date +%F).dump"
+scripts/production_backup.sh "backups/a3-$(date -u +%Y%m%dT%H%M%SZ).dump"
 ```
 
-(`$DATABASE_URL_SYNC_DSN` is the plain `postgresql://…` form of your
-connection string — strip the `+psycopg` driver suffix.)
+The helper refuses to overwrite a backup, writes through a private temporary
+file, and leaves the resulting custom-format dump mode `0600`.
 
 **Restore drill — do this once now, not during an incident:**
 
 ```bash
-createdb a3_restore_test
-pg_restore --no-owner --dbname=a3_restore_test a3-YYYY-MM-DD.dump
+# Point DATABASE_RESTORE_URL in .env.prod at a separate rehearsal database.
+scripts/production_restore.sh --confirm-restore backups/a3-YYYYMMDD.dump
 psql a3_restore_test -c "select count(*) from audit_events;"   # sanity
 ```
 
-A backup that has never been restored is a hope, not a backup.
+The helper requires both the explicit confirmation flag and a non-empty,
+explicit restore target. It uses `--clean --if-exists`, so rehearse against a
+separate database before any approved recovery window. A backup that has never
+been restored is a hope, not a backup.
 
-**Artifacts volume:** `docker run --rm -v agenticubed_artifacts:/a -v "$PWD":/b
+**Artifacts volume:** `docker run --rm -v a3_artifacts:/a -v "$PWD":/b
 alpine tar czf /b/artifacts-$(date +%F).tgz -C /a .` alongside the DB dump.
 
 ## 5. Upgrades
@@ -104,6 +108,7 @@ alpine tar czf /b/artifacts-$(date +%F).tgz -C /a .` alongside the DB dump.
 ```bash
 git pull
 docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+scripts/prod_smoke.sh https://<domain>
 ```
 
 Migrations run automatically. Take a DB dump first (section 4) — Alembic
@@ -128,3 +133,7 @@ Multi-node/HA topologies, Kubernetes, zero-downtime blue-green deploys,
 object-store artifact backends, and autoscaling workers. The port
 architecture (WorkflowEngine/EventBus/ArtifactStore) is where those grow
 later; nothing in this guide paints over that door.
+
+This runbook and CI prove a repeatable deployment contract. A real production
+claim still requires an operator-recorded deployment, a successful public
+smoke, and a restore rehearsal against the selected managed providers.

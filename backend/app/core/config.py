@@ -10,6 +10,7 @@ into prompts. Provider credentials are referenced elsewhere by their env-var
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import ClassVar
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,10 +31,13 @@ class Settings(BaseSettings):
     cors_origins: str = Field(default="*")
 
     #: The insecure default that must never run in production.
-    INSECURE_DEFAULT_SECRET: str = "dev-only-insecure-change-me-please-32chars"  # noqa: S105
+    INSECURE_DEFAULT_SECRET: ClassVar[str] = (
+        "dev-only-insecure-change-me-please-32chars"  # noqa: S105
+    )
+    INSECURE_TEMPLATE_SECRET: ClassVar[str] = "change-me-32+chars-min-for-jwt-signing"  # noqa: S105
 
     #: Shortest session-signing key accepted in production (`openssl rand -hex 32`).
-    MIN_PRODUCTION_SECRET_LENGTH: int = 32
+    MIN_PRODUCTION_SECRET_LENGTH: ClassVar[int] = 32
 
     # Database
     database_url: str = Field(
@@ -84,12 +88,12 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def assert_production_safe(self) -> None:
-        """Refuse to run in production without a strong session-signing key.
+        """Refuse unsafe session-signing and CORS settings in production.
 
         A blank or whitespace-only value (the state of an unfilled
         ``.env.prod`` template) and anything shorter than
         ``MIN_PRODUCTION_SECRET_LENGTH`` are rejected alongside the insecure
-        development default: an empty HS256 key signs forgeable tokens.
+        development and template values. Wildcard CORS is development-only.
         """
         if not self.is_production:
             return
@@ -99,15 +103,22 @@ class Settings(BaseSettings):
                 "SECRET_KEY is empty; set a strong SECRET_KEY in production "
                 "(openssl rand -hex 32)."
             )
-        if secret == self.INSECURE_DEFAULT_SECRET:
+        if secret in {
+            self.INSECURE_DEFAULT_SECRET,
+            self.INSECURE_TEMPLATE_SECRET,
+        } or secret.lower().startswith(("change-me", "replace-me")):
             raise RuntimeError(
-                "SECRET_KEY is the insecure default; set a strong SECRET_KEY in production."
+                "SECRET_KEY must be a unique value of at least 32 characters in production."
             )
         if len(secret) < self.MIN_PRODUCTION_SECRET_LENGTH:
             raise RuntimeError(
                 f"SECRET_KEY is shorter than {self.MIN_PRODUCTION_SECRET_LENGTH} "
                 "characters; set a strong SECRET_KEY in production "
                 "(openssl rand -hex 32)."
+            )
+        if "*" in self.cors_origin_list:
+            raise RuntimeError(
+                "CORS_ORIGINS cannot contain '*' in production; set the public HTTPS origin."
             )
 
 

@@ -27,6 +27,7 @@ coverage/
 # Artifacts / local storage
 /var/artifacts/
 artifact_store/
+/backups/
 
 # OS / editor
 .DS_Store

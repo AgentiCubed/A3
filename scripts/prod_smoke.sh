@@ -17,20 +17,36 @@ fail() {
 	exit 1
 }
 
-echo "1/3 API liveness through the proxy…"
-body="$(curl -fsS --max-time 10 "$BASE/healthz")" || fail "/healthz unreachable"
-case "$body" in
-*ok*) echo "    ok" ;;
-*) fail "/healthz answered without status ok: $body" ;;
+case "$BASE" in
+https://*) ;;
+http://*)
+	[ "${A3_ALLOW_HTTP:-0}" = "1" ] || {
+		echo "refusing a non-TLS URL; set A3_ALLOW_HTTP=1 only for a local test" >&2
+		exit 2
+	}
+	;;
+*)
+	echo "base URL must start with https://" >&2
+	exit 2
+	;;
 esac
 
+echo "1/3 API liveness through the proxy…"
+body="$(curl -fsS --connect-timeout 5 --max-time 20 --retry 5 --retry-connrefused "$BASE/healthz")" ||
+	fail "/healthz unreachable"
+printf "%s" "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' ||
+	fail "/healthz answered without status ok: $body"
+echo "    ok"
+
 echo "2/3 API refuses unauthenticated access…"
-code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$BASE/api/v1/projects")"
+code="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 \
+	"$BASE/api/v1/projects")" || fail "/api/v1/projects unreachable"
 [ "$code" = "401" ] || [ "$code" = "403" ] || fail "expected 401/403 from /api/v1/projects, got $code"
 echo "    ok ($code)"
 
 echo "3/3 frontend serves…"
-code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -L "$BASE/")"
+code="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 20 -L \
+	"$BASE/")" || fail "/ unreachable"
 [ "$code" = "200" ] || fail "expected 200 from /, got $code"
 echo "    ok"
 

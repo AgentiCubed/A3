@@ -46,7 +46,7 @@ Each gap was checked against the working tree, not inherited from prior docs.
 | G3 | **No dependency-audit CI job.** WS-8 called for `pip-audit`/`npm audit` failing on critical. CI has no such job; the Next.js CVE (#53) was caught by an external audit, not by our pipeline. **CLOSED 2026-07-21:** `dependency-audit` CI job + `scripts/dependency_audit.py` with expiring waivers; proof `backend/tests/unit/test_dependency_audit.py` and the gate itself, which caught two live criticals (`next`, `vitest`) on arrival — both fixed in the same change. | `.github/workflows/ci.yml` — no audit step | ~~Medium~~ closed |
 | G4 | ~~**Live-provider path is unproven.**~~ **CLOSED 2026-07-26:** the manual `Live Provider Celery Proof` workflow ran one real GitHub Models task through HTTP dispatch → Redis → a separately started Celery worker → live provider → Postgres at merged `main` SHA `312bf334`. Run [#30207256748](https://github.com/AgentiCubed/A3/actions/runs/30207256748) passed and uploaded the sanitized, 30-day proof artifact `live-provider-proof-312bf3348dee63e3d1931d2c50375d545dc49ceb` (artifact ID `8633430992`, SHA-256 `6ddfcffde0076908a72dbdf3ed43756bfcefaf909fdc177f4c98401ab4312695`). Hermetic CI remains mock-only. | `.github/workflows/live-provider-proof.yml`; `backend/tests/integration/test_live_provider_celery_smoke.py`; run #30207256748 | ~~Medium~~ closed |
 | G5 | **Optimistic-locking review under scheduler concurrency** (WS-8 item) has no recorded outcome: no ADR, no version-column usage on task transitions, no concurrency test beyond `test_atomic_close.py` (which covers closure only). | grep `version`/locking over models + state machine | Medium |
-| G6 | **No deployment story past Docker Compose.** Explicitly deferred by the remediation plan "until WS-1..6 land" — they have now landed, so this is unblocked, not incomplete. | `infra/`, compose only | Low-Medium (sequenced) |
+| G6 | ~~**No deployment story past Docker Compose.**~~ **CLOSED 2026-07-26:** `docker-compose.prod.yml` defines a single-node production shape with managed PostgreSQL/Redis, private non-root application services, Caddy TLS termination, runtime secret injection, explicit backup/restore helpers, and a public smoke contract. `docs/DEPLOYMENT.md` records deploy, upgrade, rollback, database recovery, and the boundary between a configuration proof and a real production claim. | `docker-compose.prod.yml`; `docs/DEPLOYMENT.md`; `scripts/prod_smoke.sh`; `scripts/production_{backup,restore}.sh`; `scripts/test_prod_smoke.py` | ~~Low-Medium~~ closed |
 | G7 | **Doc drift.** `REMEDIATION-2026-07.md` still marks WS-6 "READY TO START"; `README.md` cites closed issue #45 as active work; `HANDOFF-WS6.md` describes as future what is now merged. Under §7 this drift is itself a defect. | this branch fixes the first two | Low (fixed here) |
 | G8 | **Agentic³ platform vision: design ratified, zero implementation.** The Unified Architecture Spec v2 (#25), ontology (#18/#22), Runtime Domain spec (#23), and Implementation Blueprint (#24) are merged, but no runtime code exists (`RuntimeEventV1` appears nowhere in `backend/app`). Blueprint Phases 0–6 are all unstarted. | grep `RuntimeEvent` — no hits | Strategic (not a defect — sequenced design-first on purpose) |
 | G9 | `verbal-kombat/` is an unrelated standalone artifact living in the product repo. | tree | Housekeeping |
@@ -167,6 +167,13 @@ with a `--profile local-db` escape hatch), `deploy/Caddyfile`,
 `compose` job validates both compose files and both profiles on every push.
 Deliberately out of scope, unchanged: HA/Kubernetes/blue-green (ADR-0002
 reserves the port).
+
+**Follow-up hardening (PR #74):** production images run as non-root users;
+Compose adds health-gated dependencies, bounded logging, and
+`no-new-privileges`; production rejects template secrets and wildcard CORS;
+backup/explicit-confirmation restore helpers and a hermetic public-smoke
+contract are validated in CI. The proof boundary remains unchanged: this is
+not evidence of a live deployment or provider restore rehearsal.
 
 ### Step 6 — Agentic³ Phase 0, then the Phase 1 vertical slice (G8)
 

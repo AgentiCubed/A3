@@ -1,3 +1,7 @@
+{
+	admin off
+}
+
 # Single-domain TLS termination for the production compose profile.
 #
 # Caddy provisions and renews Let's Encrypt certificates automatically for
@@ -24,5 +28,10 @@
 		reverse_proxy frontend:3000
 	}
 
-	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	encode zstd gzip
 }
