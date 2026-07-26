@@ -103,10 +103,10 @@ class Settings(BaseSettings):
                 "SECRET_KEY is empty; set a strong SECRET_KEY in production "
                 "(openssl rand -hex 32)."
             )
-        if (
-            secret in {self.INSECURE_DEFAULT_SECRET, self.INSECURE_TEMPLATE_SECRET}
-            or secret.lower().startswith(("change-me", "replace-me"))
-        ):
+        if secret in {
+            self.INSECURE_DEFAULT_SECRET,
+            self.INSECURE_TEMPLATE_SECRET,
+        } or secret.lower().startswith(("change-me", "replace-me")):
             raise RuntimeError(
                 "SECRET_KEY must be a unique value of at least 32 characters in production."
             )
