@@ -21,8 +21,10 @@ event: evidence arrived, reuse occurred, contradiction was recorded, or superses
 
 ### 1.2 KnowledgeGravityMetadata Record
 
-Required for: `Pattern`, `AntiPattern`, `FoundationalConcept`, `ArchitecturalCandidate`,
-`ArchitecturalPrinciple`, `ArchitecturalContract`.
+Required for the entity types named in the **authoritative list** in
+ONTO-0001 §3 (Entity Family Summary): `Pattern`, `AntiPattern`,
+`FoundationalConcept`, `ArchitecturalCandidate`, `ArchitecturalPrinciple`,
+`ArchitecturalContract`.
 
 | Field | Type | Description |
 |---|---|---|
@@ -107,8 +109,11 @@ reuse, predictive performance, contradictions, staleness, supersession, scope br
 authority status.
 
 The review records an evidence-backed rationale and one outcome: `retain`, `increase_weight`,
-`decrease_weight`, `promote`, `supersede`, `retire`, or `request_more_evidence`. Numeric
-indicators may inform review but are never the authoritative result.
+`decrease_weight`, `promote`, `supersede`, `retire`, or `request_more_evidence`. **This is the
+owning enumeration for gravity-review outcomes** (ONTO-0003 §8); ONTO-0005 Q-011 references
+it — its former extra tokens map here as `constrain`/`revalidate` ↦ `retain` with recorded
+conditions, `demote` ↦ `decrease_weight`. Numeric indicators may inform review but are never
+the authoritative result.
 
 Promotion of an `ArchitecturalCandidate` to `FoundationalConcept` requires all of:
 

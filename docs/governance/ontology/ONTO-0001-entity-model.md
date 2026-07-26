@@ -23,7 +23,7 @@ inherit these fields. Fields marked *Conditional* are required only for the enti
 | `current_version_id` | VersionIdentifier | Conditional | No | References the current version record for versioned types (documents, specifications, governance records, software artifacts). |
 | `version_history` | []VersionRef | Conditional | No (append-only) | Ordered list of prior versions. Append-only; entries never removed. |
 | `verification_status` | VerificationStatus | Yes | No | Whether the entity's claims have been verified, by whom, and under which criteria. |
-| `governance_status` | GovernanceStatus | Yes | No | Current governance standing: `draft`, `active`, `adopted`, `superseded`, `retired`. |
+| `governance_status` | GovernanceStatus | Yes | No | Current governance standing: `draft`, `active`, `superseded`, `retired` (aligned with the ONTO-0003 lifecycle vocabulary; adoption is a candidate-lifecycle concept recorded in ACR-0001, not an instance state — see ONTO-0003 §7). |
 | `relationships` | []Relationship | Yes | No (append-only) | All explicit relationships to other entities. See ONTO-0002. |
 | `created_at` | Timestamp | Yes | Yes | Creation timestamp. Immutable. |
 | `created_by` | ActorReference | Yes | Yes | Actor that created the entity. |
@@ -138,8 +138,10 @@ are always distinct fields and shall never be conflated.
   A single undifferentiated prose block is a model violation.
 - A knowledge entity's authority is conferred by a governance relationship, not by file
   existence.
-- `FoundationalConcept` and `ArchitecturalPrinciple` require `knowledge_gravity` metadata. See
-  ONTO-0004.
+- The authoritative list of entity types requiring `knowledge_gravity`
+  metadata is the §3 Entity Family Summary; ONTO-0004 §1.2 references it.
+  (Previously four documents stated this requirement four different ways —
+  reconciled in `PHASE0-RECONCILIATION.md` §5.)
 - `Pattern` and `AntiPattern` require at least two independent application or recurrence events
   before they may be created. A single incident may produce a `Risk` or `Assumption` but not a
   `Pattern`.
@@ -305,7 +307,7 @@ material to interpretation. They are immutable records of what happened.
 |---|---|---|---|---|
 | Actor | Governance relationship | No — changes create new delegation | No | No |
 | System | Deployed configuration | No — changes audited via AuditEvent | No | No |
-| Knowledge | Authority decision | Supersessions add, never overwrite | Pattern, AntiPattern, FoundationalConcept, ArchitecturalPrinciple, ArchitecturalContract | Only when explicitly designated as a genome member (see ONTO-0004 §2.3). |
+| Knowledge | Authority decision | Supersessions add, never overwrite | **Authoritative list:** Pattern, AntiPattern, FoundationalConcept, ArchitecturalCandidate, ArchitecturalPrinciple, ArchitecturalContract | Only when explicitly designated as a genome member (see ONTO-0004 §2.3). |
 | Artifact | Execution provenance | Content-addressed artifacts immutable | No | No |
 | Evidence | System or human observation | Yes | No | No |
 | Governance | Ratification or delegation | Yes (amendments preserve prior text) | No | No |
