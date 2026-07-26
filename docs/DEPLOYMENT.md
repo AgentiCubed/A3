@@ -38,7 +38,8 @@ $EDITOR .env.prod      # SITE_ADDRESS, DATABASE_URL(s), REDIS_URL, CORS_ORIGINS
 Notes that bite:
 
 - `SECRET_KEY` signs sessions. The app **refuses to start** in production
-  with the template default. Rotating it logs every user out (no data loss).
+  when it is blank, the template default, or shorter than 32 characters.
+  Rotating it logs every user out (no data loss).
 - `DATABASE_URL` (async, `+asyncpg`) and `DATABASE_URL_SYNC` (Alembic,
   `+psycopg`) must point at the **same** database.
 - `CORS_ORIGINS` is just `https://<your domain>` — the deployment is

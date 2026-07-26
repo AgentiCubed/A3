@@ -21,6 +21,17 @@ def test_production_rejects_default_secret():
         prod.assert_production_safe()
 
 
+@pytest.mark.parametrize("secret", ["", "   ", "too-short"])
+def test_production_rejects_blank_or_short_secret(secret):
+    prod = Settings(environment="production", secret_key=secret)
+    with pytest.raises(RuntimeError):
+        prod.assert_production_safe()
+
+
+def test_development_allows_weak_secret():
+    Settings(environment="development", secret_key="").assert_production_safe()
+
+
 def test_production_accepts_strong_secret():
     prod = Settings(environment="production", secret_key="a-strong-unique-production-secret-value")
     prod.assert_production_safe()  # does not raise

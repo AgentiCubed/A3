@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     #: The insecure default that must never run in production.
     INSECURE_DEFAULT_SECRET: str = "dev-only-insecure-change-me-please-32chars"  # noqa: S105
 
+    #: Shortest session-signing key accepted in production (`openssl rand -hex 32`).
+    MIN_PRODUCTION_SECRET_LENGTH: int = 32
+
     # Database
     database_url: str = Field(
         default="postgresql+asyncpg://agenticubed:agenticubed@db:5432/agenticubed"
@@ -81,10 +84,30 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def assert_production_safe(self) -> None:
-        """Refuse to run in production with the insecure default secret."""
-        if self.is_production and self.secret_key == self.INSECURE_DEFAULT_SECRET:
+        """Refuse to run in production without a strong session-signing key.
+
+        A blank or whitespace-only value (the state of an unfilled
+        ``.env.prod`` template) and anything shorter than
+        ``MIN_PRODUCTION_SECRET_LENGTH`` are rejected alongside the insecure
+        development default: an empty HS256 key signs forgeable tokens.
+        """
+        if not self.is_production:
+            return
+        secret = self.secret_key.strip()
+        if not secret:
+            raise RuntimeError(
+                "SECRET_KEY is empty; set a strong SECRET_KEY in production "
+                "(openssl rand -hex 32)."
+            )
+        if secret == self.INSECURE_DEFAULT_SECRET:
             raise RuntimeError(
                 "SECRET_KEY is the insecure default; set a strong SECRET_KEY in production."
+            )
+        if len(secret) < self.MIN_PRODUCTION_SECRET_LENGTH:
+            raise RuntimeError(
+                f"SECRET_KEY is shorter than {self.MIN_PRODUCTION_SECRET_LENGTH} "
+                "characters; set a strong SECRET_KEY in production "
+                "(openssl rand -hex 32)."
             )
 
 
