@@ -1,15 +1,22 @@
 name: Live provider smoke
 
-# Next-steps Step 3 (gap G4): the product's first evidence that its real
-# inference path works. One real task through AnthropicProvider — dispatch →
-# execution → evaluation — asserting shape, not content. Opt-in and
-# secret-gated so hermetic CI stays mock-only (assumption A15): when the
-# ANTHROPIC_API_KEY secret is absent the job SKIPS its steps and passes.
+# Next-steps Step 3 (gap G4): standing evidence that the real inference path
+# works. One real task through GitHubModelsProvider — dispatch → execution →
+# evaluation — asserting shape, not content. GitHub Models is the free
+# inference tier, so the nightly run costs nothing. Opt-in and secret-gated
+# so hermetic CI stays mock-only (assumption A15): when the A3_MODELS_TOKEN
+# secret is absent the job SKIPS its steps and passes.
+#
+# The Celery-spine variant of this proof is live-provider-proof.yml
+# (manual dispatch, Postgres + Redis); this one covers the inline API path.
 
 on:
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * *" # nightly, 06:17 UTC
+
+permissions:
+  contents: read
 
 jobs:
   live-smoke:
@@ -22,13 +29,13 @@ jobs:
       - name: Detect credential
         id: cred
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_MODELS_TOKEN: ${{ secrets.A3_MODELS_TOKEN }}
         run: |
-          if [ -n "$ANTHROPIC_API_KEY" ]; then
+          if [ -n "$GITHUB_MODELS_TOKEN" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "ANTHROPIC_API_KEY secret not configured — skipping live smoke (job passes)."
+            echo "A3_MODELS_TOKEN secret not configured — skipping live smoke (job passes)."
           fi
       - uses: actions/setup-python@v5
         if: steps.cred.outputs.present == 'true'
@@ -41,6 +48,6 @@ jobs:
       - name: Live provider smoke (one real task, shape asserted)
         if: steps.cred.outputs.present == 'true'
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_MODELS_TOKEN: ${{ secrets.A3_MODELS_TOKEN }}
           LIVE_PROVIDER_SMOKE: "1"
         run: python -m pytest tests/live/test_live_provider_smoke.py -q

@@ -112,9 +112,9 @@ caught two live critical advisories on `main` — `next@15.1.12`
 ### Step 3 — Live-provider opt-in smoke (closes G4)
 
 A manually-triggered (`workflow_dispatch`) or nightly CI job, gated on the
-presence of an `ANTHROPIC_API_KEY` secret, that runs **one** real task through
-`AnthropicProvider` — dispatch → execution → evaluation — and asserts shape,
-not content (hermetic CI stays mock-only per A15). Done when the job passes
+presence of a provider secret, that runs **one** real task through a live
+provider — dispatch → execution → evaluation — and asserts shape, not
+content (hermetic CI stays mock-only per A15). Done when the job passes
 against the live API and is skipped, not failed, when the secret is absent.
 This is the first evidence the product works with real inference, and it
 de-risks every future "use it for real" conversation.
@@ -128,6 +128,13 @@ proves the HTTP request queues before any worker exists, a separate worker
 consumes Redis, the provider execution completes in Postgres with a provider
 request receipt, the returned marker is present, evaluation passes, and the
 task completes. The secret is not available to normal hermetic CI.
+
+**Addendum (2026-07-26):** the nightly `live-provider-smoke.yml` (inline API
+path, `tests/live/test_live_provider_smoke.py`) also runs on the free GitHub
+Models tier via the same `A3_MODELS_TOKEN` — a standing decision: CI proofs
+carry zero marginal cost and no prepaid provider credits. `AnthropicProvider`
+remains available at runtime for orgs that supply their own key; it is simply
+not exercised by CI.
 
 ### Step 4 — Concurrency-safety review (closes G5)
 
