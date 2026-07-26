@@ -1,0 +1,152 @@
+name: a3-production
+
+x-backend-environment: &backend-environment
+  ENVIRONMENT: production
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY to a unique value of at least 32 characters}
+  ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+  REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-1209600}
+  CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS to the public HTTPS origin}
+  DATABASE_URL: ${DATABASE_URL:?set the managed PostgreSQL async URL}
+  DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:?set the managed PostgreSQL sync URL}
+  REDIS_URL: ${REDIS_URL:?set the managed Redis URL}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:?set the Celery broker URL}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:?set the Celery result URL}
+  EVENT_BUS_BACKEND: redis
+  WORKFLOW_ENGINE_BACKEND: celery
+  ARTIFACT_STORE_BACKEND: local
+  ARTIFACT_STORE_PATH: /var/artifacts
+  SCHEDULER_MAX_PARALLEL: ${SCHEDULER_MAX_PARALLEL:-3}
+  HANDOFF_BUDGET_CHARS: ${HANDOFF_BUDGET_CHARS:-8000}
+  TOOL_MAX_ITERATIONS: ${TOOL_MAX_ITERATIONS:-4}
+  TOOL_MAX_CALLS: ${TOOL_MAX_CALLS:-8}
+  DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-mock}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+x-runtime-defaults: &runtime-defaults
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: "5"
+
+services:
+  api:
+    <<: *runtime-defaults
+    image: agenticubed/api:${A3_IMAGE_TAG:-local}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    environment: *backend-environment
+    command:
+      - sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+        --proxy-headers --forwarded-allow-ips='*'
+    expose:
+      - "8000"
+    volumes:
+      - artifacts:/var/artifacts
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          curl -fsS http://localhost:8000/readyz |
+          python -c 'import json,sys; data=json.load(sys.stdin);
+          checks=data.get("checks", {});
+          assert data.get("status") == "ok";
+          assert checks.get("database") == "ok";
+          assert checks.get("redis") == "ok"'
+      interval: 15s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+
+  worker:
+    <<: *runtime-defaults
+    image: agenticubed/api:${A3_IMAGE_TAG:-local}
+    environment: *backend-environment
+    command: celery -A app.workers.celery_app worker --loglevel=INFO
+    volumes:
+      - artifacts:/var/artifacts
+    tmpfs:
+      - /tmp
+    depends_on:
+      api:
+        condition: service_healthy
+
+  frontend:
+    <<: *runtime-defaults
+    image: agenticubed/frontend:${A3_IMAGE_TAG:-local}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://${A3_DOMAIN:?set A3_DOMAIN}
+    environment:
+      NODE_ENV: production
+      INTERNAL_API_BASE_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: https://${A3_DOMAIN:?set A3_DOMAIN}
+    expose:
+      - "3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://localhost:3000/login')
+          .then(r=>{if(!r.ok)process.exit(1)})
+          .catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+
+  proxy:
+    <<: *runtime-defaults
+    image: caddy:2.11.4-alpine
+    environment:
+      A3_DOMAIN: ${A3_DOMAIN:?set A3_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+
+  db-tools:
+    image: postgres:16-alpine
+    profiles:
+      - tools
+    environment:
+      DATABASE_BACKUP_URL: ${DATABASE_BACKUP_URL:?set the standard PostgreSQL backup URL}
+      DATABASE_RESTORE_URL: ${DATABASE_RESTORE_URL:-}
+    command: ["true"]
+
+volumes:
+  artifacts:
+    name: a3_artifacts
+  caddy_data:
+    name: a3_caddy_data
+  caddy_config:
+    name: a3_caddy_config

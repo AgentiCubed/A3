@@ -10,6 +10,7 @@ into prompts. Provider credentials are referenced elsewhere by their env-var
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import ClassVar
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,7 +31,10 @@ class Settings(BaseSettings):
     cors_origins: str = Field(default="*")
 
     #: The insecure default that must never run in production.
-    INSECURE_DEFAULT_SECRET: str = "dev-only-insecure-change-me-please-32chars"  # noqa: S105
+    INSECURE_DEFAULT_SECRET: ClassVar[str] = (
+        "dev-only-insecure-change-me-please-32chars"  # noqa: S105
+    )
+    INSECURE_TEMPLATE_SECRET: ClassVar[str] = "change-me-32+chars-min-for-jwt-signing"  # noqa: S105
 
     # Database
     database_url: str = Field(
@@ -81,10 +85,20 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def assert_production_safe(self) -> None:
-        """Refuse to run in production with the insecure default secret."""
-        if self.is_production and self.secret_key == self.INSECURE_DEFAULT_SECRET:
+        """Refuse production startup with template secrets or wildcard CORS."""
+        if not self.is_production:
+            return
+        if (
+            len(self.secret_key) < 32
+            or self.secret_key in {self.INSECURE_DEFAULT_SECRET, self.INSECURE_TEMPLATE_SECRET}
+            or self.secret_key.lower().startswith(("change-me", "replace-me"))
+        ):
             raise RuntimeError(
-                "SECRET_KEY is the insecure default; set a strong SECRET_KEY in production."
+                "SECRET_KEY must be a unique value of at least 32 characters in production."
+            )
+        if "*" in self.cors_origin_list:
+            raise RuntimeError(
+                "CORS_ORIGINS cannot contain '*' in production; set the public HTTPS origin."
             )
 
 

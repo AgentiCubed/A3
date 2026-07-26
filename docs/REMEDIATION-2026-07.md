@@ -233,17 +233,16 @@ documents outrun our enforcement.
 ### WS-8 — Hardening ledger (security, concurrency, deploy, UI)
 *Clears claims 1 and 10 progressively.*
 
-- CVE bump **done** (15.1.12). Remaining, tracked as a living checklist:
-  dependency-audit job in CI (`npm audit`/`pip-audit`, fail on critical),
-  optimistic-locking review on task transitions under WS-2 concurrency,
-  deployment story past compose (out of scope until WS-1..6 land), UI
-  write-paths (approve/reject, dispatch, halt) so the dashboard stops
-  being read-only.
-- **Status: OPEN — the only remaining workstream.** WS-1..WS-7 have all
-  merged, so the WS-8 checklist (plus the project-level halt switch WS-2
-  deferred) is now the gap between "loop proven in CI" and "completed
-  product." The verified gap register and recommended sequencing live in
-  `docs/NEXT-STEPS-2026-07.md` (2026-07-19).
+- CVE bump, dependency-audit CI, concurrency claims, project halt, operator UI
+  write paths, and the minimal deployment story are **done**. The deployment
+  contract is `compose.production.yml` + `docs/deployment.md`, with production
+  images, managed PostgreSQL/Redis, Caddy TLS, runtime secret injection,
+  backup/restore helpers, and a public smoke.
+- **Status: DELIVERED — WS-8 closes with Step 5/G6 (2026-07-26).** This means
+  the repository now contains the bounded hardening and deployment contract;
+  it does not claim that a live production environment or provider restore
+  rehearsal exists. Exact evidence and remaining strategic work live in
+  `docs/NEXT-STEPS-2026-07.md`.
 
 ## 5. Sequence and why
 

@@ -21,8 +21,40 @@ def test_production_rejects_default_secret():
         prod.assert_production_safe()
 
 
+@pytest.mark.parametrize(
+    "secret",
+    [
+        "short",
+        "change-me-32+chars-min-for-jwt-signing",
+        "replace-me-with-a-real-production-secret-value",
+    ],
+)
+def test_production_rejects_template_or_short_secret(secret: str):
+    prod = Settings(
+        environment="production",
+        secret_key=secret,
+        cors_origins="https://a3.example.com",
+    )
+    with pytest.raises(RuntimeError):
+        prod.assert_production_safe()
+
+
+def test_production_rejects_wildcard_cors():
+    prod = Settings(
+        environment="production",
+        secret_key="a-strong-unique-production-secret-value",
+        cors_origins="*",
+    )
+    with pytest.raises(RuntimeError):
+        prod.assert_production_safe()
+
+
 def test_production_accepts_strong_secret():
-    prod = Settings(environment="production", secret_key="a-strong-unique-production-secret-value")
+    prod = Settings(
+        environment="production",
+        secret_key="a-strong-unique-production-secret-value",
+        cors_origins="https://a3.example.com",
+    )
     prod.assert_production_safe()  # does not raise
 
 

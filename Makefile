@@ -1,5 +1,6 @@
 .PHONY: help up down logs check backend-install backend-lint backend-fmt backend-test \
-        frontend-install frontend-lint frontend-test migrate revision demo audit
+        frontend-install frontend-lint frontend-test migrate revision demo audit \
+        production-config production-build production-up production-logs
 
 help:
 	@echo "AgentiCubed make targets:"
@@ -18,6 +19,10 @@ help:
 	@echo "  revision m=msg   alembic autogenerate revision"
 	@echo "  demo             run the end-to-end demonstration project"
 	@echo "  audit            dependency-audit gate (pip-audit + npm audit + waivers)"
+	@echo "  production-config validate compose.production.yml with .env.production"
+	@echo "  production-build  build production API + frontend images"
+	@echo "  production-up     start the single-node production stack"
+	@echo "  production-logs   tail production stack logs"
 
 up:
 	docker compose up --build
@@ -57,6 +62,18 @@ frontend-test:
 audit:
 	python scripts/dependency_audit.py backend
 	python scripts/dependency_audit.py frontend
+
+production-config:
+	docker compose --env-file .env.production -f compose.production.yml config -q
+
+production-build:
+	docker compose --env-file .env.production -f compose.production.yml build api frontend
+
+production-up:
+	docker compose --env-file .env.production -f compose.production.yml up -d
+
+production-logs:
+	docker compose --env-file .env.production -f compose.production.yml logs -f --tail=100
 
 migrate:
 	cd backend && alembic upgrade head

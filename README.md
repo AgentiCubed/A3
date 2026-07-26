@@ -143,6 +143,7 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 - [`docs/data-model.md`](docs/data-model.md) — entities and relationships
 - [`docs/execution-state-machine.md`](docs/execution-state-machine.md) — task execution lifecycle
 - [`docs/security-model.md`](docs/security-model.md) — RBAC, secrets, least-privilege tools
+- [`docs/deployment.md`](docs/deployment.md) — single-node production deployment and recovery runbook
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
 - [`docs/governance/playbook/`](docs/governance/playbook/) — engineering governance playbook for gate workflow, reviews, Git procedure, and task packets
@@ -175,9 +176,13 @@ objective-to-close loop proof (`tests/integration/test_objective_to_close.py`)
 — are merged. The artifact/acceptance serialization boundary
 ([GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45)) was closed by
 making project closure atomic (PR #52, proof `test_atomic_close.py`). This is
-not a claim that every production-hardening gap is closed: the remaining gaps
-(operator UI write paths, halt switch, dependency-audit CI, live-provider
-smoke, deployment story) and their recommended sequence are recorded in
+not a claim that a live production environment exists. The July hardening
+sequence through WS-8 now includes operator UI controls, halt/resume,
+dependency-audit CI, live-provider proof, concurrency claims, and the
+single-node production deployment contract in
+[`docs/deployment.md`](docs/deployment.md). Live deployment and restore
+rehearsal remain operator-run evidence, while the next strategic sequence is
+Agentic³ Phase 0/1 in
 [`docs/NEXT-STEPS-2026-07.md`](docs/NEXT-STEPS-2026-07.md). See
 [`docs/PROJECT_SUMMARY.md`](docs/PROJECT_SUMMARY.md) and
 [`docs/roadmap.md`](docs/roadmap.md) for the full record.
