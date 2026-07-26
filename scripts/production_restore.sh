@@ -3,8 +3,8 @@ set -euo pipefail
 
 confirmation="${1:-}"
 source_file="${2:-}"
-env_file="${A3_ENV_FILE:-.env.production}"
-compose_file="${A3_COMPOSE_FILE:-compose.production.yml}"
+env_file="${A3_ENV_FILE:-.env.prod}"
+compose_file="${A3_COMPOSE_FILE:-docker-compose.prod.yml}"
 
 if [[ "$confirmation" != "--confirm-restore" || -z "$source_file" ]]; then
   echo "usage: scripts/production_restore.sh --confirm-restore backups/a3.dump" >&2

@@ -1,0 +1,187 @@
+# Production compose profile — single-node deployment (next-steps Step 5).
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Differences from the dev compose (docker-compose.yml): no source bind
+# mounts, compiled frontend, restart policies, TLS termination via Caddy,
+# and Postgres/Redis are EXTERNAL managed services by default (set
+# DATABASE_URL / REDIS_URL in .env.prod). For a self-contained single box,
+# add `--profile local-db` to run them here instead.
+#
+# Full walkthrough, secrets, and backup/restore: docs/DEPLOYMENT.md.
+
+name: a3-production
+
+x-runtime-defaults: &runtime-defaults
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: "5"
+
+services:
+  proxy:
+    <<: *runtime-defaults
+    image: caddy:2.11.4-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env.prod}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+
+  api:
+    <<: *runtime-defaults
+    image: agenticubed/api:${A3_IMAGE_TAG:-local}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    env_file: .env.prod
+    environment:
+      ENVIRONMENT: production
+      EVENT_BUS_BACKEND: redis
+      WORKFLOW_ENGINE_BACKEND: celery
+    # Migrations run before the server binds: a failed migration exits the
+    # container instead of serving against an unmigrated schema.
+    command:
+      - sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+        --workers 2 --proxy-headers --forwarded-allow-ips='*'
+    volumes:
+      - artifacts:/var/artifacts
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          curl -fsS http://localhost:8000/readyz |
+          python -c 'import json,sys; data=json.load(sys.stdin);
+          checks=data.get("checks", {});
+          assert data.get("status") == "ok";
+          assert checks.get("database") == "ok";
+          assert checks.get("redis") == "ok"'
+      interval: 15s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+
+  worker:
+    <<: *runtime-defaults
+    image: agenticubed/api:${A3_IMAGE_TAG:-local}
+    env_file: .env.prod
+    environment:
+      ENVIRONMENT: production
+      EVENT_BUS_BACKEND: redis
+      WORKFLOW_ENGINE_BACKEND: celery
+    command: celery -A app.workers.celery_app worker --loglevel=INFO
+    volumes:
+      - artifacts:/var/artifacts
+    tmpfs:
+      - /tmp
+    depends_on:
+      api:
+        condition: service_healthy
+
+  frontend:
+    <<: *runtime-defaults
+    image: agenticubed/frontend:${A3_IMAGE_TAG:-local}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        # Inlined into the browser bundle at build time: same-origin, so the
+        # browser reaches the API through the proxy's /api/v1 route.
+        NEXT_PUBLIC_API_BASE_URL: https://${SITE_ADDRESS:?set SITE_ADDRESS in .env.prod}
+    environment:
+      NODE_ENV: production
+      # Server-side calls (cookie proxy, SSE relay) go over the compose network.
+      INTERNAL_API_BASE_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://localhost:3000/login')
+          .then(r=>{if(!r.ok)process.exit(1)})
+          .catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      start_period: 45s
+      retries: 5
+
+  # ── Optional: self-hosted Postgres/Redis on the same box ─────────────────
+  # Enable with `--profile local-db` and point DATABASE_URL / REDIS_URL at
+  # db:5432 / redis:6379 in .env.prod. Managed services are the default and
+  # the recommendation — the audit trail lives in this database.
+  db:
+    profiles: ["local-db"]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agenticubed}
+      # Required when the profile is enabled — the postgres image refuses to
+      # start with it empty. (A compose-level `:?` guard would break managed-DB
+      # deployments too: interpolation runs on profile-gated services as well.)
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-agenticubed}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agenticubed}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    profiles: ["local-db"]
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # PostgreSQL client tooling for the guarded backup/restore helpers.
+  db-tools:
+    profiles: ["tools"]
+    image: postgres:16-alpine
+    environment:
+      DATABASE_BACKUP_URL: ${DATABASE_BACKUP_URL:-}
+      DATABASE_RESTORE_URL: ${DATABASE_RESTORE_URL:-}
+    command: ["true"]
+
+volumes:
+  artifacts:
+    name: a3_artifacts
+  caddy_data:
+    name: a3_caddy_data
+  caddy_config:
+    name: a3_caddy_config
+  pgdata:
+    name: a3_pgdata
+  redisdata:
+    name: a3_redisdata

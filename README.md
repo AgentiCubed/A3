@@ -143,14 +143,14 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 - [`docs/data-model.md`](docs/data-model.md) — entities and relationships
 - [`docs/execution-state-machine.md`](docs/execution-state-machine.md) — task execution lifecycle
 - [`docs/security-model.md`](docs/security-model.md) — RBAC, secrets, least-privilege tools
-- [`docs/deployment.md`](docs/deployment.md) — single-node production deployment and recovery runbook
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — single-node production deployment and recovery runbook
 - [`docs/roadmap.md`](docs/roadmap.md) — the 8-phase build plan
 - [`docs/assumptions.md`](docs/assumptions.md) — recorded architectural assumptions
 - [`docs/governance/playbook/`](docs/governance/playbook/) — engineering governance playbook for gate workflow, reviews, Git procedure, and task packets
 - [`docs/governance/knowledge/`](docs/governance/knowledge/) — institutional memory system, record templates, and knowledge records
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
 - [`docs/governance/runtime/Runtime-Domain-Specification-v1.0.md`](docs/governance/runtime/Runtime-Domain-Specification-v1.0.md) — continuous Runtime Domain architecture baseline
-- [`docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md`](docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md) — canonical architecture integration skeleton
+- [`docs/agentic3/ARCHITECTURE-v2.md`](docs/agentic3/ARCHITECTURE-v2.md) — the canonical Agentic³ v2 architecture specification (the former governance/architecture integration skeleton is superseded and harvested into it)
 
 ## Status
 
@@ -180,7 +180,7 @@ not a claim that a live production environment exists. The July hardening
 sequence through WS-8 now includes operator UI controls, halt/resume,
 dependency-audit CI, live-provider proof, concurrency claims, and the
 single-node production deployment contract in
-[`docs/deployment.md`](docs/deployment.md). Live deployment and restore
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Live deployment and restore
 rehearsal remain operator-run evidence, while the next strategic sequence is
 Agentic³ Phase 0/1 in
 [`docs/NEXT-STEPS-2026-07.md`](docs/NEXT-STEPS-2026-07.md). See

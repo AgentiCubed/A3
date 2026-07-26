@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Emit the minimal self-contained server used by Dockerfile.production.
+  // Emit the minimal self-contained server used by Dockerfile.prod.
   output: "standalone",
   // The browser talks to the API via this base URL. Server components can use
   // an internal URL (e.g. http://api:8000) when running inside compose.

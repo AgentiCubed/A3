@@ -24,6 +24,8 @@ def test_production_rejects_default_secret():
 @pytest.mark.parametrize(
     "secret",
     [
+        "",
+        "   ",
         "short",
         "change-me-32+chars-min-for-jwt-signing",
         "replace-me-with-a-real-production-secret-value",
@@ -47,6 +49,10 @@ def test_production_rejects_wildcard_cors():
     )
     with pytest.raises(RuntimeError):
         prod.assert_production_safe()
+
+
+def test_development_allows_weak_secret():
+    Settings(environment="development", secret_key="").assert_production_safe()
 
 
 def test_production_accepts_strong_secret():

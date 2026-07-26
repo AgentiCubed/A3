@@ -1,13 +1,21 @@
 # Unified Agentic³ Architecture Specification v2
 
-- **Status:** Canonical integration skeleton v2 (draft v0.1)
-- **Purpose:** Integrate approved and proposed Agentic³ architecture artifacts
-  without replacing their authority, evidence, or revision history
+- **Status:** **SUPERSEDED** (2026-07-26) by
+  [`docs/agentic3/ARCHITECTURE-v2.md`](../../agentic3/ARCHITECTURE-v2.md),
+  the single canonical v2 consolidation target, per
+  [`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §1
+- **Purpose (historical):** Integrate approved and proposed Agentic³
+  architecture artifacts without replacing their authority, evidence, or
+  revision history
 
-This skeleton is the canonical integration artifact for the architecture
-workstream. Linked source artifacts remain authoritative for their own content.
-Empty sections identify work still requiring its own governed review; they do
-not imply approval or authority.
+> **Do not cite this document's section numbers.** This file and the
+> canonical specification were written independently and use the same
+> section numbers for different topics. All unique material below has been
+> harvested into the canonical specification (its §4.4, §5.5, §6, §8, and
+> §12) with candidate statuses preserved. The body is retained verbatim
+> below for historical continuity — supersession preserves prior content.
+
+---
 
 ## 1. Executive Summary
 

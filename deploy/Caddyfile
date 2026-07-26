@@ -1,22 +1,33 @@
-{
-	email {$ACME_EMAIL}
-	admin off
-}
+# Single-domain TLS termination for the production compose profile.
+#
+# Caddy provisions and renews Let's Encrypt certificates automatically for
+# SITE_ADDRESS (set it to your domain, e.g. a3.example.com). Path routing keeps
+# everything same-origin: the browser, the httpOnly session cookie, and CORS
+# all see one https origin.
+#
+# Deliberately NOT routed from the public internet: /metrics (Prometheus
+# scrape stays on the internal network) and the API docs in production.
 
-{$A3_DOMAIN} {
-	encode zstd gzip
+{$SITE_ADDRESS} {
+	# Backend API: the browser calls /api/v1/* directly; /healthz for
+	# uptime checks from outside.
+	handle /api/v1/* {
+		reverse_proxy api:8000
+	}
+	handle /healthz {
+		reverse_proxy api:8000
+	}
+
+	# Everything else — pages, Next assets, and the frontend's own /api/*
+	# routes (the authenticated cookie proxy and the SSE relay) — is Next.js.
+	handle {
+		reverse_proxy frontend:3000
+	}
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		-Server
 	}
 
-	@backend path /api/v1/* /healthz /readyz
-	handle @backend {
-		reverse_proxy api:8000
-	}
-
-	handle {
-		reverse_proxy frontend:3000
-	}
+	encode zstd gzip
 }

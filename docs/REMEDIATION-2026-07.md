@@ -235,7 +235,7 @@ documents outrun our enforcement.
 
 - CVE bump, dependency-audit CI, concurrency claims, project halt, operator UI
   write paths, and the minimal deployment story are **done**. The deployment
-  contract is `compose.production.yml` + `docs/deployment.md`, with production
+  contract is `docker-compose.prod.yml` + `docs/DEPLOYMENT.md`, with production
   images, managed PostgreSQL/Redis, Caddy TLS, runtime secret injection,
   backup/restore helpers, and a public smoke.
 - **Status: DELIVERED — WS-8 closes with Step 5/G6 (2026-07-26).** This means

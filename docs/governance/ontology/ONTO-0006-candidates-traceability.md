@@ -51,7 +51,7 @@ proximity, file structure, or prose description.
 | Negative evidence | No existing design in the repository relies on implicit entity proximity as the primary mechanism for resolving relationships. |
 
 **Candidate status after Ontology phase:** `VALIDATING`
-**Current evaluation outcome:** `REQUEST_MORE_EVIDENCE`; adopt/modify/reject is deferred until
+**Current evaluation outcome:** `NEEDS_EVIDENCE` (canonical spelling per ONTO-0003 §8); adopt/modify/reject is deferred until
 the repeated-evaluation gate is met.
 
 **Promotion criteria:** Demonstrate that explicit relationships reduce implementation ambiguity,
@@ -90,7 +90,7 @@ requirements via their parent type.
 | Counter-evidence | The current document-based representation (Markdown files) does not enforce inheritance programmatically. Semantic inheritance is a logical model, not yet an enforced implementation constraint. This is a weakness in its current evidence base. |
 
 **Candidate status after Ontology phase:** `VALIDATING`
-**Current evaluation outcome:** `REQUEST_MORE_EVIDENCE`; adopt/modify/reject is deferred until
+**Current evaluation outcome:** `NEEDS_EVIDENCE` (canonical spelling per ONTO-0003 §8); adopt/modify/reject is deferred until
 the repeated-evaluation gate is met.
 
 **Promotion criteria:** Demonstrate that inheritance-based field sharing reduces specification
@@ -116,8 +116,12 @@ sufficient.
 
 ## 2. TARP-0001 Traceability for the Ontology
 
-Per TARP-0001 (Traceable Architecture Review Process, formalized in Issue #12), every
-significant architectural proposal requires a traceable chain from implementation to
+Per TARP-0001 — actual title "**Traceability and Review Protocol**"
+([`docs/agentic3/TARP-0001-traceability-protocol.md`](../../agentic3/TARP-0001-traceability-protocol.md),
+status **Proposed**), whose review discipline is implemented by the Active
+standard [`STD-0002`](../playbook/STD-0002-traceable-architecture-reviews.md);
+the naming/status resolution is decision **P-4** — every significant
+architectural proposal requires a traceable chain from implementation to
 constitutional basis.
 
 The Ontology itself is a significant architectural specification. The traceability chain is:
@@ -195,20 +199,20 @@ The Ontology must be reopened under any of the following conditions:
 
 ---
 
-## 3. Architecture Candidate Register Update
+## 3. Architecture Candidate Register (pointer)
 
-The following candidates are now in the register as a result of the Ontology design phase.
-This table supplements the Architectural Candidate Register (ACR-0001) that will be formally
-maintained once the PR establishing it is merged.
-
-| ID | Title | Status | Introduced in | Promotion criteria summary |
-|---|---|---|---|---|
-| AC-0001 | Knowledge Gravity | Adopted (Foundational Concept) | Issue #12 | Already adopted by Principal; see ACR-0001 in PR#14. |
-| AC-0002 | Engineering Genome | Adopted (Foundational Concept) | Issue #12 | Already adopted by Principal; see ACR-0001 in PR#14. |
-| AC-0003 | Architectural Contracts | Proposed (Candidate) | Issue #12 | Formalized as entity type `ArchitecturalContract` (CON-NNNN) in ONTO-0001; promotion criteria: demonstrate value in binding subsystem invariants across two engine designs. |
-| AC-0004 | Separation of Decision and Execution | Proposed (Foundational Candidate) | Issue #12 | Supported by GI-005 and the Actor entity constraints in ONTO-0001; promotion requires evidence across multiple design phases. |
-| AC-0005 | Explicit Relationships | `VALIDATING` | Issue #16 (this document) | Decide only after the ONTO-0004 §1.8 repeated-evaluation gates; current outcome is request more evidence. |
-| AC-0006 | Semantic Inheritance | `VALIDATING` | Issue #16 (this document) | Decide only after the ONTO-0004 §1.8 repeated-evaluation gates; current outcome is request more evidence. |
+**The single candidate register is
+[`ACR-0001`](../knowledge/ACR-0001-architectural-candidate-register.md).**
+This document no longer maintains its own status table: a second register in
+a Draft document was itself the "silent status assignment" this document's
+mechanics forbid (recorded and resolved in
+[`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2).
+Candidates this document introduced (AC-0005 Explicit Relationships,
+AC-0006 Semantic Inheritance) are recorded there, alongside AC-0003, with
+their statuses. The recorded adoption status of AC-0001/AC-0002 is disputed
+by those documents' own headers; resolution is reserved to the Principal
+(decisions P-1/P-2). This section's former table is preserved in git
+history.
 
 ---
 
