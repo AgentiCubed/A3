@@ -57,6 +57,9 @@ the repeated-evaluation gate is met.
 **Promotion criteria:** Demonstrate that explicit relationships reduce implementation ambiguity,
 improve query determinism, and support evidence-backed impact analysis across at least three
 independent architectural workstreams, while satisfying every gate in ONTO-0004 §1.8.
+*Independence is defined (DR-0004 P-7): a workstream is independent of another when it has a
+different initiating issue, a different primary Executor session, and no shared draft lineage.
+This definition applies to every promotion gate in this family that requires independence.*
 
 **Modify conditions:** If explicit relationship modeling is found to impose
 disproportionate overhead for well-understood local relationships (e.g., a failure record

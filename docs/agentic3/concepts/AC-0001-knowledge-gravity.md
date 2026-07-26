@@ -1,11 +1,13 @@
 # AC-0001 — Knowledge Gravity
 
 **Type:** Foundational Concept (Architectural Candidate)
-**Status:** Proposed — reconstructed from issue-text usage; awaiting Principal
-review and an explicit adoption decision. This document assumes the
-ARCHITECTURE-v2 §7 candidate lifecycle governs Foundational Concepts — that
-applicability is itself a **proposed governance decision** (GD-P1, recorded
-in ARCHITECTURE-v2 §7), not an established rule.
+**Status:** **Adopted, as amended** — by explicit Principal decision
+[DR-0004](../../governance/decisions/DR-0004-Phase-0-Reconciliation-Decisions.md)
+P-1 (2026-07-26, recorded in RR-0002). The amendments conform the ontology
+representation to this concept (four-source rule; gravity is justified
+weight, never authority) and thereby action and close both previously met
+reopening conditions. GD-P1 is decided (DR-0004 P-3): the ARCHITECTURE-v2
+§7 lifecycle governs Foundational Concepts.
 **Drafted by:** delegated agent (Executor); per Constitution Art. XII §2 by
 analogy and STD-0001, the drafter must not be the sole reviewer
 

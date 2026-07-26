@@ -1,11 +1,11 @@
 # AC-0002 — Engineering Genome
 
 **Type:** Foundational Concept (Architectural Candidate)
-**Status:** Proposed — reconstructed from issue-text usage; awaiting Principal
-review and an explicit adoption decision. This document assumes the
-ARCHITECTURE-v2 §7 candidate lifecycle governs Foundational Concepts — that
-applicability is itself a **proposed governance decision** (GD-P1, recorded
-in ARCHITECTURE-v2 §7), not an established rule.
+**Status:** **Adopted, as amended** — by explicit Principal decision
+[DR-0004](../../governance/decisions/DR-0004-Phase-0-Reconciliation-Decisions.md)
+P-2 (2026-07-26, recorded in RR-0002). ONTO-0004 §2.2's eight element kinds
+are the adopted representation; the ARCHITECTURE-v2 §7 lifecycle is the
+adopted genome-entry procedure. GD-P1 is decided (DR-0004 P-3).
 **Drafted by:** delegated agent (Executor); the drafter must not be the sole
 reviewer (STD-0001)
 

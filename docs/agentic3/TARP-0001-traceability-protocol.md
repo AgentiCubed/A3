@@ -1,8 +1,10 @@
 # TARP-0001 — Traceability and Review Protocol
 
 **Type:** Protocol (subordinate instrument)
-**Status:** Proposed — reconstructed from issue-text usage; awaiting Principal
-review and an explicit adoption decision
+**Status:** **Adopted** — by explicit Principal decision
+[DR-0004](../governance/decisions/DR-0004-Phase-0-Reconciliation-Decisions.md)
+P-4 (2026-07-26): this protocol is the traceability discipline that the
+Active standard STD-0002 implements
 **Drafted by:** delegated agent (Executor); the drafter must not be the sole
 reviewer (STD-0001)
 
