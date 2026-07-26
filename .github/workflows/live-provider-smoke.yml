@@ -1,0 +1,46 @@
+name: Live provider smoke
+
+# Next-steps Step 3 (gap G4): the product's first evidence that its real
+# inference path works. One real task through AnthropicProvider — dispatch →
+# execution → evaluation — asserting shape, not content. Opt-in and
+# secret-gated so hermetic CI stays mock-only (assumption A15): when the
+# ANTHROPIC_API_KEY secret is absent the job SKIPS its steps and passes.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * *" # nightly, 06:17 UTC
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect credential
+        id: cred
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_API_KEY secret not configured — skipping live smoke (job passes)."
+          fi
+      - uses: actions/setup-python@v5
+        if: steps.cred.outputs.present == 'true'
+        with:
+          python-version: "3.12"
+      - name: Install backend
+        if: steps.cred.outputs.present == 'true'
+        # [dev] carries aiosqlite for the hermetic test database.
+        run: pip install ".[dev]"
+      - name: Live provider smoke (one real task, shape asserted)
+        if: steps.cred.outputs.present == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LIVE_PROVIDER_SMOKE: "1"
+        run: python -m pytest tests/live/test_live_provider_smoke.py -q
