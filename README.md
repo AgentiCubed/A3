@@ -149,7 +149,7 @@ See [`docs/demo.md`](docs/demo.md) for a detailed walkthrough of the scenario, w
 - [`docs/governance/knowledge/`](docs/governance/knowledge/) — institutional memory system, record templates, and knowledge records
 - [`docs/decisions/`](docs/decisions/) — Architecture Decision Records (ADRs)
 - [`docs/governance/runtime/Runtime-Domain-Specification-v1.0.md`](docs/governance/runtime/Runtime-Domain-Specification-v1.0.md) — continuous Runtime Domain architecture baseline
-- [`docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md`](docs/governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md) — canonical architecture integration skeleton
+- [`docs/agentic3/ARCHITECTURE-v2.md`](docs/agentic3/ARCHITECTURE-v2.md) — the canonical Agentic³ v2 architecture specification (the former governance/architecture integration skeleton is superseded and harvested into it)
 
 ## Status
 

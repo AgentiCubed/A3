@@ -1,14 +1,17 @@
-# Agentic³ Unified Architecture Specification v2 — DRAFT (partially filled)
+# Agentic³ Unified Architecture Specification v2 — DRAFT
 
-> **Status: draft, unblocked sections filled.** This document is the
-> consolidation target for issue #19. Sections §1, §2, §5.1–§5.4, §5.6, §7,
-> and §9 are drafted from ratified and adopted sources; sections marked
-> **[BLOCKED: #16]** or **[BLOCKED: #17]** cannot be finalized until those
-> design workstreams conclude, and their headings are fixed so the
-> consolidation has a stable shape. Everything here is design and
-> specification — no product code, no database or vendor selection, no
-> candidate promotion without evidence, no Constitution v1.0 rewrite
-> (issue #19 non-goals).
+> **Status: draft — the single canonical consolidation target.** Per the
+> Phase 0 Reconciliation Record
+> ([`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §1), this document
+> is the one canonical v2 specification; the former integration skeleton at
+> `../governance/architecture/Unified-Agentic3-Architecture-Specification-v2.md`
+> is superseded, its unique material harvested into §6 and §12 here with
+> statuses preserved. Sections drafted from ratified and adopted sources are
+> normative-draft; material marked **candidate** or **[DECISION PENDING:
+> P-n]** awaits the Principal decisions queued in the Reconciliation Record.
+> Everything here is design and specification — no product code, no database
+> or vendor selection, no candidate promotion without evidence, no
+> Constitution v1.0 rewrite (issue #19 non-goals).
 
 ## 0. Reading this document
 
@@ -32,9 +35,12 @@ missing context they were supposed to have.
 | AC-0004 Separation of Decision and Execution | **none** | Candidate — note: the *shipped platform* already enforces executor/evaluator separation (ADR-0004); the candidate generalizes it |
 | AC-0005 Explicit Relationships | **none** | Candidate — adopt/modify/reject decision owned by #16 |
 | AC-0006 Semantic Inheritance | **none** | Candidate — adopt/modify/reject decision owned by #16 |
-| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | Proposed — chain and review rules landed; acronym expansion and the still-unlanded **Upward Compatibility Rule** flagged inside |
-| Ontology & semantic graph | issue #16 (open) | **[BLOCKED: #16]** |
-| Runtime Domain & continuous operation | issue #17 (open) | **[BLOCKED: #17]** |
+| TARP-0001 traceability | [`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md) | Proposed — chain and review rules landed; the **Upward Compatibility Rule** still unlanded; relation to active STD-0002 is decision **P-4** |
+| Ontology & semantic graph | [`../governance/ontology/`](../governance/ontology/) ONTO-0001…0006 | Landed as **Drafts** (no owner/version declared); adoption review pending; known conflicts recorded in [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2–§5 |
+| Runtime Domain & continuous operation | [`../governance/runtime/Runtime-Domain-Specification-v1.0.md`](../governance/runtime/Runtime-Domain-Specification-v1.0.md) | **Adopted architecture baseline** (issue #17 closed) |
+| Implementation Blueprint | [`IMPLEMENTATION-BLUEPRINT.md`](IMPLEMENTATION-BLUEPRINT.md) | Landed; divergences from the Runtime spec reconciled as rulings R-1…R-18 in [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §4 |
+| Phase 0 Reconciliation Record | [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) | Proposed — mechanical rulings applied by this revision; decisions P-1…P-7 reserved for the Principal |
+| Reversible-work standing policy | [`../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md`](../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md) | Proposed — confers no authority until ratified |
 
 ### 0.2 Relationship to the shipped platform
 
@@ -160,11 +166,19 @@ resumption, acceptance, abandonment, and termination each require authority
 independently established under Art. III (Art. IX §3). Non-convergence never
 justifies indefinite execution or fabricated success (Art. IX §5).
 
-## 3. Ontology **[BLOCKED: #16]**
+## 3. Ontology **[DRAFTS LANDED — adoption review pending]**
 
 *The canonical entity taxonomy, controlled relationship vocabulary, identity/
 versioning/provenance semantics, lifecycle states, graph integrity rules, and
 query semantics shared by every engine.*
+
+The representation now exists as six **Draft** documents,
+[`ONTO-0001…ONTO-0006`](../governance/ontology/), covering every subsection
+below (109 entity types, 64 relationship types, 13 integrity rules, 12
+canonical queries). They are not yet adopted, declare no owner or version,
+and carry known conflicts with AC-0001/AC-0002 recorded in
+[`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2, §3, and §5 —
+resolution of those conflicts is bundled into decisions **P-1…P-3**.
 
 Fixed subsection shape (mirrors issue #16 required outputs):
 
@@ -190,10 +204,21 @@ boundary and its constitutional basis.*
 
 - 4.1 Executive Domain **[DRAFT — cite the approving artifact; if approval
   exists only conversationally, it must land first (same rule as §0.1)]**
-- 4.2 Runtime Domain **[BLOCKED: #17]** — observe, schedule, queue,
-  synchronize, learn, report continuously without an active chat session,
-  preserving human authority over irreversible actions
-- 4.3 Domain interaction contracts **[BLOCKED: #16 relationships, #17]**
+- 4.2 Runtime Domain — **defined by the adopted
+  [Runtime Domain Specification v1.0](../governance/runtime/Runtime-Domain-Specification-v1.0.md)**:
+  observe, schedule, queue, synchronize, learn, report continuously without
+  an active chat session, preserving human authority over irreversible
+  actions. See §6.
+- 4.3 Domain interaction contracts **[PARTIAL — relationship vocabulary
+  landed as Draft (ONTO-0002); adoption pending]**
+- 4.4 **Candidate (harvested, unregistered):** the superseded integration
+  skeleton asserted an "**Intelligence**" domain (peer of Executive,
+  Assurance, Runtime) that appears nowhere else in the repository. It is
+  recorded here as an unregistered candidate only — the Implementation
+  Blueprint independently uses "Intelligence" as a package grouping for the
+  Verification/Memory/Knowledge/Evolution engines, which is implementation
+  layout, not domain authority. Registering it as a real domain requires a
+  candidate artifact and the §7 lifecycle.
 
 ## 5. Engines
 
@@ -317,11 +342,21 @@ substitutes for constitutional duty (§0.2).
 **Authority limits:** verification determines whether conditions are
 satisfied; acceptance remains the Principal's (Art. IV §1, Art. IX §3).
 
-### 5.5 Assurance engine **[BLOCKED: #17]**
+### 5.5 Assurance engine **[DECISION PENDING: P-5]**
 
 *Continuous-operation assurance: how the institution stays confident in an
-always-on system between explicit verification events. Boundary with §5.4 to
-be drawn on #17 closure (risk R3).*
+always-on system between explicit verification events.*
+
+Issue #17 has closed; the adopted Runtime Domain Specification and the
+Implementation Blueprint both give Assurance a consistent shape: it issues
+tri-state readiness decisions (`ready | not_ready | more_evidence_required`)
+over an evidence set, unresolved risks, a confidence statement, a validity
+window, and reopening conditions — and it **cannot execute, mutate evidence,
+grant authority, or replace human acceptance**. The proposed boundary with
+§5.4 (harvested from the superseded skeleton, consistent with both Runtime
+sources): *Verification evaluates evidence; Assurance evaluates readiness
+and unresolved risk; Governance supplies authority.* Adopting that sentence
+closes risk R3 and is decision **P-5**.
 
 ### 5.6 Evolution engine
 
@@ -341,12 +376,36 @@ adoption is a governance act requiring authority traceable to a Principal
 document age — the failure mode issue #16 names "scoring theater" and R1/R2
 track.
 
-## 6. Runtime **[BLOCKED: #17]**
+## 6. Runtime
 
 *Continuous operation model: schedulers, queues, synchronization, learning
 loops, reporting; what may run unattended; what always requires a Principal.
 Constitutional constraints: Bounded Autonomy (Art. VII), Halt/Escalation
 (Art. IX incl. A-0001), Emergency (Art. X).*
+
+Defined by the adopted
+[Runtime Domain Specification v1.0](../governance/runtime/Runtime-Domain-Specification-v1.0.md)
+(issue #17 closed) as elaborated by the
+[Implementation Blueprint](IMPLEMENTATION-BLUEPRINT.md); where the two
+diverge, the reconciled rulings R-1…R-18 in
+[`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §4 control. The
+load-bearing facts:
+
+- Ten components (RT-101 Event Observer … RT-110 Notifier/Escalation
+  Router), each with explicit authority and "cannot" constraints.
+- The Runtime manages work; it holds no product, constitutional, or release
+  authority and cannot certify its own success. A Work Item is a proposal,
+  not authorization.
+- It may initiate only **reversible, pre-authorized work classes** — the
+  standing policy instrument is
+  [DR-0003](../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md)
+  (Proposed). Irreversible actions require an explicit, current, unexpired,
+  unrevoked human authorization artifact.
+- Schedule, timeout, urgency, silence, inferred intent, and model confidence
+  never authorize anything (reconciled union, R-8).
+- Harvested runtime-authority rules (consistent with the adopted spec):
+  *Runtime may propose capture but cannot promote its own records to
+  institutional truth; Runtime observations are signals, not authority.*
 
 ## 7. Candidate lifecycle
 
@@ -416,9 +475,14 @@ architectural statement must be traceable along explicit relationships
 
 **[PARTIALLY UNBLOCKED: TARP-0001 landed as a proposed protocol
 ([`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md))
-defining the chain and review rules. This section finalizes after (a) the
-Principal's adoption decision on that proposal and (b) issue #16 fixes the
-relationship semantics a "trace" is made of.]**
+defining the chain and review rules; the relationship semantics a "trace" is
+made of now exist as Draft (ONTO-0002, `TRACES_TO`). This section finalizes
+after the Principal's decision **P-4**, which also resolves the instrument
+naming: STD-0002 (Active standard) implements the review discipline
+TARP-0001 (Proposed protocol) describes, and the superseded skeleton's
+eleven-stage chain variant (…candidates, contracts, work, Verification,
+Assurance/Governance, Memory, Learning) is recorded as a proposed extension
+of the six-stage chain above, not a replacement.]**
 
 ## 9. Safety
 
@@ -476,30 +540,42 @@ the posture is buildable, not the posture itself.
    AC-0002, and TARP-0001 landed as proposals (adoption decisions pending);
    candidate texts AC-0003…AC-0006 and the Upward Compatibility Rule still
    unlanded
-2. Close issue #16 (ontology) — unblocks §3, §4.3
-3. Close issue #17 (Runtime Domain) — unblocks §4.2, §5.5, §6
-4. ~~Fill §1, §2, §5.1–5.4, §5.6, §7, §9~~ — **done** (this revision)
-5. Consolidation review under STD-0001 (context-complete review), then
+2. ~~Close issue #16 (ontology)~~ — **drafts landed** (ONTO-0001…0006);
+   adoption review and conflict resolution pending (P-1…P-3)
+3. ~~Close issue #17 (Runtime Domain)~~ — **done** (Runtime Domain
+   Specification v1.0 adopted); §4.2, §5.5, §6 updated this revision
+4. ~~Fill §1, §2, §5.1–5.4, §5.6, §7, §9~~ — **done** (prior revision)
+5. ~~Reconcile the parallel v2 specifications~~ — **done** (this revision;
+   [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §1)
+6. Principal decisions P-1…P-7, then the remaining Phase 0 deliverables
+   (contract examples with owners/versions, authority matrix,
+   precedence/retention records)
+7. Consolidation review under STD-0001 (context-complete review), then
    ratify per the gate workflow (POL-0001)
 
 ## 11. Open risks and reopening conditions
+
+### 11.1 Named risks
 
 - **R1 — Reconstruction risk (updated):** Knowledge Gravity, Engineering
   Genome, and TARP-0001 now exist as landed *reconstructions* from issue-text
   usage, awaiting Principal adoption decisions. The original drift risk is
   narrowed but not closed: the reconstructions may not match the Principal's
-  intent, and issue #17 already treats AC-0001/0002 as "approved" without a
-  recorded decision. *Reopen §3/§7/§8 if the adoption review corrects the
-  reconstructions; resolve the approval-status discrepancy at that review.*
+  intent; four documents record AC-0001/0002 as "adopted" while the concept
+  documents themselves say "proposed"; and **two of AC-0001's reopening
+  conditions are already met**
+  ([`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2). *Resolution is
+  decisions P-1…P-3.*
 - **R2 — Platform/spec conflation:** the shipped platform's seams look like
   the candidate principles; treating shipped code as proof of adoption would
   promote candidates without governance. *Reopen §0.2 if any engine section
   starts citing code as authority.*
-- **R3 — Engine overlap:** Verification vs. Assurance boundaries are
-  undefined until #17 lands. *Reopen §5 on #17 closure.*
+- **R3 — Engine overlap:** the Verification/Assurance boundary has a
+  proposed resolution (§5.5). *Closes on decision P-5.*
 - **R4 — Amendment interactions:** future amendments (post A-0001) may alter
   halt semantics assumed in §6/§9. *Reopen on any Article VII/IX/X amendment.*
-## 17. Unresolved risks
+
+### 11.2 Standing design risks (harvested)
 
 - Relationship vocabulary and metadata may become too broad or costly to curate.
 - Engine ownership may become ambiguous for composite artifacts.
@@ -510,8 +586,9 @@ the posture is buildable, not the posture itself.
 - Legacy records may be incomplete for historical reconstruction.
 - Ontology evolution may require compatibility mappings and migrations.
 - Source-of-truth precedence across repositories, CI, Runtime, and memory needs
-  an explicit policy.
-- Event volume, retention cost, delayed delivery, and clock skew are unknown.
+  an explicit policy *(a Phase 0 deliverable — see the Reconciliation Record §6)*.
+- Event volume, retention cost, delayed delivery, and clock skew are unknown
+  *(retention policy is likewise a Phase 0 deliverable)*.
 - Multi-scope identity and authorization semantics need implementation evidence.
 - Physical consolidation of engines may erode logical independence.
 - Notifications may create alert fatigue or be mistaken for acknowledged
@@ -521,7 +598,7 @@ the posture is buildable, not the posture itself.
 
 These are active design risks, not implied defects in a selected implementation.
 
-## 18. Reopening conditions
+### 11.3 Reopening conditions
 
 Reopen this specification when any of the following occurs:
 
@@ -546,7 +623,38 @@ Revision must preserve the prior version, evidence that triggered reopening,
 the authorized decision, compatibility impact, and migration or supersession
 path.
 
-## 19. Acceptance tests for this architecture
+## 12. Harvested integration material (candidate status preserved)
+
+Unique material from the superseded integration skeleton, recorded here so
+supersession is not silent. Nothing in this section is adopted by virtue of
+appearing here.
+
+- **Engine contract schema (proposed):** each engine contract states
+  Mission, Inputs, Outputs, Dependencies, Authority, Constraints, Evidence,
+  and Learning; cross-engine APIs remain logical contracts until a governed
+  technology decision is made. *(§5's engines currently use
+  Purpose/Inputs/Outputs/Authority-limits; unifying on the richer schema is
+  part of the engine-contract-examples Phase 0 deliverable.)*
+- **Knowledge Gravity review protocol (proposed, depends on P-1):** gravity
+  changes require evidence-backed reasons, explicit relationships, review
+  triggers, and governed promotion when higher architectural layers are
+  affected.
+- **Engineering Genome lifecycle (proposed, depends on P-2):** membership
+  requires demonstrated use, explicit adoption, versioning, evidence, and
+  reversal conditions.
+- **Candidate register schema (subsumed):** status, supporting and
+  contradictory evidence, authority, dependencies, review trigger, and
+  supersession history — now realized by
+  [`ACR-0001`](../governance/knowledge/ACR-0001-architectural-candidate-register.md),
+  the single candidate register (Reconciliation Record §2).
+- **Implementation roadmap sentence (superseded):** "implementation proceeds
+  in separately authorized, reversible slices" — now fully elaborated by the
+  [Implementation Blueprint](IMPLEMENTATION-BLUEPRINT.md) Phases 0–6.
+- **Glossary rule (adopted practice):** the glossary references canonical
+  definitions rather than duplicating them; conflicts or missing terms are
+  recorded for ontology review instead of silently resolved.
+
+## 13. Acceptance tests for this architecture
 
 The architecture is context-complete only if a reviewer can answer:
 
