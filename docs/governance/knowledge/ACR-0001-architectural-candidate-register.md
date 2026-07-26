@@ -30,7 +30,25 @@ No Architectural Principle, Pattern, Implementation, or subsystem may contradict
 |---|---|---|---|---|---|---|
 | **AC-0001** | Knowledge Gravity | Foundational Concept | Adopted | Knowledge gains or loses authority through accumulated evidence and successful reuse rather than age or author. | [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12) owner comments approving Foundational Concepts and upward compatibility on 2026-07-16. | Continue validating across governance, memory, verification, planning, orchestration, and release work; derive narrower Architectural Principles as evidence accumulates. |
 | **AC-0002** | Engineering Genome | Foundational Concept | Adopted | AgentiCubed maintains an explicit, evolving genome of principles, patterns, anti-patterns, heuristics, governance rules, verification practices, architectural preferences, and risk tolerances. | [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12) owner comments approving Foundational Concepts and institutionalization on 2026-07-16. | Continue validating across subsystem designs; update whenever validated experience strengthens, weakens, introduces, or retires a genome element. |
+| **AC-0003** | Architectural Contracts | Candidate | Proposed | Binding invariants between architectural layers and components, formalized as entity type `ArchitecturalContract` (CON-NNNN) in ONTO-0001. **No concept document has landed**; this row records the gap. | [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12); ONTO-0006 §3 (Ontology design phase). | Land the concept document first (lifecycle state 1); then demonstrate value in binding subsystem invariants across two engine designs. |
 | **AC-0004** | Separation of Decision and Execution | Foundational Candidate | Proposed | Decision authority and execution behavior should remain separable enough to reason about governance, verification, and subsystem boundaries independently. The title and promotion policy are preserved; fuller articulation remains pending. | [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12) owner comment adding AC-0004 as a Foundational Candidate on 2026-07-16. | Promotion requires repeated successful application across independent design phases and evidence that it improves clarity, governance, verification, and subsystem separation. |
+| **AC-0005** | Explicit Relationships | Candidate | Proposed | Connections between entities are permitted only through the controlled relationship vocabulary; implicit connection by proximity is prohibited. Candidate-lifecycle state is `VALIDATING` (more evidence requested), which the register summarizes as `Proposed` per the ONTO-0003 §8 Status Vocabulary Map. **No concept document has landed** — the candidate thesis lives in ONTO-0006 §1; this row records the gap. | [Issue #16](https://github.com/AgentiCubed/agenticubed/issues/16); ONTO-0002 (the vocabulary the candidate governs). | Land the concept document; decide only after the ONTO-0004 §1.8 repeated-evaluation gates. |
+| **AC-0006** | Semantic Inheritance | Candidate | Proposed | Entity families inherit constraints and semantics from their family root. Candidate-lifecycle state is `VALIDATING` (more evidence requested), which the register summarizes as `Proposed` per the ONTO-0003 §8 Status Vocabulary Map. **No concept document has landed** — the candidate thesis lives in ONTO-0006 §1; this row records the gap. | [Issue #16](https://github.com/AgentiCubed/agenticubed/issues/16); ONTO-0001 (the family model the candidate governs). | Land the concept document; decide only after the ONTO-0004 §1.8 repeated-evaluation gates. |
+
+### Recorded status dispute (AC-0001, AC-0002)
+
+This register records AC-0001 and AC-0002 as Adopted per the Issue #12 owner
+comments. The concept documents themselves
+([`AC-0001`](../../agentic3/concepts/AC-0001-knowledge-gravity.md),
+[`AC-0002`](../../agentic3/concepts/AC-0002-engineering-genome.md)) declare
+**Proposed — awaiting Principal review and an explicit adoption decision**,
+and state that no adoption record exists in the repository. Two of
+AC-0001's reopening conditions are additionally already met. The
+contradiction and its resolution path are recorded in
+[`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2
+(decisions **P-1**/**P-2**, reserved to the Principal). Until those
+decisions land, readers should treat the adoption status as **disputed**;
+this note changes no status.
 
 ## Review Requirement
 

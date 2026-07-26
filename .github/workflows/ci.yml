@@ -128,17 +128,19 @@ jobs:
         run: cp .env.example .env
       - name: Validate development compose
         run: docker compose config -q
-      - name: Validate production compose
+      - name: Validate production compose profile
+        # SITE_ADDRESS is required (no default) so config validation proves
+        # the interpolation contract, not just YAML syntax.
         env:
-          # Overrides the intentionally empty example value for static config.
           SECRET_KEY: ci-only-production-config-secret-32chars
-        run: >-
-          docker compose --env-file .env.production.example
-          -f compose.production.yml config -q
+        run: |
+          cp .env.prod.example .env.prod
+          docker compose -f docker-compose.prod.yml --env-file .env.prod config -q
+          docker compose -f docker-compose.prod.yml --env-file .env.prod --profile local-db config -q
       - name: Validate production proxy
         run: >-
           docker run --rm
-          -e A3_DOMAIN=a3.example.com
+          -e SITE_ADDRESS=a3.example.com
           -e ACME_EMAIL=ops@example.com
           -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro"
           caddy:2.11.4-alpine
@@ -147,11 +149,11 @@ jobs:
         env:
           SECRET_KEY: ci-only-production-config-secret-32chars
         run: >-
-          docker compose --env-file .env.production.example
-          -f compose.production.yml build api frontend
+          docker compose -f docker-compose.prod.yml
+          --env-file .env.prod build api frontend
       - name: Verify production operations scripts
         run: |
-          bash -n scripts/production_smoke.sh
+          bash -n scripts/prod_smoke.sh
           bash -n scripts/production_backup.sh
           bash -n scripts/production_restore.sh
           python scripts/test_production_smoke.py

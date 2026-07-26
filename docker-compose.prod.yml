@@ -7,9 +7,9 @@ x-backend-environment: &backend-environment
   ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
   REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-1209600}
   CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS to the public HTTPS origin}
-  DATABASE_URL: ${DATABASE_URL:?set the managed PostgreSQL async URL}
-  DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:?set the managed PostgreSQL sync URL}
-  REDIS_URL: ${REDIS_URL:?set the managed Redis URL}
+  DATABASE_URL: ${DATABASE_URL:?set the PostgreSQL async URL}
+  DATABASE_URL_SYNC: ${DATABASE_URL_SYNC:?set the PostgreSQL sync URL}
+  REDIS_URL: ${REDIS_URL:?set the Redis URL}
   CELERY_BROKER_URL: ${CELERY_BROKER_URL:?set the Celery broker URL}
   CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:?set the Celery result URL}
   EVENT_BUS_BACKEND: redis
@@ -21,6 +21,7 @@ x-backend-environment: &backend-environment
   TOOL_MAX_ITERATIONS: ${TOOL_MAX_ITERATIONS:-4}
   TOOL_MAX_CALLS: ${TOOL_MAX_CALLS:-8}
   DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-mock}
+  GITHUB_MODELS_TOKEN: ${GITHUB_MODELS_TOKEN:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
 
 x-runtime-defaults: &runtime-defaults
@@ -41,6 +42,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.production
+    env_file: .env.prod
     environment: *backend-environment
     command:
       - sh
@@ -73,6 +75,7 @@ services:
   worker:
     <<: *runtime-defaults
     image: agenticubed/api:${A3_IMAGE_TAG:-local}
+    env_file: .env.prod
     environment: *backend-environment
     command: celery -A app.workers.celery_app worker --loglevel=INFO
     volumes:
@@ -88,13 +91,13 @@ services:
     image: agenticubed/frontend:${A3_IMAGE_TAG:-local}
     build:
       context: ./frontend
-      dockerfile: Dockerfile.production
+      dockerfile: Dockerfile.prod
       args:
-        NEXT_PUBLIC_API_BASE_URL: https://${A3_DOMAIN:?set A3_DOMAIN}
+        NEXT_PUBLIC_API_BASE_URL: https://${SITE_ADDRESS:?set SITE_ADDRESS}
     environment:
       NODE_ENV: production
       INTERNAL_API_BASE_URL: http://api:8000
-      NEXT_PUBLIC_API_BASE_URL: https://${A3_DOMAIN:?set A3_DOMAIN}
+      NEXT_PUBLIC_API_BASE_URL: https://${SITE_ADDRESS:?set SITE_ADDRESS}
     expose:
       - "3000"
     depends_on:
@@ -118,7 +121,7 @@ services:
     <<: *runtime-defaults
     image: caddy:2.11.4-alpine
     environment:
-      A3_DOMAIN: ${A3_DOMAIN:?set A3_DOMAIN}
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL}
     ports:
       - "80:80"
@@ -138,10 +141,41 @@ services:
     image: postgres:16-alpine
     profiles:
       - tools
+    env_file: .env.prod
     environment:
       DATABASE_BACKUP_URL: ${DATABASE_BACKUP_URL:?set the standard PostgreSQL backup URL}
       DATABASE_RESTORE_URL: ${DATABASE_RESTORE_URL:-}
     command: ["true"]
+
+  db:
+    profiles:
+      - local-db
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agenticubed}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-agenticubed}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agenticubed}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    profiles:
+      - local-db
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 volumes:
   artifacts:
@@ -150,3 +184,5 @@ volumes:
     name: a3_caddy_data
   caddy_config:
     name: a3_caddy_config
+  pgdata:
+  redisdata:

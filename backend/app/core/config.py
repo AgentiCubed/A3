@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     )
     INSECURE_TEMPLATE_SECRET: ClassVar[str] = "change-me-32+chars-min-for-jwt-signing"  # noqa: S105
 
+    #: Shortest session-signing key accepted in production (`openssl rand -hex 32`).
+    MIN_PRODUCTION_SECRET_LENGTH: ClassVar[int] = 32
+
     # Database
     database_url: str = Field(
         default="postgresql+asyncpg://agenticubed:agenticubed@db:5432/agenticubed"
@@ -85,16 +88,33 @@ class Settings(BaseSettings):
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
     def assert_production_safe(self) -> None:
-        """Refuse production startup with template secrets or wildcard CORS."""
+        """Refuse to run in production without a strong session-signing key.
+
+        A blank or whitespace-only value (the state of an unfilled
+        ``.env.prod`` template) and anything shorter than
+        ``MIN_PRODUCTION_SECRET_LENGTH`` are rejected alongside development
+        and template values. Wildcard CORS is also forbidden in production.
+        """
         if not self.is_production:
             return
+        secret = self.secret_key.strip()
+        if not secret:
+            raise RuntimeError(
+                "SECRET_KEY is empty; set a strong SECRET_KEY in production "
+                "(openssl rand -hex 32)."
+            )
         if (
-            len(self.secret_key) < 32
-            or self.secret_key in {self.INSECURE_DEFAULT_SECRET, self.INSECURE_TEMPLATE_SECRET}
-            or self.secret_key.lower().startswith(("change-me", "replace-me"))
+            secret in {self.INSECURE_DEFAULT_SECRET, self.INSECURE_TEMPLATE_SECRET}
+            or secret.lower().startswith(("change-me", "replace-me"))
         ):
             raise RuntimeError(
                 "SECRET_KEY must be a unique value of at least 32 characters in production."
+            )
+        if len(secret) < self.MIN_PRODUCTION_SECRET_LENGTH:
+            raise RuntimeError(
+                f"SECRET_KEY is shorter than {self.MIN_PRODUCTION_SECRET_LENGTH} "
+                "characters; set a strong SECRET_KEY in production "
+                "(openssl rand -hex 32)."
             )
         if "*" in self.cors_origin_list:
             raise RuntimeError(

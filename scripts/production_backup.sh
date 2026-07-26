@@ -2,8 +2,8 @@
 set -euo pipefail
 
 target="${1:-}"
-env_file="${A3_ENV_FILE:-.env.production}"
-compose_file="${A3_COMPOSE_FILE:-compose.production.yml}"
+env_file="${A3_ENV_FILE:-.env.prod}"
+compose_file="${A3_COMPOSE_FILE:-docker-compose.prod.yml}"
 
 if [[ -z "$target" ]]; then
   echo "usage: scripts/production_backup.sh backups/a3-YYYYMMDD.dump" >&2
@@ -25,7 +25,7 @@ trap 'rm -f "$temporary"' EXIT
 
 docker compose --env-file "$env_file" -f "$compose_file" \
   run -T --rm --no-deps db-tools \
-  sh -ec 'exec pg_dump --format=custom --no-owner --dbname="$DATABASE_BACKUP_URL"' \
+  sh -ec 'exec pg_dump --format=custom --no-owner --no-acl --dbname="$DATABASE_BACKUP_URL"' \
   >"$temporary"
 
 if [[ ! -s "$temporary" ]]; then

@@ -3,7 +3,10 @@
 	admin off
 }
 
-{$A3_DOMAIN} {
+# Single-domain TLS termination for the production Compose profile.
+# Caddy provisions and renews certificates automatically for SITE_ADDRESS.
+# /metrics remains private on the Compose network by design.
+{$SITE_ADDRESS} {
 	encode zstd gzip
 
 	header {

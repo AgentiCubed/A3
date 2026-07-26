@@ -1,8 +1,11 @@
-node_modules/
-.next/
-out/
-dist/
-coverage/
-tests/
+node_modules
+.next
+out
+coverage
+playwright-report
+test-results
+.env*.local
+dist
+tests
 *.log
 *.tsbuildinfo

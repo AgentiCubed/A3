@@ -19,7 +19,7 @@ help:
 	@echo "  revision m=msg   alembic autogenerate revision"
 	@echo "  demo             run the end-to-end demonstration project"
 	@echo "  audit            dependency-audit gate (pip-audit + npm audit + waivers)"
-	@echo "  production-config validate compose.production.yml with .env.production"
+	@echo "  production-config validate docker-compose.prod.yml with .env.prod"
 	@echo "  production-build  build production API + frontend images"
 	@echo "  production-up     start the single-node production stack"
 	@echo "  production-logs   tail production stack logs"
@@ -64,16 +64,16 @@ audit:
 	python scripts/dependency_audit.py frontend
 
 production-config:
-	docker compose --env-file .env.production -f compose.production.yml config -q
+	docker compose --env-file .env.prod -f docker-compose.prod.yml config -q
 
 production-build:
-	docker compose --env-file .env.production -f compose.production.yml build api frontend
+	docker compose --env-file .env.prod -f docker-compose.prod.yml build api frontend
 
 production-up:
-	docker compose --env-file .env.production -f compose.production.yml up -d
+	docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 production-logs:
-	docker compose --env-file .env.production -f compose.production.yml logs -f --tail=100
+	docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f --tail=100
 
 migrate:
 	cd backend && alembic upgrade head

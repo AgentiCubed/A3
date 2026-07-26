@@ -1,4 +1,4 @@
-"""Hermetic contract test for scripts/production_smoke.sh."""
+"""Hermetic contract test for scripts/prod_smoke.sh."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SMOKE = ROOT / "scripts" / "production_smoke.sh"
+SMOKE = ROOT / "scripts" / "prod_smoke.sh"
 
 
 class _Handler(BaseHTTPRequestHandler):

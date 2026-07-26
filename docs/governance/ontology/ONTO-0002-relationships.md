@@ -149,9 +149,9 @@ and how knowledge evolves.
 | `RESOLVED_BY` | Assumption, Risk | GovernanceDecision, ExperimentResult, ObservationRecord | N:1 | The assumption was resolved or the risk was mitigated by this artifact. |
 | `REOPENS` | Evidence entity, ObservationRecord | GovernanceDecision, Knowledge entity | N:N | New evidence triggers reconsideration of a prior decision or record. |
 | `PROMOTES_TO` | Knowledge entity (lower gravity) | Knowledge entity (higher gravity) | N:1 | The source concept was promoted to a higher-authority knowledge type. Requires evidence. |
-| `CONTRIBUTED_TO_GENOME` | Pattern, AntiPattern, ArchitecturalPrinciple, Risk | Engineering Genome (AC-0002 entity) | N:1 | This entity contributed to the Engineering Genome. |
+| `CONTRIBUTED_TO_GENOME` | Pattern, AntiPattern, ArchitecturalPrinciple, Risk | `EngineeringGenome` (the ONTO-0001 §2.3 singleton) | N:1 | This entity contributed to the Engineering Genome. |
 | `RECORDS` | Knowledge entity, Artifact | Event, GovernanceDecision, Knowledge entity | N:N | The source preserves the target for durable memory. |
-| `EXTRACTS` | KnowledgeEngine, Knowledge entity | Pattern, Lesson | N:N | The source produces reusable learning from recorded material. |
+| `EXTRACTS` | `Engine` (in the knowledge-engine role), Knowledge entity | Pattern, Lesson | N:N | The source produces reusable learning from recorded material. (No `KnowledgeEngine` entity type exists; the generic `Engine` type carries the role via its `responsibilities[]`.) |
 | `STRENGTHENS` | Evidence entity, ReuseEvent | Knowledge entity | N:N | The source increases justified Knowledge Gravity. |
 | `WEAKENS` | Evidence entity, FailureRecord | Knowledge entity | N:N | The source decreases confidence or applicability. |
 | `REMOVED_FROM_GENOME` | GovernanceDecision | Knowledge entity | N:N | The decision ends current genome membership while preserving history. |

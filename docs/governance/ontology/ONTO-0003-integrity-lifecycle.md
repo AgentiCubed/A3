@@ -184,6 +184,10 @@ validated → retired    (decommissioned from active use)
 | `STD-NNNN` | Standard document | |
 | `TPL-NNNN` | Template document | |
 | `ONTO-NNNN` | Ontology document | |
+| `ACR-NNNN` | Architectural Candidate Register document | e.g. ACR-0001 |
+| `RR-NNNN` | Ratification Record | e.g. RR-0001 |
+| `TARP-NNNN` | Traceability protocol document | e.g. TARP-0001 |
+| `GD-Pn` | Proposed governance decision (pre-DR placeholder) | e.g. GD-P1; becomes a `DR-NNNN` on decision |
 
 Identifiers within a namespace are assigned sequentially and are never reused. A `NNNN` slot
 that is retired or superseded keeps its number; the next assignment receives the next available
@@ -298,3 +302,39 @@ conflict.
 Every query whose answer may change over time accepts an `as_of` boundary and resolves entities,
 relationship versions, authority, and validity intervals effective at that instant. Current state
 never overwrites historical state.
+
+---
+
+## 8. Status Vocabulary Map
+
+Seven overlapping status vocabularies grew up across this family, ACR-0001,
+and ONTO-0004, reusing tokens (`proposed`, `validated`, `adopted`,
+`foundational`, `retired`) with different meanings
+(`PHASE0-RECONCILIATION.md` §3). This section is the single map; each
+vocabulary keeps exactly one owner document and one scope.
+
+| Vocabulary | Owner | Scope (what it describes) | Tokens |
+|---|---|---|---|
+| Lifecycle states | **this document** (§2) | Any entity instance's life | `draft`, `active`, `validated`, `superseded`, `retired` |
+| `governance_status` | ONTO-0001 §1 | Same instance life, governance view — **aligned to the lifecycle states** (no separate `adopted` token) | `draft`, `active`, `superseded`, `retired` |
+| Candidate lifecycle | ONTO-0006 §1 | An Architectural Candidate's path to a decision | `PROPOSED`, `OBSERVED`, `VALIDATING`, `QUALIFIED`, `PROMOTION_REVIEW`, `ADOPTED` (+ `REJECTED`, `DEFERRED`, `NEEDS_EVIDENCE`, `WITHDRAWN`, `SUPERSEDED`, `RETIRED`) |
+| Register lifecycle | ACR-0001 | The register's summary of the candidate lifecycle | `Proposed` ↦ PROPOSED–VALIDATING, `Under Review` ↦ QUALIFIED/PROMOTION_REVIEW, `Adopted`, `Superseded`, `Retired` |
+| Gravity levels | ONTO-0004 §1.3 | How much justified weight a knowledge entity carries | `observation`, `lesson`, `pattern`, `principle`, `foundational` |
+| Genome maturity | ONTO-0004 §2.4 | A genome element's maturation | `proposed`, `observed`, `validated`, `incorporated`, `characteristic`, `foundational` (↘ `superseded`, `retired`) |
+| Genome membership status | ONTO-0004 §2.3 | Whether an element is currently in the genome | `active`, `under_review`, `suspended`, `removed` |
+
+Reading rules:
+
+- A token's meaning is fixed by its vocabulary, never by its spelling.
+  `foundational` as a gravity level is a weight; `foundational` as genome
+  maturity is a maturation stage; neither is adoption.
+- The three spellings `NEEDS_EVIDENCE` (candidate lifecycle),
+  `request_more_evidence` (gravity review outcome, ONTO-0004 §1.8), and
+  `REQUEST_MORE_EVIDENCE` (formerly in ONTO-0006 §1 prose) name one
+  concept: the canonical token in candidate-lifecycle position is
+  `NEEDS_EVIDENCE`; the canonical review-outcome token is
+  `request_more_evidence`.
+- The gravity-review outcome enumeration is owned by **ONTO-0004 §1.8**;
+  ONTO-0005 Q-011 references it rather than defining its own (the former
+  Q-011-only tokens `constrain`, `revalidate`, and `demote` are recorded
+  there as sub-cases of `decrease_weight` and `retain`-with-conditions).

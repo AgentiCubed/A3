@@ -3,7 +3,7 @@ set -euo pipefail
 
 base_url="${1:-${A3_BASE_URL:-}}"
 if [[ -z "$base_url" ]]; then
-  echo "usage: scripts/production_smoke.sh https://a3.example.com" >&2
+  echo "usage: scripts/prod_smoke.sh https://a3.example.com" >&2
   exit 2
 fi
 base_url="${base_url%/}"

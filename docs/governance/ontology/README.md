@@ -4,7 +4,12 @@
 
 The Agentic³ Ontology defines the canonical entity taxonomy, semantic relationships, lifecycle
 rules, graph integrity constraints, and query semantics shared by all Agentic³ engines: Memory,
-Knowledge, Governance, Verification, Assurance, and Evolution.
+Knowledge, Governance, Verification, Assurance, and Evolution — plus the **Runtime** components,
+which appear in the ONTO-0006 §5 engine crosswalk (Runtime is a domain of components, not a
+seventh engine; it enforces recorded authority but may not create or resolve it).
+
+This family is the ontology layer of the canonical
+[Agentic³ Architecture Specification v2](../../agentic3/ARCHITECTURE-v2.md) (its §3).
 
 The Ontology occupies the third layer in the governing hierarchy:
 
@@ -49,8 +54,12 @@ relationships.
 
 ## Governing Foundational Concepts
 
-The Ontology is subordinate to two adopted Foundational Concepts (approved in
-[Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12)):
+The Ontology is subordinate to two Foundational Concepts (recorded as
+Adopted in [`ACR-0001`](../knowledge/ACR-0001-architectural-candidate-register.md)
+per [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12); the
+concept documents themselves declare Proposed — this **recorded status
+dispute** is resolved by Principal decisions P-1/P-2, see
+[`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2):
 
 **AC-0001 — Knowledge Gravity**
 Knowledge gains authority through verified evidence and successful reuse, not author seniority or

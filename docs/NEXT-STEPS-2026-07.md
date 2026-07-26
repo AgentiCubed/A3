@@ -46,7 +46,7 @@ Each gap was checked against the working tree, not inherited from prior docs.
 | G3 | **No dependency-audit CI job.** WS-8 called for `pip-audit`/`npm audit` failing on critical. CI has no such job; the Next.js CVE (#53) was caught by an external audit, not by our pipeline. **CLOSED 2026-07-21:** `dependency-audit` CI job + `scripts/dependency_audit.py` with expiring waivers; proof `backend/tests/unit/test_dependency_audit.py` and the gate itself, which caught two live criticals (`next`, `vitest`) on arrival — both fixed in the same change. | `.github/workflows/ci.yml` — no audit step | ~~Medium~~ closed |
 | G4 | ~~**Live-provider path is unproven.**~~ **CLOSED 2026-07-26:** the manual `Live Provider Celery Proof` workflow ran one real GitHub Models task through HTTP dispatch → Redis → a separately started Celery worker → live provider → Postgres at merged `main` SHA `312bf334`. Run [#30207256748](https://github.com/AgentiCubed/A3/actions/runs/30207256748) passed and uploaded the sanitized, 30-day proof artifact `live-provider-proof-312bf3348dee63e3d1931d2c50375d545dc49ceb` (artifact ID `8633430992`, SHA-256 `6ddfcffde0076908a72dbdf3ed43756bfcefaf909fdc177f4c98401ab4312695`). Hermetic CI remains mock-only. | `.github/workflows/live-provider-proof.yml`; `backend/tests/integration/test_live_provider_celery_smoke.py`; run #30207256748 | ~~Medium~~ closed |
 | G5 | **Optimistic-locking review under scheduler concurrency** (WS-8 item) has no recorded outcome: no ADR, no version-column usage on task transitions, no concurrency test beyond `test_atomic_close.py` (which covers closure only). | grep `version`/locking over models + state machine | Medium |
-| G6 | ~~**No deployment story past Docker Compose.**~~ **CLOSED 2026-07-26:** `compose.production.yml` defines a single-node production shape with managed PostgreSQL/Redis, private application services, Caddy TLS termination, runtime secret injection, production images, explicit backup/restore helpers, and a public smoke contract. `docs/deployment.md` records deploy, upgrade, rollback, database recovery, and the boundary between a configuration proof and a real production claim. | `compose.production.yml`; `docs/deployment.md`; `scripts/production_{smoke,backup,restore}.sh`; `scripts/test_production_smoke.py` | ~~Low-Medium~~ closed |
+| G6 | ~~**No deployment story past Docker Compose.**~~ **CLOSED 2026-07-26:** `docker-compose.prod.yml` defines a single-node production shape with managed PostgreSQL/Redis, private application services, Caddy TLS termination, runtime secret injection, production images, explicit backup/restore helpers, and a public smoke contract. `docs/DEPLOYMENT.md` records deploy, upgrade, rollback, database recovery, and the boundary between a configuration proof and a real production claim. | `docker-compose.prod.yml`; `docs/DEPLOYMENT.md`; `scripts/prod_smoke.sh`; `scripts/production_{backup,restore}.sh`; `scripts/test_production_smoke.py` | ~~Low-Medium~~ closed |
 | G7 | **Doc drift.** `REMEDIATION-2026-07.md` still marks WS-6 "READY TO START"; `README.md` cites closed issue #45 as active work; `HANDOFF-WS6.md` describes as future what is now merged. Under §7 this drift is itself a defect. | this branch fixes the first two | Low (fixed here) |
 | G8 | **Agentic³ platform vision: design ratified, zero implementation.** The Unified Architecture Spec v2 (#25), ontology (#18/#22), Runtime Domain spec (#23), and Implementation Blueprint (#24) are merged, but no runtime code exists (`RuntimeEventV1` appears nowhere in `backend/app`). Blueprint Phases 0–6 are all unstarted. | grep `RuntimeEvent` — no hits | Strategic (not a defect — sequenced design-first on purpose) |
 | G9 | `verbal-kombat/` is an unrelated standalone artifact living in the product repo. | tree | Housekeeping |
@@ -156,18 +156,16 @@ termination, secret injection, backup/restore of the audit-bearing database),
 plus a smoke script. Kubernetes/Temporal remain out of scope until demand
 exists (ADR-0002 already reserves the port).
 
-**Done (2026-07-26):** `compose.production.yml` + production API/frontend
-images run the single-node application behind Caddy automatic TLS while
-PostgreSQL and Redis remain managed, TLS-protected dependencies. Runtime
-secrets are injected from an ignored `0600` environment file (or the hosting
-platform's secret store), the API rejects template secrets and wildcard
-production CORS, and `scripts/production_smoke.sh` proves the public TLS,
-health, readiness, and login surfaces. `scripts/production_backup.sh` and the
-explicit-confirmation restore helper protect the audit-bearing database;
-`docs/deployment.md` records the operating and rollback procedure. CI validates
-the production Compose contract and smoke behavior. This closes the missing
-deployment *story*; it does not claim a live deployment or provider restore
-rehearsal has occurred.
+**Done (2026-07-26):** `docker-compose.prod.yml` (Caddy TLS termination on
+one domain, non-root production images, auto-migrations, health checks, bounded
+logs, and restart policies; managed Postgres/Redis by default with a
+`--profile local-db` escape hatch), `deploy/Caddyfile`, `.env.prod.example`
+(runtime secret injection; production refuses blank/template secrets and
+wildcard CORS), `docs/DEPLOYMENT.md`, explicit backup/restore helpers, and
+`scripts/prod_smoke.sh`. CI validates both Compose profiles, Caddy, production
+image builds, and the smoke contract on every push.
+Deliberately out of scope, unchanged: HA/Kubernetes/blue-green (ADR-0002
+reserves the port).
 
 ### Step 6 — Agentic³ Phase 0, then the Phase 1 vertical slice (G8)
 
