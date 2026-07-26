@@ -83,7 +83,9 @@ test("operator decides an escalated approval gate in the browser", async ({
   await page.waitForURL("**/");
 
   await page.goto(`/projects/${project.id}`);
-  await expect(page.getByTestId("pending-approval")).toBeVisible();
+  // First fetch through the proxy pays the dev server's cold route compile
+  // in CI (this file sorts first in the suite) — allow for it.
+  await expect(page.getByTestId("pending-approval")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("pending-approval")).toContainText("Deliver the brief");
 
   await page.getByLabel("Justification").fill("reviewed the output; acceptable");
@@ -164,7 +166,7 @@ test("operator rejects an escalated gate and the task returns to ready", async (
   await page.waitForURL("**/");
 
   await page.goto(`/projects/${project.id}`);
-  await expect(page.getByTestId("pending-approval")).toBeVisible();
+  await expect(page.getByTestId("pending-approval")).toBeVisible({ timeout: 20_000 });
 
   await page.getByLabel("Justification").fill("output unacceptable; redo");
   await page.getByRole("button", { name: "Reject", exact: true }).click();
