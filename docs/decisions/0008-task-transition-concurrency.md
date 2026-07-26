@@ -7,6 +7,10 @@
   recorded outcome)
 - **Related:** issue #45 / PR #52 (atomic project close), WS-6 governed
   dispatch claims
+- **Consolidates:** two independently merged records of the same Step-4
+  review (PR #69: dispatch transitions; PR #71: approval decisions, formerly
+  `0008-concurrency-claims.md`). Both reached the same decision — the
+  conditional-UPDATE claim pattern — and this file is now the single ADR-0008.
 
 ## Context
 
@@ -50,17 +54,34 @@ The line-verified state before this decision:
 2. **New concurrency guarantees are expressed as conditional UPDATEs, not
    row locks**, so the hermetic suite can prove them (see Context on
    SQLite).
-3. **Transitions that remain read-then-write are accepted, with reasons:**
+3. **Approval decisions are exactly-once via the same claim pattern.**
+   `approval_service.decide_approval` was a read-then-write on
+   `approval.status`: two concurrent deciders (two operators, or a
+   double-submit) could both pass the PENDING check, both record a decision
+   on one gate, and double-advance the linked task. The decision is now a
+   conditional `UPDATE ... WHERE status = PENDING`; the loser receives
+   `AlreadyDecided` (the 409 the UI already renders) and only the claim
+   winner advances the task. Proven by
+   `tests/unit/test_approval_decision_claim.py`.
+4. **Transitions that remain read-then-write are accepted, with reasons:**
    - *Mid-attempt retry transitions* inside `execute_task`
      (FAILED→RUNNING within the retry loop): the executing session owns the
      task for the whole attempt loop; a competing dispatcher is fenced out
      by the RUNNING claim it cannot win.
-   - *Approval decisions and other human-paced transitions*
-     (`transition_task`): serialized per project by the
-     `claim_acceptance_write` row-claim, and the approval row itself
-     rejects a second decision (`AlreadyDecided`).
+   - *Post-decision task advancement and other human-paced transitions*
+     (`transition_task`): the approval-decision claim admits exactly one
+     decider, so the advancement runs at most once; project closure is
+     fenced by the `claim_acceptance_write` row-claim.
    - *Reassignment to READY* (`reassign_task`): human-paced, and any
      subsequent dispatch must still win the QUEUED claim.
+5. **A generic ORM version column and broad `SELECT ... FOR UPDATE` are
+   both rejected** as the general mechanism. The state machine's own
+   persisted state is the version: a claim names the state it expects and
+   the database arbitrates. A `version_id_col` would guard every flush of
+   every mutable row, turn benign concurrent metadata edits into
+   user-facing conflicts, and still not express *which* transition was
+   claimed. Broad row locks serialize readers that don't need it — and
+   SQLite ignores them (see Context), so CI could not prove them.
 
 ## Consequences
 
@@ -78,3 +99,10 @@ The line-verified state before this decision:
   column (the alternative considered) was rejected as strictly heavier —
   it requires a migration and retry semantics at every writer while
   providing the same arbiter the status predicate already provides.
+- Any new state-machine write that can race (scheduler vs. worker vs. API
+  vs. operator) must use a conditional-UPDATE claim with the expected state
+  in the predicate, surface the lost race as a governed 409, and synchronize
+  the in-memory instance via `set_committed_value` so a later flush cannot
+  emit a stale unconditional write.
+- Deciders can receive `409 already_decided` where they previously might
+  have silently double-written; the UI already renders that refusal.
