@@ -265,8 +265,10 @@ IMPLEMENTS → ArchitectureDecisionRecord
 - list of `foundational` and `principle`-level entities with last validation date
 - list of entities with `review_due` in the past (overdue for review)
 - factors increasing and decreasing influence, confidence, and unresolved uncertainty
-- evidence-backed recommendation: `retain`, `promote`, `constrain`, `revalidate`, `demote`,
-  `supersede`, `retire`, or `request_more_evidence`
+- evidence-backed recommendation drawn from the ONTO-0004 §1.8 outcome
+  enumeration (the owning list): `retain`, `increase_weight`,
+  `decrease_weight`, `promote`, `supersede`, `retire`, or
+  `request_more_evidence`
 
 ---
 
