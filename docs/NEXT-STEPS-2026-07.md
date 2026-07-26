@@ -41,7 +41,7 @@ Each gap was checked against the working tree, not inherited from prior docs.
 
 | # | Gap | Evidence | Severity |
 | --- | --- | --- | --- |
-| G1 | **Dashboard is read-only.** No UI write path exists for any governed action: plan approve/reject, project start, approval-gate decisions, or halt. The only frontend POSTs are login/session and SSE plumbing (`frontend/src/app/api/session/route.ts`, `lib/api.ts`). The backend endpoints exist (`plans.py`: generate/approve/reject; `projects.py`: `/start`; `approvals` flow) — the UI simply never calls them. | grep of `frontend/src` — zero calls to plan/start/approval endpoints | **High** — a human cannot operate the governed loop without curl |
+| G1 | **Dashboard is read-only.** No UI write path exists for any governed action: plan approve/reject, project start, approval-gate decisions, or halt. The only frontend POSTs are login/session and SSE plumbing (`frontend/src/app/api/session/route.ts`, `lib/api.ts`). The backend endpoints exist (`plans.py`: generate/approve/reject; `projects.py`: `/start`; `approvals` flow) — the UI simply never calls them. **CLOSED 2026-07-21** across PRs #62 (plan approve/reject, `tests/e2e/plan-approval.spec.ts`), #63 (start/halt/resume, `tests/e2e/project-controls.spec.ts`), and #66 (approval-gate decisions, project close, and objective intake; `tests/e2e/approvals.spec.ts` + the Step-1 definition-of-done proof `tests/e2e/governed-loop.spec.ts`). Every governed action is operable from the dashboard. | grep of `frontend/src` — zero calls to plan/start/approval endpoints | ~~High~~ closed |
 | G2 | **No project-level halt switch.** WS-2 named "a project-level concurrency cap and a halt switch." The concurrency cap exists (`scheduler_service.py`); no halt/pause path exists anywhere in `app/` — an approved, started project cannot be stopped mid-flight through any API. **CLOSED 2026-07-19 (PR #56):** `POST /projects/{id}/halt` + `/resume` (audited, optional reason), single scheduler gate in `find_dispatchable`, audited refusals on start/dispatch; proof `tests/integration/test_halt.py`. | grep `halt`/`pause` over `backend/app` — only tool-runtime internals | ~~High~~ closed |
 | G3 | **No dependency-audit CI job.** WS-8 called for `pip-audit`/`npm audit` failing on critical. CI has no such job; the Next.js CVE (#53) was caught by an external audit, not by our pipeline. **CLOSED 2026-07-21:** `dependency-audit` CI job + `scripts/dependency_audit.py` with expiring waivers; proof `backend/tests/unit/test_dependency_audit.py` and the gate itself, which caught two live criticals (`next`, `vitest`) on arrival — both fixed in the same change. | `.github/workflows/ci.yml` — no audit step | ~~Medium~~ closed |
 | G4 | **Live-provider path is unproven.** `AnthropicProvider` exists (`orchestration/adapters/anthropic_provider.py`) and resolves credentials by reference, but no test — not even an opt-in, secret-gated smoke — has ever exercised it. Every proof of the loop is `MockProvider`. This is honest (assumption A15) but means the product has never once run its real inference path end-to-end. | no live-marked test; no workflow with provider secret | Medium — blocks calling the product "usable," not "correct" |
@@ -80,6 +80,13 @@ Make the dashboard the place where the governed loop is actually operated:
    Done when a Playwright e2e drives objective → plan → approve → start →
    (mock) completion → close entirely through the browser, and that test runs
    in the existing e2e CI job.
+   **Done (2026-07-21):** flow (a) PR #62; flow (b) PR #63; flow (c) plus the
+   close control and objective intake PR #66. The definition-of-done spec is
+   `tests/e2e/governed-loop.spec.ts` (objective → plan → approve → start →
+   completion → close, entirely in the browser), running in the CI e2e job;
+   `tests/e2e/approvals.spec.ts` proves both gate outcomes — approve
+   completes the escalated task, reject returns it to READY with the
+   justification recorded.
 
 This step turns the CI-proven loop into a product a human can use.
 

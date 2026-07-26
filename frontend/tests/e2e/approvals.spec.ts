@@ -4,7 +4,8 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
  * UI write path (c): an escalated approval gate is decided from the browser.
  * A manual task fails its rubric with no remediation budget, escalating to
  * AWAITING_APPROVAL; the operator approves it in the dashboard with a
- * justification and the task completes.
+ * justification and the task completes — or rejects it and the task returns
+ * to READY, never a silent proceed.
  */
 
 const API = "http://localhost:8000";
@@ -104,4 +105,85 @@ test("operator decides an escalated approval gate in the browser", async ({
     token,
   });
   expect(tasks[0].status).toBe("completed");
+});
+
+test("operator rejects an escalated gate and the task returns to ready", async ({
+  page,
+  request,
+}) => {
+  const email = `e2e-${Date.now()}-rj@example.com`;
+  await apiJson(request, "post", "/api/v1/auth/register", {
+    data: { organization_name: "E2E Rejections", email, password: PASSWORD },
+  });
+  const login = await apiJson(request, "post", "/api/v1/auth/login", {
+    data: { email, password: PASSWORD },
+  });
+  const token = login.access_token as string;
+  const agent = await apiJson(request, "post", "/api/v1/agents", {
+    token,
+    data: { name: "Worker", kind: "ai", provider: "mock" },
+  });
+  const project = await apiJson(request, "post", "/api/v1/projects", {
+    token,
+    data: { name: "E2E rejections project", objective: "Escalate one gate" },
+  });
+  const task = await apiJson(request, "post", `/api/v1/projects/${project.id}/tasks`, {
+    token,
+    data: { title: "Deliver the brief" },
+  });
+  await apiJson(
+    request,
+    "patch",
+    `/api/v1/projects/${project.id}/tasks/${task.id}/assign`,
+    { token, data: { agent_id: agent.id } },
+  );
+  const dispatch = await apiJson(
+    request,
+    "post",
+    `/api/v1/projects/${project.id}/tasks/${task.id}/dispatch`,
+    {
+      token,
+      data: {
+        rubric: [
+          {
+            key: "impossible",
+            check: "contains_all",
+            params: { keywords: ["TOKEN_THAT_NEVER_APPEARS"] },
+          },
+        ],
+        max_remediations: 0,
+      },
+    },
+  );
+  expect(dispatch.final_state).toBe("awaiting_approval");
+
+  await page.goto("/login");
+  await page.getByPlaceholder("email").fill(email);
+  await page.getByPlaceholder("password").fill(PASSWORD);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.waitForURL("**/");
+
+  await page.goto(`/projects/${project.id}`);
+  await expect(page.getByTestId("pending-approval")).toBeVisible();
+
+  await page.getByLabel("Justification").fill("output unacceptable; redo");
+  await page.getByRole("button", { name: "Reject", exact: true }).click();
+  await expect(page.locator("[data-approvals-notice]")).toContainText("Rejected");
+  await expect(page.getByTestId("no-pending-approvals")).toBeVisible();
+
+  // Rejection routes the task back to READY — never a silent proceed — and
+  // records the justification on the gate.
+  const approvals = await apiJson(
+    request,
+    "get",
+    `/api/v1/projects/${project.id}/approvals`,
+    { token },
+  );
+  expect(approvals).toHaveLength(1);
+  expect(approvals[0].status).toBe("rejected");
+  expect(approvals[0].comment).toBe("output unacceptable; redo");
+  const tasks = await apiJson(request, "get", `/api/v1/projects/${project.id}/tasks`, {
+    token,
+  });
+  expect(tasks[0].status).toBe("ready");
 });
