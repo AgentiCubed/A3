@@ -1054,26 +1054,26 @@ async def reassign_task(
 ) -> None:
     """Reassign a (typically failed) task to another agent, then make it ready.
 
-    For FAILED/BLOCKED tasks the new assignment and the transition to READY are
-    persisted by one conditional UPDATE, so a concurrent dispatch cannot claim
-    the task between the assignment write and the transition (ADR-0008).
+    The new assignment and the transition to READY are persisted by one
+    conditional UPDATE, so a concurrent dispatch cannot claim the task between
+    the assignment write and the transition (ADR-0008). Only statuses with a
+    legal transition to READY (e.g. FAILED/BLOCKED) can be reassigned; any other
+    status (e.g. an in-flight RUNNING/QUEUED task) raises ``IllegalTransition``,
+    which the API maps to HTTP 409, rather than silently swapping the executor.
     """
     if task.source_plan_id is not None:
         raise GovernedAssignmentLocked()
     before = str(task.assigned_agent_id)
-    if task.status in (ExecutionState.FAILED, ExecutionState.BLOCKED):
-        await _compare_and_transition(
-            session,
-            task,
-            task.status,
-            ExecutionState.READY,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            reason="reassigned",
-            extra_values={"assigned_agent_id": new_agent.id},
-        )
-    else:
-        task.assigned_agent_id = new_agent.id
+    await _compare_and_transition(
+        session,
+        task,
+        task.status,
+        ExecutionState.READY,
+        actor_id=actor_id,
+        actor_type=actor_type,
+        reason="reassigned",
+        extra_values={"assigned_agent_id": new_agent.id},
+    )
     await record_audit(
         session,
         organization_id=task.organization_id,
