@@ -17,7 +17,7 @@ SMOKE = ROOT / "scripts" / "prod_smoke.sh"
 class _Handler(BaseHTTPRequestHandler):
     ready = True
 
-    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler contract
+    def do_GET(self) -> None:
         if self.path == "/healthz":
             self._json({"status": "ok", "version": "test"})
             return
