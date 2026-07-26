@@ -11,8 +11,9 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import set_committed_value
 
 from app.core.audit import record_audit
 from app.core.enums import ApprovalStatus
@@ -59,10 +60,35 @@ async def decide_approval(
     if approval.status != ApprovalStatus.PENDING:
         raise AlreadyDecided()
 
-    approval.status = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
-    approval.decided_by = actor.user_id
-    approval.decided_at = datetime.now(UTC)
-    approval.comment = comment
+    # Exactly-once decision: a plain ORM assignment is read-then-write, so two
+    # concurrent deciders could both pass the PENDING check and both record a
+    # decision (with the linked task transitioning twice). The conditional
+    # UPDATE makes the persisted PENDING state the arbiter — the same claim
+    # pattern as the governed dispatch spine (ADR 0008).
+    new_status = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
+    decided_at = datetime.now(UTC)
+    result = await session.execute(
+        update(Approval)
+        .where(
+            Approval.id == approval.id,
+            Approval.organization_id == actor.organization_id,
+            Approval.status == ApprovalStatus.PENDING,
+        )
+        .values(
+            status=new_status,
+            decided_by=actor.user_id,
+            decided_at=decided_at,
+            comment=comment,
+        )
+        .execution_options(synchronize_session=False)
+    )
+    if result.rowcount != 1:
+        await session.refresh(approval)
+        raise AlreadyDecided()
+    set_committed_value(approval, "status", new_status)
+    set_committed_value(approval, "decided_by", actor.user_id)
+    set_committed_value(approval, "decided_at", decided_at)
+    set_committed_value(approval, "comment", comment)
 
     await record_audit(
         session,
