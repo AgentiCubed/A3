@@ -156,6 +156,18 @@ termination, secret injection, backup/restore of the audit-bearing database),
 plus a smoke script. Kubernetes/Temporal remain out of scope until demand
 exists (ADR-0002 already reserves the port).
 
+**Done (2026-07-26):** `docker-compose.prod.yml` (Caddy TLS termination on
+one domain, compiled frontend via `frontend/Dockerfile.prod`, api + worker
+with auto-migrations and restart policies, managed Postgres/Redis by default
+with a `--profile local-db` escape hatch), `deploy/Caddyfile`,
+`.env.prod.example` (secret injection by env; production refuses the default
+`SECRET_KEY`), `docs/DEPLOYMENT.md` (single-node walkthrough including
+`pg_dump` backup + restore drill for the audit-bearing database), and
+`scripts/prod_smoke.sh` (post-deploy routing/auth/frontend probe). CI's
+`compose` job validates both compose files and both profiles on every push.
+Deliberately out of scope, unchanged: HA/Kubernetes/blue-green (ADR-0002
+reserves the port).
+
 ### Step 6 — Agentic³ Phase 0, then the Phase 1 vertical slice (G8)
 
 Only after Steps 1–3: begin the blueprint's own sequence —
