@@ -128,6 +128,13 @@ jobs:
         run: cp .env.example .env
       - name: Validate docker-compose
         run: docker compose config -q
+      - name: Validate production compose profile
+        # SITE_ADDRESS is required (no default) so config validation proves
+        # the interpolation contract, not just YAML syntax.
+        run: |
+          cp .env.prod.example .env.prod
+          docker compose -f docker-compose.prod.yml --env-file .env.prod config -q
+          docker compose -f docker-compose.prod.yml --env-file .env.prod --profile local-db config -q
 
   dependency-audit:
     # Supply-chain gate (next-steps Step 2, gap G3): fail the build on known
