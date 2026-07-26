@@ -87,7 +87,7 @@ async def test_duplicate_workers_have_exactly_one_governed_execution_claim(
 
     outcomes = await asyncio.gather(
         *(
-            execution_service._claim_governed_execution(
+            execution_service._claim_execution(
                 session,
                 task,
                 actor_id=None,
@@ -131,7 +131,7 @@ async def test_concurrent_queue_requests_submit_only_one_governed_claim(monkeypa
 
     outcomes = await asyncio.gather(
         *(
-            execution_service._move_governed_to_queued(
+            execution_service._claim_queued(
                 session,
                 task,
                 actor_id=None,

@@ -256,7 +256,7 @@ async def _transition(
     )
 
 
-async def _compare_and_transition_governed(
+async def _compare_and_transition(
     session: AsyncSession,
     task: Task,
     expected: ExecutionState,
@@ -266,7 +266,7 @@ async def _compare_and_transition_governed(
     actor_type: ActorType,
     reason: str | None = None,
 ) -> None:
-    """Atomically claim one governed transition and audit the winner.
+    """Atomically claim one dispatch transition and audit the winner (ADR-0008).
 
     A normal ORM assignment is a read-then-write operation: two sessions can
     both read QUEUED and both begin provider execution. The conditional UPDATE
@@ -274,9 +274,9 @@ async def _compare_and_transition_governed(
     waits for the winner and then re-checks the predicate; exactly one caller
     can change ``expected`` to ``to``. The task instance is synchronized as a
     committed value so a later flush cannot emit a stale unconditional write.
+    Applies to every task; for legacy tasks the plan-provenance predicate
+    compiles to ``source_plan_id IS NULL``.
     """
-    if task.source_plan_id is None:
-        raise ValueError("atomic governed transition requires plan provenance")
     assert_transition(expected, to)
     result = await session.execute(
         update(Task)
@@ -307,16 +307,16 @@ async def _compare_and_transition_governed(
     )
 
 
-async def _move_governed_to_queued(
+async def _claim_queued(
     session: AsyncSession,
     task: Task,
     *,
     actor_id: uuid.UUID | None,
     actor_type: ActorType,
 ) -> None:
-    """Walk a governed task to QUEUED using conditional state claims."""
+    """Walk any task to QUEUED using conditional state claims (ADR-0008)."""
     if task.status == ExecutionState.PLANNED:
-        await _compare_and_transition_governed(
+        await _compare_and_transition(
             session,
             task,
             ExecutionState.PLANNED,
@@ -326,7 +326,7 @@ async def _move_governed_to_queued(
         )
     if task.status in (ExecutionState.READY, ExecutionState.FAILED, ExecutionState.BLOCKED):
         expected = task.status
-        await _compare_and_transition_governed(
+        await _compare_and_transition(
             session,
             task,
             expected,
@@ -338,7 +338,7 @@ async def _move_governed_to_queued(
         assert_transition(task.status, ExecutionState.QUEUED)
 
 
-async def _claim_governed_execution(
+async def _claim_execution(
     session: AsyncSession,
     task: Task,
     *,
@@ -346,13 +346,13 @@ async def _claim_governed_execution(
     actor_type: ActorType,
 ) -> None:
     """Atomically claim the first RUNNING transition before provider work."""
-    await _move_governed_to_queued(
+    await _claim_queued(
         session,
         task,
         actor_id=actor_id,
         actor_type=actor_type,
     )
-    await _compare_and_transition_governed(
+    await _compare_and_transition(
         session,
         task,
         ExecutionState.QUEUED,
@@ -360,23 +360,6 @@ async def _claim_governed_execution(
         actor_id=actor_id,
         actor_type=actor_type,
     )
-
-
-async def _move_to_queued(
-    session: AsyncSession, task: Task, *, actor_id: uuid.UUID | None, actor_type: ActorType
-) -> None:
-    """Walk legal steps to QUEUED from whatever open state the task is in."""
-    if task.status == ExecutionState.PLANNED:
-        await _transition(
-            session, task, ExecutionState.READY, actor_id=actor_id, actor_type=actor_type
-        )
-    if task.status in (ExecutionState.READY, ExecutionState.FAILED, ExecutionState.BLOCKED):
-        await _transition(
-            session, task, ExecutionState.QUEUED, actor_id=actor_id, actor_type=actor_type
-        )
-    if task.status != ExecutionState.QUEUED:
-        # e.g. already RUNNING/COMPLETED/CANCELLED — not dispatchable.
-        assert_transition(task.status, ExecutionState.QUEUED)
 
 
 async def transition_task(
@@ -591,10 +574,10 @@ async def queue_task(
     Runs the same dispatchability checks as ``execute_task`` so an
     unassigned/non-AI task is rejected at the API instead of failing silently
     in the worker. A task that is *already* QUEUED is rejected here — since
-    ``_move_to_queued`` treats QUEUED as a no-op, re-dispatch would otherwise
+    ``_claim_queued`` treats QUEUED as a no-op, re-dispatch would otherwise
     enqueue a second worker message and run the task concurrently. (The
-    worker's own re-entry through QUEUED is unaffected: it calls
-    ``_move_to_queued`` directly, not this function.)
+    worker's own re-entry through QUEUED is unaffected: it goes through
+    ``execute_task``, not this function.)
     """
     if task.status == ExecutionState.QUEUED:
         raise AlreadyQueued()
@@ -609,15 +592,12 @@ async def queue_task(
         project_id=task.project_id,
         org_id=task.organization_id,
     )
-    if task.source_plan_id is not None:
-        await _move_governed_to_queued(
-            session,
-            task,
-            actor_id=actor_id,
-            actor_type=actor_type,
-        )
-    else:
-        await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
+    await _claim_queued(
+        session,
+        task,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
 
 
 async def _create_approval(
@@ -724,22 +704,12 @@ async def execute_task(
         project_id=task.project_id,
         org_id=task.organization_id,
     )
-    if task.source_plan_id is not None:
-        await _claim_governed_execution(
-            session,
-            task,
-            actor_id=actor_id,
-            actor_type=actor_type,
-        )
-    else:
-        await _move_to_queued(session, task, actor_id=actor_id, actor_type=actor_type)
-        await _transition(
-            session,
-            task,
-            ExecutionState.RUNNING,
-            actor_id=actor_id,
-            actor_type=actor_type,
-        )
+    await _claim_execution(
+        session,
+        task,
+        actor_id=actor_id,
+        actor_type=actor_type,
+    )
     # Persist the exclusive/open-project RUNNING claim before any provider or
     # tool can produce an external side effect. This also releases the project
     # boundary so model latency never holds a database lock.
