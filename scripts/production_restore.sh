@@ -32,6 +32,7 @@ docker compose --env-file "$env_file" -f "$compose_file" \
       --clean \
       --if-exists \
       --no-owner \
+      --no-acl \
       --dbname="$DATABASE_RESTORE_URL"
   ' <"$source_file"
 

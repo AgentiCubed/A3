@@ -25,7 +25,7 @@ trap 'rm -f "$temporary"' EXIT
 
 docker compose --env-file "$env_file" -f "$compose_file" \
   run -T --rm --no-deps db-tools \
-  sh -ec 'exec pg_dump --format=custom --no-owner --dbname="$DATABASE_BACKUP_URL"' \
+  sh -ec 'exec pg_dump --format=custom --no-owner --no-acl --dbname="$DATABASE_BACKUP_URL"' \
   >"$temporary"
 
 if [[ ! -s "$temporary" ]]; then
