@@ -1041,40 +1041,23 @@ async def _record(
     return execution.id
 
 
-async def reassign_task(
-    session: AsyncSession,
-    *,
-    task: Task,
-    new_agent: Agent,
-    actor_id: uuid.UUID | None,
-    actor_type: ActorType = ActorType.USER,
-) -> None:
-    """Reassign a (typically failed) task to another agent, then make it ready."""
-    if task.source_plan_id is not None:
-        raise GovernedAssignmentLocked()
-    before = str(task.assigned_agent_id)
-    task.assigned_agent_id = new_agent.id
-    if task.status in (ExecutionState.FAILED, ExecutionState.BLOCKED):
-        await _transition(
-            session,
-            task,
-            ExecutionState.READY,
-            actor_id=actor_id,
-            actor_type=actor_type,
-            reason="reassigned",
+async def reassign_task(session, task_id, new_worker_id):
+    stmt = (
+        update(Task)
+        .where(
+            Task.id == task_id,
+            Task.status.in_(['FAILED', 'BLOCKED']) 
         )
-    await record_audit(
-        session,
-        organization_id=task.organization_id,
-        project_id=task.project_id,
-        actor_type=actor_type,
-        actor_id=actor_id,
-        action="task.reassigned",
-        entity_type="Task",
-        entity_id=task.id,
-        before={"agent_id": before},
-        after={"agent_id": str(new_agent.id)},
+        .values(
+            worker_id=new_worker_id,
+            status='ASSIGNED' 
+        )
     )
+    
+    result = await session.execute(stmt)
+    
+    if result.rowcount == 0:
+        raise ValueError(f"Cannot reassign task {task_id}: Must be FAILED or BLOCKED.")
 
 
 async def list_executions(
