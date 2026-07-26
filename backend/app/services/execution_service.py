@@ -1046,11 +1046,11 @@ async def reassign_task(session, task_id, new_worker_id):
         update(Task)
         .where(
             Task.id == task_id,
-            Task.status.in_(['FAILED', 'BLOCKED']) 
+            Task.status.in_(["FAILED", "BLOCKED"]) 
         )
         .values(
             worker_id=new_worker_id,
-            status='ASSIGNED' 
+            status="ASSIGNED" 
         )
     )
     
