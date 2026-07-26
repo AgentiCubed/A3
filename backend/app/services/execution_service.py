@@ -265,6 +265,7 @@ async def _compare_and_transition(
     actor_id: uuid.UUID | None,
     actor_type: ActorType,
     reason: str | None = None,
+    extra_values: dict[str, object] | None = None,
 ) -> None:
     """Atomically claim one dispatch transition and audit the winner (ADR-0008).
 
@@ -286,13 +287,15 @@ async def _compare_and_transition(
             Task.source_plan_id == task.source_plan_id,
             Task.status == expected,
         )
-        .values(status=to)
+        .values(status=to, **(extra_values or {}))
         .execution_options(synchronize_session=False)
     )
     if result.rowcount != 1:
         await session.refresh(task)
         raise AlreadyQueued()
     set_committed_value(task, "status", to)
+    for name, value in (extra_values or {}).items():
+        set_committed_value(task, name, value)
     await record_audit(
         session,
         organization_id=task.organization_id,
@@ -1049,20 +1052,28 @@ async def reassign_task(
     actor_id: uuid.UUID | None,
     actor_type: ActorType = ActorType.USER,
 ) -> None:
-    """Reassign a (typically failed) task to another agent, then make it ready."""
+    """Reassign a (typically failed) task to another agent, then make it ready.
+
+    For FAILED/BLOCKED tasks the new assignment and the transition to READY are
+    persisted by one conditional UPDATE, so a concurrent dispatch cannot claim
+    the task between the assignment write and the transition (ADR-0008).
+    """
     if task.source_plan_id is not None:
         raise GovernedAssignmentLocked()
     before = str(task.assigned_agent_id)
-    task.assigned_agent_id = new_agent.id
     if task.status in (ExecutionState.FAILED, ExecutionState.BLOCKED):
-        await _transition(
+        await _compare_and_transition(
             session,
             task,
+            task.status,
             ExecutionState.READY,
             actor_id=actor_id,
             actor_type=actor_type,
             reason="reassigned",
+            extra_values={"assigned_agent_id": new_agent.id},
         )
+    else:
+        task.assigned_agent_id = new_agent.id
     await record_audit(
         session,
         organization_id=task.organization_id,
