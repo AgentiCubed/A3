@@ -136,6 +136,10 @@ dispatch, decide optimistic locking (version column) vs. row-level locking vs.
 "current serialization is sufficient," and record the outcome as an ADR either
 way. If a change is needed, it comes with a concurrency test in the spirit of
 `test_atomic_close.py`. Done when the ADR exists and cites its test.
+**Done (2026-07-26):** `docs/decisions/0008-task-transition-concurrency.md` —
+the conditional-claim pattern is now the arbiter for every dispatch-critical
+transition on all tasks (version column rejected as strictly heavier);
+proof `tests/integration/test_transition_concurrency.py`.
 
 ### Step 5 — Minimal deployment story (closes G6)
 
