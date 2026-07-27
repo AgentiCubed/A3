@@ -2,16 +2,16 @@
 
 **ID:** PHASE0-REVIEW-1
 **Date:** 2026-07-26
-**Assigned to:** **Devin** — named by the Principal at dispatch
-(2026-07-27) via promotion and merge of the dispatch-fill PR. Devin is a
+**Assigned to:** **Codex** — named by the Principal at dispatch
+(2026-07-27) via promotion and merge of the dispatch-fill PR. Codex is a
 valid assignee under the non-drafter rule: the Phase 0 bundle was drafted
 by this repository's Claude Code Executor session; per STD-0001 and
-Constitution Art. V §3 the drafter must not be the sole reviewer. Devin has
-contributed platform code to this repository (e.g. PRs #70, #72, #74) but
-authored **none** of the in-scope Phase 0 governance documents, and its
-reviewing session shares no draft lineage with them (the DR-0004 P-7
-independence test). (Alternate assignees if re-dispatch is needed: Gemini,
-Codex, Copilot, or a human reviewer.)
+Constitution Art. V §3 the drafter must not be the sole reviewer. Codex has
+contributed platform code to this repository (e.g. PR #67) but authored
+**none** of the in-scope Phase 0 governance documents, and its reviewing
+session shares no draft lineage with them (the DR-0004 P-7 independence
+test). (Alternate assignees if re-dispatch is needed: Gemini, Devin,
+Copilot, or a human reviewer.)
 **Authorized by:** James Richmond (Principal)
 
 ---
