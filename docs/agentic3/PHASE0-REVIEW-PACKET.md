@@ -39,8 +39,10 @@ remains the Principal's.
 - `docs/governance/ontology/` — README and ONTO-0001…ONTO-0006
 - `docs/agentic3/concepts/AC-0001-knowledge-gravity.md`, `AC-0002-engineering-genome.md`
 - `docs/agentic3/TARP-0001-traceability-protocol.md`
-- The Phase 0 contract-examples document (path to be added when it lands —
-  see Preconditions)
+- `docs/agentic3/CONTRACT-EXAMPLES.md` (the Phase 0 contract-examples
+  document), plus its companion Phase 0 records
+  `docs/agentic3/AUTHORITY-MATRIX.md` and
+  `docs/agentic3/PRECEDENCE-AND-RETENTION.md`
 
 **Out of scope (explicitly excluded):**
 
