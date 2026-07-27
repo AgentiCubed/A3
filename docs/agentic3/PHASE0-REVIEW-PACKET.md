@@ -2,11 +2,13 @@
 
 **ID:** PHASE0-REVIEW-1
 **Date:** 2026-07-26
-**Assigned to:** *to be named by the Principal — any capable reviewer that is
-**not** the drafter. The Phase 0 bundle was drafted by this repository's
-Claude Code Executor session; per STD-0001 and Constitution Art. V §3 the
-drafter must not be the sole reviewer. Suitable assignees: a different agent
-(Gemini, Copilot, Codex/Devin) or a human reviewer.*
+**Assigned to:** **GitHub Copilot (coding agent)** — named by the Principal
+at dispatch (2026-07-27) via promotion and merge of the dispatch-fill PR.
+Copilot is a valid assignee under the non-drafter rule: the Phase 0 bundle
+was drafted by this repository's Claude Code Executor session; per STD-0001
+and Constitution Art. V §3 the drafter must not be the sole reviewer, and
+Copilot authored none of the in-scope documents. (Alternate assignees if
+re-dispatch is needed: Gemini, Codex/Devin, or a human reviewer.)
 **Authorized by:** James Richmond (Principal)
 
 ---
@@ -99,14 +101,14 @@ filing the findings document requires a new gate.
 
 ### Artifacts under review [required for reviews]
 
-All in-scope paths at the **merge commit of PR #82** on `main`.
-At packet-drafting time #82 is open; its head is `ee7a052` on
-`claude/governance-decisions` (base `main` at `53f06b2`). **Precondition:**
-this review begins only after (a) PR #82 has merged and (b) the
-contract-examples document has landed; whoever dispatches this packet
-records the exact `main` commit SHA here at dispatch:
+All in-scope paths at the pinned `main` commit below. Both preconditions
+are satisfied: (a) PR #82 merged on 2026-07-26 (merge commit `f2acdd2`),
+and (b) the contract-examples document landed via PR #84 on 2026-07-27
+(merge commit `6615fb1`). The pinned commit is the post-#84 `main` head —
+it contains every in-scope document in its reviewed form:
 
-**Pinned commit:** `____________` *(fill at dispatch)*
+**Pinned commit:** `6615fb1e2dcde79c62049740c883f9ddb351883b`
+*(filled at dispatch, 2026-07-27)*
 
 ---
 
