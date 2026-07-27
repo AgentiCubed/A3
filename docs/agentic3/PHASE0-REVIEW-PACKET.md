@@ -2,13 +2,20 @@
 
 **ID:** PHASE0-REVIEW-1
 **Date:** 2026-07-26
-**Assigned to:** **GitHub Copilot (coding agent)** — named by the Principal
-at dispatch (2026-07-27) via promotion and merge of the dispatch-fill PR.
-Copilot is a valid assignee under the non-drafter rule: the Phase 0 bundle
-was drafted by this repository's Claude Code Executor session; per STD-0001
-and Constitution Art. V §3 the drafter must not be the sole reviewer, and
-Copilot authored none of the in-scope documents. (Alternate assignees if
-re-dispatch is needed: Gemini, Codex/Devin, or a human reviewer.)
+**Assigned to:** **Codex** — named by the Principal at dispatch
+(2026-07-27) via promotion and merge of the dispatch-fill PR. Codex is a
+valid assignee under the non-drafter rule: the Phase 0 bundle was drafted
+by this repository's Claude Code Executor session; per STD-0001 and
+Constitution Art. V §3 the drafter must not be the sole reviewer. Codex has
+contributed platform code to this repository (e.g. PR #67) but authored
+**none** of the in-scope Phase 0 governance documents. This review satisfies
+all three DR-0004 P-7 independence conditions: its initiating issue is the
+PHASE0-REVIEW-1 workstream filed in PR #83, distinct from the Phase 0 drafting
+workstream initiated in PR #78; its primary Executor is this Codex review
+session, distinct from the Claude Code Executor session that drafted the
+bundle; and the reviewing session shares no draft lineage with that drafting
+session. (Alternate assignees if re-dispatch is needed: Gemini, Devin,
+Copilot, or a human reviewer.)
 **Authorized by:** James Richmond (Principal)
 
 ---
