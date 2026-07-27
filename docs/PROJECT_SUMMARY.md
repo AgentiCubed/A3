@@ -111,6 +111,10 @@ Sign in at `/login`, dashboards at `/projects/<id>`.
 Architecture substitutions are recorded as ADRs (0001–0005) in
 [`decisions/`](decisions/).
 
-Post-baseline hardening is tracked separately. In particular, concurrent artifact
-writes versus acceptance snapshots remain open in
-[GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45).
+Post-baseline hardening is tracked separately in
+[`NEXT-STEPS-2026-07.md`](NEXT-STEPS-2026-07.md). The artifact/acceptance
+serialization boundary from
+[GitHub issue #45](https://github.com/AgentiCubed/A3/issues/45) was closed by
+PR #52 and the concurrency follow-up is recorded in
+[`decisions/0008-task-transition-concurrency.md`](decisions/0008-task-transition-concurrency.md).
+Live deployment and restore rehearsal remain operator-run evidence.
