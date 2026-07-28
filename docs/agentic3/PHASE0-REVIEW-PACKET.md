@@ -1,5 +1,14 @@
 # Task / Review Packet — Phase 0 Independent Review
 
+> **Disposition: CLOSED (2026-07-27)** by
+> [DR-0005](../governance/decisions/DR-0005-Phase-0-Acceptance.md). The
+> third-party-agent review was dispatched three times without execution
+> (Copilot, Devin, Codex); the Principal directed a draft-only drafter
+> self-check ([`PHASE0-REVIEW-FINDINGS.md`](PHASE0-REVIEW-FINDINGS.md),
+> 0 blocking / 1 material / 2 minor, repairs merged via PR #90) and then
+> accepted Phase 0. The Codex assignment below is withdrawn; this packet
+> is preserved unedited below as the historical record.
+
 **ID:** PHASE0-REVIEW-1
 **Date:** 2026-07-26
 **Assigned to:** **Codex** — named by the Principal at dispatch
