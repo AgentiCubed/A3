@@ -39,7 +39,7 @@ missing context they were supposed to have.
 | Ontology & semantic graph | [`../governance/ontology/`](../governance/ontology/) ONTO-0001…0006 | Landed as **Drafts** (no owner/version declared); adoption review pending; known conflicts recorded in [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2–§5 |
 | Runtime Domain & continuous operation | [`../governance/runtime/Runtime-Domain-Specification-v1.0.md`](../governance/runtime/Runtime-Domain-Specification-v1.0.md) | **Adopted architecture baseline** (issue #17 closed) |
 | Implementation Blueprint | [`IMPLEMENTATION-BLUEPRINT.md`](IMPLEMENTATION-BLUEPRINT.md) | Landed; divergences from the Runtime spec reconciled as rulings R-1…R-18 in [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §4 |
-| Phase 0 Reconciliation Record | [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) | Accepted — mechanical rulings applied; decisions P-1…P-7 **decided** (DR-0004, 2026-07-26) |
+| Phase 0 Reconciliation Record | [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) | Accepted — mechanical rulings applied; decisions P-1…P-7 **decided** (DR-0004, 2026-07-26); **Phase 0 accepted** ([DR-0005](../governance/decisions/DR-0005-Phase-0-Acceptance.md), 2026-07-27) |
 | Reversible-work standing policy | [`../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md`](../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md) | **Ratified v1.0.0** (RR-0002, 2026-07-26; expires 2027-01-22) |
 
 ### 0.2 Relationship to the shipped platform
