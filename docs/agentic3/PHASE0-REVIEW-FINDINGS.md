@@ -87,8 +87,8 @@ unless noted):
 
 ### F-2 — Stale "pending" status assertions in the roadmap section (severity: **minor**)
 
-- **Location:** `docs/agentic3/ARCHITECTURE-v2.md` §13 (path-to-completion
-  list), items 1, 2, and 6: "adoption decisions pending" for
+- **Location:** `docs/agentic3/ARCHITECTURE-v2.md` §10 Roadmap
+  (sequencing-to-v2-final list), items 1, 2, and 6: "adoption decisions pending" for
   AC-0001/AC-0002/TARP-0001; "adoption review and conflict resolution
   pending (P-1…P-3)"; "Principal decisions P-1…P-7, then the remaining
   Phase 0 deliverables".
@@ -97,7 +97,7 @@ unless noted):
   state; the contract examples/authority matrix/precedence records landed
   in the pinned commit itself.
 - **Impact:** Internal inconsistency between a progress checklist and the
-  authoritative register. Rated minor because §13 is a non-normative
+  authoritative register. Rated minor because §10 is a non-normative
   roadmap list and the authoritative sections are correct, but the C2
   criterion ("no document asserts a status another document contradicts")
   is not met to the letter.
