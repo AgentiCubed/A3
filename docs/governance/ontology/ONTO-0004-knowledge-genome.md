@@ -42,6 +42,15 @@ ONTO-0001 §3 (Entity Family Summary): `Pattern`, `AntiPattern`,
 | `current_reviewer` | ActorReference | The entity responsible for the next scheduled gravity review. |
 | `review_due` | Date | When the next gravity review is due. |
 
+**`PromotionThreshold` and `DemotionTrigger` (canonical definitions).**
+A `PromotionThreshold` is a structured condition record, not free text: it
+names the target gravity level and the minimum required GravityEvents by
+type and count, per the §1.5 promotion table. A `DemotionTrigger` names the
+§1.6 condition class that, once recorded, requires a demotion review.
+Neither executes automatically — satisfying a threshold or trigger produces
+a proposed §1.8 governed review, never a direct level change. (These
+definitions close the gap recorded in `PHASE0-RECONCILIATION.md` §5.)
+
 ### 1.3 Gravity Levels
 
 | Level | Meaning | Minimum evidence required |
@@ -224,7 +233,8 @@ Each entry in `revision_history`:
 
 ## 3. Interaction Between Knowledge Gravity and the Engineering Genome
 
-Knowledge Gravity governs how authoritative a knowledge entity is based on evidence and reuse.
+Knowledge Gravity records the justified weight of a knowledge entity based on evidence and
+reuse; per AC-0001 Rule 2 (adopted, DR-0004 P-1) that weight is never authority.
 The Engineering Genome governs which entities are explicitly designated as part of
 AgentiCubed's engineering character.
 

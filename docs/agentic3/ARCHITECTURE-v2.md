@@ -537,19 +537,24 @@ the posture is buildable, not the posture itself.
 *Sequencing to v2-final:*
 
 1. Land the missing foundational artifacts — **partially done**: AC-0001,
-   AC-0002, and TARP-0001 landed as proposals (adoption decisions pending);
-   candidate texts AC-0003…AC-0006 and the Upward Compatibility Rule still
-   unlanded
+   AC-0002, and TARP-0001 landed and **adopted** (DR-0004 P-1/P-2/P-4,
+   2026-07-26); candidate texts AC-0003…AC-0006 and the Upward
+   Compatibility Rule still unlanded
 2. ~~Close issue #16 (ontology)~~ — **drafts landed** (ONTO-0001…0006);
-   adoption review and conflict resolution pending (P-1…P-3)
+   P-1…P-3 decided (DR-0004) and their amendments applied; family-level
+   adoption review of the ONTO drafts still pending (they remain Drafts)
 3. ~~Close issue #17 (Runtime Domain)~~ — **done** (Runtime Domain
    Specification v1.0 adopted); §4.2, §5.5, §6 updated this revision
 4. ~~Fill §1, §2, §5.1–5.4, §5.6, §7, §9~~ — **done** (prior revision)
 5. ~~Reconcile the parallel v2 specifications~~ — **done** (this revision;
    [`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §1)
-6. Principal decisions P-1…P-7, then the remaining Phase 0 deliverables
-   (contract examples with owners/versions, authority matrix,
-   precedence/retention records)
+6. ~~Principal decisions P-1…P-7, then the remaining Phase 0 deliverables~~
+   — **done**: P-1…P-7 decided (DR-0004, 2026-07-26; ratification RR-0002);
+   contract examples with owners/versions
+   ([`CONTRACT-EXAMPLES.md`](CONTRACT-EXAMPLES.md)), authority matrix
+   ([`AUTHORITY-MATRIX.md`](AUTHORITY-MATRIX.md)), and precedence/retention
+   records ([`PRECEDENCE-AND-RETENTION.md`](PRECEDENCE-AND-RETENTION.md))
+   landed via PR #84
 7. Consolidation review under STD-0001 (context-complete review), then
    ratify per the gate workflow (POL-0001)
 
