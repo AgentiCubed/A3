@@ -175,10 +175,12 @@ query semantics shared by every engine.*
 The representation now exists as six **Draft** documents,
 [`ONTO-0001…ONTO-0006`](../governance/ontology/), covering every subsection
 below (109 entity types, 64 relationship types, 13 integrity rules, 12
-canonical queries). They are not yet adopted, declare no owner or version,
-and carry known conflicts with AC-0001/AC-0002 recorded in
-[`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2, §3, and §5 —
-resolution of those conflicts is bundled into decisions **P-1…P-3**.
+canonical queries). They are not yet adopted and declare no owner or
+version; their prior known conflicts with AC-0001/AC-0002, recorded in
+[`PHASE0-RECONCILIATION.md`](PHASE0-RECONCILIATION.md) §2, §3, and §5, were
+resolved by the Principal's decisions **P-1…P-7** (DR-0004, 2026-07-26):
+AC-0001 and AC-0002 are Adopted, as amended, and the ontology representation
+was amended to conform (see §0.1).
 
 Fixed subsection shape (mirrors issue #16 required outputs):
 
@@ -189,10 +191,10 @@ Fixed subsection shape (mirrors issue #16 required outputs):
 - 3.4 Identity, versioning, provenance, authority semantics
 - 3.5 Lifecycle states and transition constraints
 - 3.6 Graph integrity rules
-- 3.7 Knowledge Gravity metadata and update rules *(AC-0001 landed as a
-  proposal; also awaiting its adoption decision)*
-- 3.8 Engineering Genome membership and evolution *(AC-0002 landed as a
-  proposal; also awaiting its adoption decision)*
+- 3.7 Knowledge Gravity metadata and update rules *(AC-0001 Adopted, as
+  amended — DR-0004 P-1, 2026-07-26; see §0.1)*
+- 3.8 Engineering Genome membership and evolution *(AC-0002 Adopted, as
+  amended — DR-0004 P-2, 2026-07-26; see §0.1)*
 - 3.9 Query semantics (provenance, impact, contradiction, authority, reuse)
 - 3.10 AC-0005 / AC-0006 adopt–modify–reject decisions
 
