@@ -17,7 +17,61 @@ What you get at the end:
 ## Prerequisites
 
 - Docker Desktop (macOS/Windows) or docker + compose (Linux)
-- git
+- git — or GitHub Desktop (no command-line git needed; see Path A0)
+
+## Path A0 — first time with a terminal? (macOS, GitHub Desktop)
+
+Same result as Path A, in smaller steps with no git commands.
+
+1. **Install Docker Desktop.** Download from docker.com/products/docker-desktop,
+   open the `.dmg`, drag Docker into Applications, open it, and wait for
+   the whale icon in the menu bar to stop animating ("Docker Desktop is
+   running").
+2. **Clone with GitHub Desktop.** File → Clone Repository →
+   `AgentiCubed/A3` → Clone. Note the Local Path it shows (default:
+   `~/Documents/GitHub/A3`).
+3. **Open Terminal** (Cmd+Space, type `Terminal`, Enter) and go to the
+   repo folder — type this and press Enter:
+
+   ```bash
+   cd ~/Documents/GitHub/A3
+   ```
+
+   (If GitHub Desktop showed a different Local Path, use that instead.)
+4. **Create your settings file** — two commands, one at a time:
+
+   ```bash
+   cp .env.example .env
+   sed -i '' "s/^SECRET_KEY=.*/SECRET_KEY=$(openssl rand -hex 32)/" .env
+   ```
+
+   The first copies the example settings; the second replaces the
+   placeholder signing key with a freshly generated random one.
+5. **Start everything:**
+
+   ```bash
+   docker compose up -d --build
+   ```
+
+   The first run downloads and builds for several minutes. Success looks
+   like a list of services each ending in `Started` or `Healthy`.
+6. **Create the demo project and your login** (use any real-looking
+   email — no mail is sent; reserved endings like `.local` are rejected):
+
+   ```bash
+   docker compose exec api python -m app.seed.demo --email you@example.com
+   ```
+
+   Success ends with `Tasks: 2/2 completed` and a closeout report.
+7. **Log in.** Browser → http://localhost:3000/login — the email from
+   step 6, password `demo-password-123`. Open the demo project and click
+   through the plan, tasks, evaluations, and the two artifacts.
+8. **Stop / restart later:** `docker compose stop` pauses it;
+   `docker compose up -d` brings it back. Your data persists between
+   restarts.
+
+Then continue with "Go live on free models" below (that part is also
+command-free except editing `.env`).
 
 ## Path A — Docker (recommended, ~10 minutes)
 
