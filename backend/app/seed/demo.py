@@ -408,16 +408,27 @@ async def build_and_run_demo(
     }
 
 
-async def _main() -> None:  # pragma: no cover - manual entrypoint
+async def _main(email: str | None = None) -> None:  # pragma: no cover - manual entrypoint
     from app.db.session import SessionFactory
 
     store = artifact_service.default_store()
     async with SessionFactory() as session:
-        result = await build_and_run_demo(session, store=store, now=datetime.now(UTC))
+        result = await build_and_run_demo(session, store=store, now=datetime.now(UTC), email=email)
     print(result["closeout_markdown"])  # noqa: T201
 
 
 if __name__ == "__main__":  # pragma: no cover
+    import argparse
     import asyncio
 
-    asyncio.run(_main())
+    parser = argparse.ArgumentParser(description="Run the governed demo project")
+    parser.add_argument(
+        "--email",
+        default=None,
+        help=(
+            "Owner email for the seeded demo organization (password: "
+            "demo-password-123). Defaults to a random demo address."
+        ),
+    )
+    args = parser.parse_args()
+    asyncio.run(_main(email=args.email))

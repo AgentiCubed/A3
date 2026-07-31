@@ -4,6 +4,10 @@
 
 AgentiCubed converts project objectives into structured plans, recommends a project-management methodology, decomposes work into tasks, identifies required capabilities, assigns specialized agents, executes tasks, evaluates outputs, detects failures, remediates the agent/tool configuration, and continues until acceptance criteria are satisfied.
 
+> **New here? Start with the [MVP Quickstart](docs/MVP-QUICKSTART.md)** — clone to a
+> running governed project (UI included) in ~10 minutes, then go live on the
+> free GitHub Models tier.
+
 ## Principal control loop
 
 ```
