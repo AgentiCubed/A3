@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Devin Control Dashboard</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #e6edf3;
+    --muted: #8b949e; --accent: #2f81f7; --green: #3fb950; --red: #f85149;
+    --yellow: #d29922; --purple: #a371f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  header { padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; }
+  header .repo { color: var(--muted); font-size: 14px; }
+  header .status { margin-left: auto; font-size: 13px; color: var(--muted); }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 24px; max-width: 1500px; margin: 0 auto; }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  section h2 { margin: 0 0 12px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  section h2 .count { color: var(--muted); font-weight: normal; font-size: 13px; }
+  .composer { grid-column: 1 / -1; }
+  textarea { width: 100%; min-height: 90px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 14px; font-family: inherit; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--accent); }
+  button { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
+  button:hover { filter: brightness(1.1); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 4px 10px; font-size: 12px; }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  .row label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .list { display: flex; flex-direction: column; gap: 8px; max-height: 480px; overflow-y: auto; }
+  .item { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .item .body { flex: 1; min-width: 0; }
+  .item .title { font-size: 14px; }
+  .item .title a { color: var(--text); text-decoration: none; }
+  .item .title a:hover { color: var(--accent); }
+  .item .meta { font-size: 12px; color: var(--muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; border: 1px solid; white-space: nowrap; }
+  .badge.open { color: var(--green); border-color: var(--green); }
+  .badge.working, .badge.running { color: var(--yellow); border-color: var(--yellow); }
+  .badge.blocked { color: var(--red); border-color: var(--red); }
+  .badge.finished, .badge.stopped { color: var(--purple); border-color: var(--purple); }
+  .badge.label { color: var(--muted); border-color: var(--border); }
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; font-size: 14px; display: none; max-width: 420px; }
+  .toast.error { border-color: var(--red); }
+  .toast.ok { border-color: var(--green); }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Devin Control Dashboard</h1>
+  <span class="repo" id="repo-name"></span>
+  <span class="status" id="key-status"></span>
+</header>
+<main>
+  <section class="composer">
+    <h2>Dispatch a Devin session</h2>
+    <textarea id="prompt" placeholder="Describe the task for Devin, e.g. 'Fix the flaky scheduler test in backend/app/services/...'"></textarea>
+    <div class="row">
+      <label><input type="checkbox" id="include-repo" checked /> Prefix prompt with repo context</label>
+      <label><input type="checkbox" id="idempotent" /> Idempotent (skip if identical session exists)</label>
+      <button id="dispatch">Dispatch to Devin</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Open issues <span class="count" id="issues-count"></span> <button class="ghost" onclick="loadIssues()">Refresh</button></h2>
+    <div class="list" id="issues"></div>
+  </section>
+
+  <section>
+    <h2>Open pull requests <span class="count" id="prs-count"></span> <button class="ghost" onclick="loadPRs()">Refresh</button></h2>
+    <div class="list" id="prs"></div>
+  </section>
+
+  <section style="grid-column: 1 / -1;">
+    <h2>Recent Devin sessions <button class="ghost" onclick="loadSessions()">Refresh</button></h2>
+    <div class="list" id="sessions"></div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+let REPO = "AgentiCubed/A3";
+
+function toast(msg, cls) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast " + (cls || "");
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.display = "none"; }, 6000);
+}
+
+function esc(s) {
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
+}
+
+async function api(path, opts) {
+  const resp = await fetch(path, opts);
+  const text = await resp.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!resp.ok) throw new Error(data.error || data.message || (data.detail && JSON.stringify(data.detail)) || resp.status + " " + text.slice(0, 200));
+  return data;
+}
+
+async function loadConfig() {
+  const cfg = await api("/api/config");
+  REPO = cfg.repo;
+  document.getElementById("repo-name").textContent = REPO;
+  document.getElementById("key-status").textContent =
+    (cfg.devin_key_set ? "Devin key: set" : "Devin key: MISSING") +
+    " | GitHub token: " + (cfg.github_token_set ? "set" : "none (public reads only)");
+}
+
+function itemHTML(kind, it) {
+  const labels = (it.labels || []).map(l => `<span class="badge label">${esc(l.name)}</span>`).join(" ");
+  return `<div class="item">
+    <div class="body">
+      <div class="title"><a href="${esc(it.html_url)}" target="_blank">#${it.number} ${esc(it.title)}</a> ${labels}</div>
+      <div class="meta">by ${esc(it.user && it.user.login)} · updated ${new Date(it.updated_at).toLocaleString()}</div>
+    </div>
+    <span class="badge open">${esc(it.state)}</span>
+    <button class="ghost" onclick="prefill('${kind}', ${it.number}, this)">Send to Devin</button>
+  </div>`;
+}
+
+let issueCache = {};
+
+async function loadIssues() {
+  const el = document.getElementById("issues");
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const items = (await api(`/api/github/repos/${REPO}/issues?state=open&per_page=50`)).filter(i => !i.pull_request);
+    issueCache = {};
+    items.forEach(i => { issueCache["issue" + i.number] = i; });
+    document.getElementById("issues-count").textContent = items.length;
+    el.innerHTML = items.length ? items.map(i => itemHTML("issue", i)).join("") : '<div class="empty">No open issues.</div>';
+  } catch (e) { el.innerHTML = `<div class="empty">Failed: ${esc(e.message)}</div>`; }
+}
+
+async function loadPRs() {
+  const el = document.getElementById("prs");
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const items = await api(`/api/github/repos/${REPO}/pulls?state=open&per_page=50`);
+    items.forEach(i => { issueCache["pr" + i.number] = i; });
+    document.getElementById("prs-count").textContent = items.length;
+    el.innerHTML = items.length ? items.map(i => itemHTML("pr", i)).join("") : '<div class="empty">No open pull requests.</div>';
+  } catch (e) { el.innerHTML = `<div class="empty">Failed: ${esc(e.message)}</div>`; }
+}
+
+function prefill(kind, number, btn) {
+  const it = issueCache[kind + number];
+  const noun = kind === "pr" ? "pull request" : "issue";
+  document.getElementById("prompt").value =
+    `Work on ${noun} ${REPO}#${number}: "${it ? it.title : ""}"\n${it ? it.html_url : ""}\n\n` +
+    (kind === "pr" ? "Review the PR, address outstanding review comments and CI failures, and push fixes."
+                   : "Investigate the issue, implement a fix, and open a pull request.");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  document.getElementById("prompt").focus();
+}
+
+async function dispatch() {
+  const btn = document.getElementById("dispatch");
+  let prompt = document.getElementById("prompt").value.trim();
+  if (!prompt) { toast("Enter a prompt first.", "error"); return; }
+  if (document.getElementById("include-repo").checked && !prompt.includes(REPO)) {
+    prompt = `In the GitHub repo ${REPO}: ` + prompt;
+  }
+  btn.disabled = true;
+  try {
+    const body = { prompt };
+    if (document.getElementById("idempotent").checked) body.idempotent = true;
+    const res = await api("/api/devin/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    toast(`Session created: ${res.session_id || ""}`, "ok");
+    if (res.url) window.open(res.url, "_blank");
+    document.getElementById("prompt").value = "";
+    loadSessions();
+  } catch (e) { toast("Dispatch failed: " + e.message, "error"); }
+  finally { btn.disabled = false; }
+}
+
+function sessionHTML(s) {
+  const status = (s.status_enum || s.status || "unknown").toLowerCase();
+  const url = s.url || ("https://app.devin.ai/sessions/" + String(s.session_id || "").replace("devin-", ""));
+  const title = s.title || (s.prompt ? s.prompt.slice(0, 100) : s.session_id);
+  return `<div class="item">
+    <div class="body">
+      <div class="title"><a href="${esc(url)}" target="_blank">${esc(title)}</a></div>
+      <div class="meta">${esc(s.session_id || "")} · created ${s.created_at ? new Date(s.created_at).toLocaleString() : "?"}</div>
+    </div>
+    <span class="badge ${esc(status)}">${esc(status)}</span>
+  </div>`;
+}
+
+async function loadSessions() {
+  const el = document.getElementById("sessions");
+  el.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await api("/api/devin/sessions?limit=20");
+    const sessions = res.sessions || res || [];
+    el.innerHTML = sessions.length ? sessions.map(sessionHTML).join("") : '<div class="empty">No sessions found.</div>';
+  } catch (e) { el.innerHTML = `<div class="empty">Failed: ${esc(e.message)} (is DEVIN_API_KEY set?)</div>`; }
+}
+
+document.getElementById("dispatch").addEventListener("click", dispatch);
+loadConfig().then(() => { loadIssues(); loadPRs(); loadSessions(); });
+setInterval(loadSessions, 60000);
+</script>
+</body>
+</html>
