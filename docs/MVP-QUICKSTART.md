@@ -134,14 +134,23 @@ API keys.
    docker compose up -d
    ```
 
-4. In the UI (or via the API), create your planner/executor/evaluator
-   agents with:
-   - **provider:** `github_models`
-   - **model:** `openai/gpt-4.1` (the default), or any ID from
-     github.com/marketplace/models — e.g. `openai/gpt-4o-mini` (fast),
-     `deepseek/DeepSeek-R1` (reasoning)
-   - the token is resolved by reference from `GITHUB_MODELS_TOKEN`; the
-     secret value never enters the database, logs, or audit records.
+4. Register the live agent squad (planner, analyst, writer, independent
+   evaluator) in your organization — one idempotent command, using the
+   email you seeded/registered with:
+
+   ```bash
+   docker compose exec api python -m app.seed.live_agents --email you@example.com
+   ```
+
+   Defaults to `github_models` / `openai/gpt-4o-mini`; pass `--model` for
+   any ID from github.com/marketplace/models (e.g. `openai/gpt-4.1`,
+   `deepseek/DeepSeek-R1`). The token is resolved by reference from
+   `GITHUB_MODELS_TOKEN` at call time; the secret value never enters the
+   database, logs, or audit records.
+5. In a new project, pick **Live Planner** to generate the plan and
+   **Live Analyst** (or **Live Writer**) as the executor. Outputs are now
+   real model text; evaluation is graded by the independent
+   **Live Evaluator**.
 
 Free-tier note: GitHub Models enforces per-model daily request and token
 caps. If a task fails with a rate-limit error, use a smaller model
