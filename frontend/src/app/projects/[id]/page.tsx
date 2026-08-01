@@ -66,7 +66,13 @@ export default async function ProjectDashboard({
   return (
     <main style={{ maxWidth: 1040, margin: "0 auto", padding: "40px 24px" }}>
       <div style={{ marginBottom: 8 }}>
-        <Wordmark size={22} />
+        <Link
+          href="/"
+          aria-label="Back to the project list"
+          style={{ textDecoration: "none" }}
+        >
+          <Wordmark size={22} />
+        </Link>
       </div>
       <h1 style={{ marginTop: 0 }}>Project dashboard</h1>
       <ProjectControls projectId={id} />
