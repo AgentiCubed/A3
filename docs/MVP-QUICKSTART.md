@@ -203,6 +203,7 @@ container for you.
 | Login fails after seeding | The seed's password is exactly `demo-password-123`; the email must match the `--email` you passed |
 | Live task fails with 401/403 | Token missing `models: read` permission, or `GITHUB_MODELS_TOKEN` not present in the container env (rerun `docker compose up -d`) |
 | Live task fails with 429 | Free-tier daily cap hit — smaller model or wait |
+| `plan_generation_failed` and `api` logs show `410 Gone` | The agent's model ID was retired from the GitHub Models catalog. Switch to a current ID — either reseed (`... app.seed.live_agents --model openai/gpt-4.1`) or update existing agents: `docker compose exec db psql -U agenticubed -d agenticubed -c "UPDATE agents SET model='openai/gpt-4.1' WHERE name LIKE 'Live %';"` |
 | `/readyz` red | `docker compose ps` — db/redis unhealthy; check `docker compose logs api` |
 
 ## What this MVP deliberately is not
