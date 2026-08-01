@@ -115,8 +115,8 @@ if __name__ == "__main__":  # pragma: no cover
     )
     parser.add_argument(
         "--model",
-        default="openai/gpt-4o-mini",
-        help="Model ID (default: openai/gpt-4o-mini)",
+        default="openai/gpt-4.1",
+        help="Model ID (default: openai/gpt-4.1)",
     )
     args = parser.parse_args()
     asyncio.run(_main(args.email, args.provider, args.model))
