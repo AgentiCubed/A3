@@ -188,6 +188,8 @@ container for you.
 | Symptom | Fix |
 |---|---|
 | `value is not a valid email address` on seed/register | Use a real-looking domain (`.local`, `.test` etc. are rejected) |
+| `governed scheduler did not complete the approved demo graph` | You're on a build older than the seed's inline-mode fix — update (`git pull`), `docker compose down -v && docker compose up -d --build`, and rerun the seed; or run the seed with `-e WORKFLOW_ENGINE_BACKEND=inline -e EVENT_BUS_BACKEND=memory` after `docker compose exec` |
+| Seed fails with `email address is already registered` | That email already has an account from a previous seed run — pass a different `--email`, or reset with `docker compose down -v && docker compose up -d` first |
 | Ports 3000/8000/5432/6379 already bound | Stop the conflicting service or change the published port in `docker-compose.yml` |
 | Login fails after seeding | The seed's password is exactly `demo-password-123`; the email must match the `--email` you passed |
 | Live task fails with 401/403 | Token missing `models: read` permission, or `GITHUB_MODELS_TOKEN` not present in the container env (rerun `docker compose up -d`) |
