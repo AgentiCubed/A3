@@ -33,7 +33,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 15, // matches the access-token TTL
+    // Matches the backend access-token TTL, which is configurable via
+    // ACCESS_TOKEN_TTL_SECONDS (server-side env; falls back to 15 minutes).
+    maxAge: Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 60 * 15),
   });
   return response;
 }
