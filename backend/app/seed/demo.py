@@ -420,6 +420,24 @@ async def _main(email: str | None = None) -> None:  # pragma: no cover - manual 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
     import asyncio
+    import os
+
+    # The demo is a synchronous, offline orchestration proof. Force the
+    # inline engine and in-memory bus for THIS PROCESS ONLY, regardless of
+    # deployment settings — otherwise, under the compose stack
+    # (WORKFLOW_ENGINE_BACKEND=celery), project start hands the task chain
+    # to the worker container and the seed's run_inline pass races it,
+    # finds nothing dispatchable, and aborts. The running api/worker
+    # services are unaffected; they keep their own settings.
+    os.environ["WORKFLOW_ENGINE_BACKEND"] = "inline"
+    os.environ["EVENT_BUS_BACKEND"] = "memory"
+    from app.core.config import get_settings
+    from app.orchestration.adapters.event_bus import reset_event_bus
+    from app.orchestration.engines import reset_workflow_engine
+
+    get_settings.cache_clear()
+    reset_workflow_engine()
+    reset_event_bus()
 
     parser = argparse.ArgumentParser(description="Run the governed demo project")
     parser.add_argument(
