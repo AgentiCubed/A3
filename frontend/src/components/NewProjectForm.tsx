@@ -9,7 +9,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { backend, errorDetail } from "@/lib/backend";
+
+const SIGN_IN_MESSAGE = "Sign in to create a project.";
 
 export function NewProjectForm() {
   const router = useRouter();
@@ -28,9 +31,7 @@ export function NewProjectForm() {
     });
     setBusy(false);
     if (!res.ok) {
-      setError(
-        res.status === 401 ? "Sign in to create a project." : errorDetail(res.body),
-      );
+      setError(res.status === 401 ? SIGN_IN_MESSAGE : errorDetail(res.body));
       return;
     }
     router.push(`/projects/${res.body.id}`);
@@ -79,7 +80,16 @@ export function NewProjectForm() {
             data-project-form-error
             style={{ color: "#e0883a", fontSize: 13 }}
           >
-            {error}
+            {error === SIGN_IN_MESSAGE ? (
+              <>
+                <Link href="/login" style={{ color: "#2f6fed" }}>
+                  Sign in
+                </Link>{" "}
+                to create a project.
+              </>
+            ) : (
+              error
+            )}
           </span>
         )}
       </form>
