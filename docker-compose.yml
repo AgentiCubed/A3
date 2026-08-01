@@ -62,6 +62,15 @@ services:
       EVENT_BUS_BACKEND: redis
       WORKFLOW_ENGINE_BACKEND: celery
     command: celery -A app.workers.celery_app worker --loglevel=INFO
+    # The image's HEALTHCHECK curls the API port, which a Celery worker does
+    # not serve — override with a real worker ping so `docker compose ps`
+    # reports the truth (prod disables it instead; see docker-compose.prod.yml).
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app inspect ping --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
     volumes:
       - ./backend:/app
       - artifacts:/var/artifacts
