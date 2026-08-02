@@ -18,7 +18,7 @@ definition:
 
 ## 2. Layered architecture
 
-```
+````mermaid`
 flowchart TB
     %% Styling classes
     classDef ui fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000
