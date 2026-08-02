@@ -124,8 +124,8 @@ than agreed with:
 
 - GitHub: [@JamesTRichmond](https://github.com/JamesTRichmond) ·
   [@AgentiCubed](https://github.com/AgentiCubed)
-- LinkedIn: *(add before publishing)*
-- X: *(add before publishing)*
+- LinkedIn: [linkedin.com/in/jamestrichmond](https://www.linkedin.com/in/jamestrichmond)
+- X: [@jamestrichmond](https://x.com/jamestrichmond)
 
 *This repository is the public architecture showcase. The implementation is
 private, and nothing here runs. If the conversation warrants it, I am happy to go

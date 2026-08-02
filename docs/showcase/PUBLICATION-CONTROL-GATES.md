@@ -283,8 +283,15 @@ Change only the *showcase* repository's visibility. Never `AgentiCubed/A3`.
 - [ ] `AgentiCubed/A3` re-confirmed `Private`.
 - [ ] Logged-out smoke test: reachable without authentication; README, diagrams,
       tables, images, and links render; license and trademark boundary visible;
-      contact links work; correct on desktop and mobile; no permission-dependent
-      asset appears.
+      correct on desktop and mobile; no permission-dependent asset appears.
+- [ ] **Contact links verified by hand, from the logged-out session.** Both must
+      open the intended profile:
+      `https://www.linkedin.com/in/jamestrichmond` and
+      `https://x.com/jamestrichmond`.
+      A failed link is a release blocker, not permission to improvise another
+      address. This check cannot be automated usefully — LinkedIn and X both
+      refuse unauthenticated automated requests, so a scripted failure would not
+      distinguish a wrong URL from a blocked bot. Open them yourself.
 - [ ] A clean public clone contains exactly the approved commit and file tree, and
       requires no private submodule, package, registry, or credential.
 - [ ] Branch protection configured so the panic reflex is impossible. Do not
@@ -398,7 +405,7 @@ unless asked otherwise.
 | D2 | Repository name | `agenticubed-showcase` | James Richmond | 2026-08-02 |
 | D3 | Owner | `AgentiCubed` org, pinned on personal profile | James Richmond | 2026-08-02 |
 | D4 | License | MIT for `demo/` + `assets/`, CC BY 4.0 for prose; no CC0 | James Richmond | 2026-08-02 |
-| D5 | Contact | Project-scoped only; personal Gmail never ships. Email line removed pending an alias; LinkedIn and X **PENDING — BLOCKING** | James Richmond | 2026-08-02 |
+| D5 | Contact | **Resolved.** LinkedIn `linkedin.com/in/jamestrichmond` and X `@jamestrichmond` ship. Personal Gmail never ships; the email line stays absent until a project alias exists, then is added in a later public commit. | James Richmond | 2026-08-02 |
 | D6 | Pitch depth | Stands as written | James Richmond | 2026-08-02 |
 | D7 | AI attribution | Disclosure kept; no vendor named | James Richmond | 2026-08-02 |
 | D8 | Naming GitHub | Stands, with primary sources linked | James Richmond | 2026-08-02 |
@@ -415,7 +422,8 @@ scans have run.
 | X-02 | `showcase/docs/provenance.md` | Names GitHub and one retired provider dependency | Deliberate per D8; anchored to GitHub's own changelog. C6 re-run and passed: no other provider, no fallback ordering, no routing logic. | *(pending owner sign-off)* | 2026-08-02 |
 | X-03 | `README.md:10`, `README.md:82`, `security-boundaries.md:105`, `security-boundaries.md:125` | Placeholder sweep matches `TODO` / `PENDING` | Substring false positives: "Mas**todo**n", and the ordinary English "blocked **pending** a decision" / "de**pending** on". Verified with `grep -o`. | *(pending owner sign-off)* | 2026-08-02 |
 | X-04 | `showcase/demo/mock-platform-events.json` | Domain `example.invalid` | RFC 2606 reserved TLD — guaranteed never resolvable. Deliberately chosen over `example.com` so a fabricated federated handle can never be mistaken for a real one. | *(pending owner sign-off)* | 2026-08-02 |
-| X-05 | `showcase/README.md:436-437`, `showcase/docs/ai4-positioning.md:127-128` | Four `*(add before publishing)*` placeholders remain | **BLOCKING — not an accepted exception.** LinkedIn and X were not supplied. Fail-closed by instruction: leave the placeholder rather than invent a value. Must be filled or the lines deleted before Gate 7. | **UNRESOLVED** | 2026-08-02 |
+| X-05 | `showcase/README.md`, `showcase/docs/ai4-positioning.md` | ~~Four `*(add before publishing)*` placeholders~~ | **RESOLVED 2026-08-02.** LinkedIn and X supplied by the owner and inserted in both files. Zero placeholders remain. Email line stays absent per D5 until an alias exists. | James Richmond | 2026-08-02 |
+| X-06 | `showcase/README.md`, `showcase/docs/ai4-positioning.md` | Two public contact identifiers ship: `linkedin.com/in/jamestrichmond`, `x.com/jamestrichmond` | Approved public destinations per D5. These are the **only** approved personal identifiers; B4 must still fail on any other. Both are intentionally public professional profiles. | James Richmond | 2026-08-02 |
 
 ---
 

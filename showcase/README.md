@@ -433,8 +433,8 @@ I would like to talk.
 
 - **GitHub:** [@JamesTRichmond](https://github.com/JamesTRichmond) · organization
   [@AgentiCubed](https://github.com/AgentiCubed)
-- **LinkedIn:** *(add before publishing)*
-- **X:** *(add before publishing)*
+- **LinkedIn:** [linkedin.com/in/jamestrichmond](https://www.linkedin.com/in/jamestrichmond)
+- **X:** [@jamestrichmond](https://x.com/jamestrichmond)
 
 Good conversations to have: where approval gates belong in an agentic pipeline;
 whether evaluation should be structural or statistical; what a durable
