@@ -18,19 +18,39 @@ Everything the platform does is one closed loop over each task, run until
 acceptance criteria are met.
 
 ```mermaid
-flowchart LR
-    Plan["Plan<br/><small>decompose · methodology</small>"]
-    Assign["Assign<br/><small>capability matching</small>"]
-    Execute["Execute<br/><small>dispatch · agent adapter</small>"]
-    Evaluate["Evaluate<br/><small>rubrics · evaluator agent</small>"]
-    Gaps["Identify Gaps<br/><small>gap classifier</small>"]
-    Remediate["Remediate<br/><small>policy engine</small>"]
+flowchart TD
+    %% Styling classes for visual hierarchy
+    classDef normalTask fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000
+    classDef warningTask fill:#fff2e6,stroke:#ff7f0e,stroke-width:2px,color:#000
+    classDef successState fill:#e6ffe6,stroke:#2ca02c,stroke-width:2px,color:#000
+    classDef pendingState fill:#f2e6ff,stroke:#9467bd,stroke-width:2px,color:#000
 
-    Plan --> Assign --> Execute --> Evaluate --> Gaps --> Remediate
-    Remediate -->|re-execute| Execute
-    Evaluate -->|pass + no approval| Done(["COMPLETED"])
-    Evaluate -->|pass + approval required| Approval(["AWAITING_APPROVAL"])
-    Approval -->|approved| Done
+    Plan["Plan \n(Decompose & Methodology)"]:::normalTask
+    Assign["Assign \n(Capability Matching)"]:::normalTask
+    Execute["Execute \n(Dispatch & Agent Adapter)"]:::normalTask
+    Evaluate["Evaluate \n(Rubrics & Evaluator Agent)"]:::normalTask
+    
+    Gaps["Identify Gaps \n(Gap Classifier)"]:::warningTask
+    Remediate["Remediate \n(Policy Engine)"]:::warningTask
+    
+    Done(["COMPLETED"]):::successState
+    Approval(["AWAITING_APPROVAL"]):::pendingState
+
+    %% Main execution flow
+    Plan --> Assign
+    Assign --> Execute
+    Execute --> Evaluate
+    
+    %% Branching logic based on evaluation
+    Evaluate -->|Fail: Gaps found| Gaps
+    Evaluate -->|Pass: No approval needed| Done
+    Evaluate -->|Pass: Approval required| Approval
+    
+    Approval -->|Approved| Done
+    
+    %% The closed remediation loop
+    Gaps --> Remediate
+    Remediate -->|Re-execute| Execute
 ```
 
 | Loop step | Component | Output |
@@ -52,41 +72,46 @@ Celery/Redis, or FastAPI request objects — only ports.
 
 ```mermaid
 flowchart TB
-    subgraph UI["UI — Next.js / React / TypeScript"]
-        direction LR
-        dash["dashboards · Kanban · Gantt · dependency graph · approvals"]
+    %% Styling classes
+    classDef component fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000,rx:5,ry:5
+    classDef crosscut fill:#fff2e6,stroke:#ff7f0e,stroke-width:2px,color:#000,rx:5,ry:5
+
+    subgraph UI ["1. UI (Next.js / React / TypeScript)"]
+        direction TB
+        dash["Dashboards, Kanban, Gantt, \nDependency Graph, Approvals"]:::component
     end
 
-    subgraph API["API layer — FastAPI (app/api/v1)"]
-        direction LR
-        ctl["thin controllers · auth · RBAC · request validation"]
+    subgraph API ["2. API Layer (FastAPI app/api/v1)"]
+        direction TB
+        ctl["Thin Controllers, Auth, \nRBAC, Request Validation"]:::component
     end
 
-    subgraph SVC["Project-domain services (app/services) — provider-neutral"]
-        direction LR
-        svc["projects · methodology · decomposition · capability analysis<br/>matching · risk/decision logs · metrics"]
+    subgraph SVC ["3. Project-Domain Services (app/services)"]
+        direction TB
+        svc["Projects, Methodology, Decomposition, \nCapability Analysis, Matching, \nRisk/Decision Logs, Metrics"]:::component
     end
 
-    subgraph ENG["Execution engines"]
+    subgraph ENG ["4. Execution Engines"]
         direction LR
-        orch["Orchestration<br/>app/orchestration<br/><small>state machine · dispatch</small>"]
-        eval["Evaluation<br/>app/evaluation<br/><small>validators + evaluators</small>"]
-        rem["Remediation<br/>app/remediation<br/><small>policy engine</small>"]
+        orch["Orchestration (app/orchestration)\n State Machine, Dispatch"]:::component
+        eval["Evaluation (app/evaluation)\n Validators, Evaluators"]:::component
+        rem["Remediation (app/remediation)\n Policy Engine"]:::component
     end
 
-    subgraph PROV["Provider integrations (app/orchestration/adapters)"]
-        direction LR
-        prov["MockProvider (deterministic) · Anthropic adapter · extensible"]
+    subgraph PROV ["5. Provider Integrations (app/orchestration/adapters)"]
+        direction TB
+        prov["MockProvider (Deterministic), \nAnthropic Adapter, Extensible"]:::component
     end
 
-    UI -->|"REST/JSON (OpenAPI) · SSE"| API
-    API -->|"calls services, never the DB"| SVC
+    XCUT["Cross-cutting: app/core (Config, Security/RBAC, Logging, Audit) \n app/db (Session, Unit of Work) \n app/workers (Celery behind WorkflowEngine port)"]:::crosscut
+
+    %% Dependencies point INWARD
+    UI -->|"REST/JSON (OpenAPI), SSE"| API
+    API -->|"Calls services, never the DB"| SVC
     SVC --> orch
     SVC --> eval
     SVC --> rem
-    orch -->|AgentAdapter port| PROV
-
-    XCUT["Cross-cutting: app/core (config · security/RBAC · structured logging · audit) ·<br/>app/db (session + Unit of Work) · app/workers (Celery behind WorkflowEngine port)"]
+    orch -->|"AgentAdapter port"| PROV
 ```
 
 ---
@@ -98,25 +123,47 @@ at the edges, so each can be swapped without touching domain logic.
 
 ```mermaid
 flowchart LR
-    subgraph Domain["Domain (depends only on ports)"]
-        d["services · orchestration · evaluation · remediation"]
+    %% Styling classes for visual distinction and accessibility
+    classDef domain fill:#f2e6ff,stroke:#9467bd,stroke-width:2px,color:#000,rx:5,ry:5
+    classDef port fill:#fff2e6,stroke:#ff7f0e,stroke-width:2px,color:#000,shape:hexagon
+    classDef adapter fill:#e6ffe6,stroke:#2ca02c,stroke-width:2px,color:#000,rx:5,ry:5
+
+    subgraph DomainLayer ["1. Domain (Depends only on ports)"]
+        direction TB
+        D["Domain Logic: \nServices, Orchestration, \nEvaluation, Remediation"]:::domain
     end
 
-    subgraph Ports["Ports (Protocol / ABC)"]
-        p1["AgentAdapter"]
-        p2["WorkflowEngine"]
-        p3["ArtifactStore"]
-        p4["Clock"]
-        p5["EventBus"]
+    subgraph PortLayer ["2. Ports (Protocol / ABC)"]
+        direction TB
+        P1{{"AgentAdapter"}}:::port
+        P2{{"WorkflowEngine"}}:::port
+        P3{{"ArtifactStore"}}:::port
+        P4{{"Clock"}}:::port
+        P5{{"EventBus"}}:::port
     end
 
-    d --> p1 & p2 & p3 & p4 & p5
+    subgraph AdapterLayer ["3. Concrete Adapters (Interchangeable)"]
+        direction TB
+        A1["MockProvider, AnthropicProvider"]:::adapter
+        A2["Celery (Future: Temporal)"]:::adapter
+        A3["LocalFs (Future: S3)"]:::adapter
+        A4["SystemClock, FrozenClock"]:::adapter
+        A5["InMemory, Redis (SSE feed)"]:::adapter
+    end
 
-    p1 --> a1["MockProvider · AnthropicAdapter"]
-    p2 --> a2["CeleryWorkflowEngine<br/><small>→ Temporal later</small>"]
-    p3 --> a3["LocalFsArtifactStore<br/><small>→ S3 later</small>"]
-    p4 --> a4["SystemClock · FrozenClock (tests)"]
-    p5 --> a5["InMemoryEventBus · RedisEventBus<br/><small>feeds the live SSE stream</small>"]
+    %% Dependency flow
+    D -->|Calls interface| P1
+    D --> P2
+    D --> P3
+    D --> P4
+    D --> P5
+
+    %% Implementation flow (Dotted lines show dependency inversion)
+    P1 -.->|Realized by| A1
+    P2 -.-> A2
+    P3 -.-> A3
+    P4 -.-> A4
+    P5 -.-> A5
 ```
 
 | Port | Purpose | MVP adapter(s) | Future swap |
@@ -164,15 +211,33 @@ table: [`execution-state-machine.md`](execution-state-machine.md).
 ## 5. Deployment topology (Docker Compose)
 
 ```mermaid
-flowchart LR
-    browser["Browser"] --> fe["frontend<br/>Next.js :3000"]
-    fe --> api["api<br/>FastAPI :8000<br/><small>/docs · /healthz · /readyz</small>"]
-    api --> pg[("PostgreSQL 16")]
-    api --> redis[("Redis 7")]
-    worker["worker<br/>Celery"] --> pg
+flowchart TD
+    %% Styling classes
+    classDef client fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000
+    classDef server fill:#f2e6ff,stroke:#9467bd,stroke-width:2px,color:#000
+    classDef database fill:#fff2e6,stroke:#ff7f0e,stroke-width:2px,color:#000
+    classDef worker fill:#e6ffe6,stroke:#2ca02c,stroke-width:2px,color:#000
+
+    browser["Browser"]:::client
+    fe["Frontend \n Next.js :3000"]:::client
+    api["API \n FastAPI :8000 \n /docs · /healthz · /readyz"]:::server
+    
+    pg[("PostgreSQL 16")]:::database
+    redis[("Redis 7")]:::database
+    
+    worker["Worker \n Celery"]:::worker
+
+    %% Standard connections
+    browser --> fe
+    fe --> api
+    api --> pg
+    api --> redis
+    worker --> pg
     worker --> redis
-    api -. enqueue .-> redis
-    redis -. deliver .-> worker
+    
+    %% Queue flow
+    api -.->|"enqueue"| redis
+    redis -.->|"deliver"| worker
 ```
 
 Published ports bind to loopback by default. Bring the stack up with
