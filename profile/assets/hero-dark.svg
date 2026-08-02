@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" width="1200" height="280" role="img" aria-label="James Richmond — AI Solutions Engineer. Governed agentic systems.">
+  <defs>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#22D3EE" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="scan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0"/>
+      <stop offset="35%" stop-color="#22D3EE" stop-opacity="0.30"/>
+      <stop offset="65%" stop-color="#22D3EE" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#22D3EE" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="60" height="40" patternUnits="userSpaceOnUse">
+      <path d="M60 0 L0 0 0 40" fill="none" stroke="#22D3EE" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <style>
+    .sweep { animation: railSweep 9s ease-in-out infinite; }
+    .scan  { animation: scanDrift 11s ease-in-out infinite; }
+    .led   { animation: ledPulse 2.4s ease-in-out infinite; }
+
+    @keyframes railSweep { 0%, 100% { transform: translateX(0); }    50% { transform: translateX(952px); } }
+    @keyframes scanDrift { 0%, 100% { transform: translateY(0); }    50% { transform: translateY(220px); } }
+    @keyframes ledPulse  { 0%, 100% { fill-opacity: 1; }             50% { fill-opacity: 0.15; } }
+
+    /* An explicit accessibility preference outranks the aesthetic. The sweep and
+       LED settle into static states that still read as intentional; the scanline
+       has no meaningful resting position, so it is removed rather than frozen. */
+    @media (prefers-reduced-motion: reduce) {
+      .sweep, .led { animation: none; }
+      .scan { display: none; }
+    }
+  </style>
+
+  <rect width="1200" height="280" fill="#070B10"/>
+  <rect width="1200" height="280" fill="url(#grid)"/>
+
+  <!-- corner brackets -->
+  <path d="M24 62 L24 24 L86 24" fill="none" stroke="#22D3EE" stroke-opacity="0.55" stroke-width="2"/>
+  <path d="M1176 218 L1176 256 L1114 256" fill="none" stroke="#22D3EE" stroke-opacity="0.55" stroke-width="2"/>
+  <path d="M1176 62 L1176 24 L1114 24" fill="none" stroke="#22D3EE" stroke-opacity="0.18" stroke-width="2"/>
+  <path d="M24 218 L24 256 L86 256" fill="none" stroke="#22D3EE" stroke-opacity="0.18" stroke-width="2"/>
+
+  <!-- top rail + running sweep -->
+  <rect x="24" y="24" width="1152" height="1" fill="#22D3EE" fill-opacity="0.16"/>
+  <rect class="sweep" x="24" y="23" width="200" height="2" fill="url(#sweep)"/>
+
+  <!-- scanline -->
+  <rect class="scan" x="24" y="30" width="1152" height="2" fill="url(#scan)"/>
+
+  <!-- identity block -->
+  <circle class="led" cx="68" cy="82" r="3.5" fill="#22D3EE"/>
+  <text x="86" y="86" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" letter-spacing="4.2" fill="#8CA3B5">OPERATOR</text>
+
+  <text x="64" y="150" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="52" font-weight="700" letter-spacing="5" fill="#E6EDF3">JAMES RICHMOND</text>
+
+  <rect x="64" y="172" width="72" height="2" fill="#22D3EE"/>
+
+  <text x="64" y="206" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" letter-spacing="3.4" fill="#22D3EE">AI SOLUTIONS ENGINEER</text>
+
+  <text x="64" y="234" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12.5" letter-spacing="1.4" fill="#7D93A6">Governed agentic systems — approve, evaluate, audit.</text>
+
+  <!-- right readout -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="11.5" letter-spacing="1.6" text-anchor="end">
+    <text x="1136" y="88" fill="#8CA3B5">BUILD</text>
+    <text x="1136" y="108" fill="#C6D4DE">AGENTICUBED / A3</text>
+
+    <text x="1136" y="130" fill="#8CA3B5">FOCUS</text>
+    <text x="1136" y="150" fill="#C6D4DE">ORCHESTRATION · GOVERNANCE</text>
+
+    <text x="1136" y="172" fill="#8CA3B5">POSTURE</text>
+    <text x="1136" y="192" fill="#C6D4DE">DEFAULT-DENY</text>
+
+    <text x="1136" y="214" fill="#8CA3B5">STATUS</text>
+    <text x="1136" y="234" fill="#22D3EE">OPEN TO ROLES</text>
+  </g>
+</svg>

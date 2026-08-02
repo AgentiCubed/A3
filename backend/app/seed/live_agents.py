@@ -115,8 +115,8 @@ if __name__ == "__main__":  # pragma: no cover
     )
     parser.add_argument(
         "--model",
-        default="gemini-2.5-flash",
-        help="Model ID (default: gemini-2.5-flash)",
+        default="gemini-flash-latest",
+        help="Model ID (default: gemini-flash-latest; the models/ prefix is optional)",
     )
     args = parser.parse_args()
     asyncio.run(_main(args.email, args.provider, args.model))
