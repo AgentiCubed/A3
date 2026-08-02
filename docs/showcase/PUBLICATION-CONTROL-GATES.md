@@ -367,7 +367,8 @@ exactly why the README says so rather than implying public verifiability.
 | Governed loop runs end to end | Private end-to-end lifecycle integration test | No |
 | Strict plan contract validated at the boundary | Private schema + contract tests | No |
 | Human approval gates on irreversible actions | Private approval-gate integration tests | No |
-| Executor / evaluator separation | Private dispatch + evaluation-write tests | No |
+| Executor / evaluator separation | **Verified 2026-08-02 against source.** Three independent enforcement points: API boundary, dispatch (evaluator bound to task), and evaluation write. The "two enforcement points" claim in `security-boundaries.md` I6 is accurate and conservative. | No |
+| Deterministic evaluation always runs; agent evaluation is added when an evaluator is assigned; verdicts combine | **Verified 2026-08-02 against source.** Corrected a prior overclaim — `architecture.md` §3.6 previously said both kinds were *required*. | No |
 | Append-only audit, enforced at two layers | Private audit/immutability tests + DB trigger | No |
 | Default-deny, scoped, expiring permissions | Private tool-runtime tests | No |
 | Credential-by-reference with redaction | Private redaction + provider tests | No |
