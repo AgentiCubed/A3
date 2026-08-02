@@ -1,6 +1,6 @@
 # Issue 0011 — Draft/review loop, live rubrics, and per-task model routing
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B3, B4, B6  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B3, B4, B6
 **Suggested labels:** `type:enhancement`, `type:epic`, `area:backend`, `area:workers`, `track:quality`
 
 ## Summary

@@ -1,6 +1,6 @@
 # Issue 0012 — Artifact ergonomics and in-app downloads
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B5, E3  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B5, E3
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:frontend`, `track:quality`
 
 ## Summary

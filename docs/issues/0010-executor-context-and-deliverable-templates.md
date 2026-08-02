@@ -1,6 +1,6 @@
 # Issue 0010 — Executor context enrichment and deliverable templates
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B2  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B2
 **Suggested labels:** `type:enhancement`, `area:backend`, `track:quality`
 
 ## Summary

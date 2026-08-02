@@ -1,6 +1,6 @@
 # Issue 0015 — Live execution timeline and reliable activity feed refresh
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` C3, C5  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` C3, C5
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:frontend`, `track:transparency`
 
 ## Summary

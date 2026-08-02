@@ -1,6 +1,6 @@
 # Issue 0014 — Transcript viewer and one-click project log export
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` C2, C4  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` C2, C4
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:frontend`, `track:transparency`
 
 ## Summary

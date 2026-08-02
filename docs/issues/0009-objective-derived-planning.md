@@ -1,6 +1,6 @@
 # Issue 0009 — Objective-derived planning with task-level deliverable specs
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B1  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` B1
 **Suggested labels:** `type:enhancement`, `type:epic`, `area:backend`, `track:quality`
 
 ## Summary

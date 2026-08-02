@@ -1,5 +1,5 @@
 ## Summary
-- 
+-
 
 ## Linked issue
 - Closes #
@@ -26,4 +26,4 @@
 - [ ] Migrations, config changes, or rollout sequencing are noted below
 
 ## Notes
-- 
+-

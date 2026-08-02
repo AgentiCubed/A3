@@ -1,6 +1,6 @@
 # Issue 0016 — Guided project intake, controls board, and live preview
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` D1, D2, D3, D4  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` D1, D2, D3, D4
 **Suggested labels:** `type:enhancement`, `type:epic`, `area:backend`, `area:frontend`, `track:intake`
 
 ## Summary

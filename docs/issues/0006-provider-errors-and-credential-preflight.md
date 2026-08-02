@@ -1,6 +1,6 @@
 # Issue 0006 — Provider errors and credential preflight
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A2, A3  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A2, A3
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:frontend`, `track:live-runs`
 
 ## Summary

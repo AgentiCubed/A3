@@ -1,6 +1,6 @@
 # Issue 0013 — Persist full execution transcripts with redaction
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` C1  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` C1
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:workers`, `track:transparency`
 
 ## Summary

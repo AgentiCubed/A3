@@ -1,6 +1,6 @@
 # Issue 0007 — Dashboard failure visibility and retry flow
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A4  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A4
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:frontend`, `track:live-runs`
 
 ## Summary

@@ -1,6 +1,6 @@
 # Issue 0008 — Rate-limit resilience and model fallback
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A5  
+**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A5
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:workers`, `track:live-runs`
 
 ## Summary
