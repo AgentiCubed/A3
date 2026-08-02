@@ -143,6 +143,31 @@ Read every public file end to end, in separate passes. Do not combine them.
 
 ## Gate 5 — Clean one-use local staging repository
 
+> **Rehearsal result, 2026-08-02.** Every step below was executed end to end
+> against the current `showcase/` tree in a disposable environment, and every
+> check passed: 22 files staged, no symlinks, no nested git metadata, no OS
+> droppings, no control documents, no `.github/workflows/`, no binaries; all
+> content scans clean; `git diff --cached --check` clean; exactly one commit;
+> both author and committer lines showing the noreply address; no remote; clean
+> tree; `git fsck` clean.
+>
+> **The rehearsal is not the artifact.** It ran in an ephemeral container and no
+> longer exists. Gate 5 must be run again on your own machine, because the
+> staging repository it produces is the thing Gate 6 pushes. What the rehearsal
+> buys is certainty that the procedure and the bytes are sound before you spend
+> the attention.
+>
+> **Two tools were unavailable in the rehearsal environment and must be run for
+> real:** `gitleaks dir .` and `gitleaks git .` (B1 and the post-commit history
+> scan). Everything else was covered by equivalent scans. `exiftool` was also
+> absent but has nothing to act on — the tree contains no binaries, only text
+> and two JSON files.
+>
+> **One scan reads differently on your machine.** The `grep -RniF "$(whoami)"`
+> check matched the ordinary English word "root" in the rehearsal, because the
+> container user is `root`. On your machine `whoami` is your real username, so
+> that check becomes meaningful rather than noisy — read its hits properly.
+
 Supersedes `PUBLICATION-CHECKLIST.md` Part 3 steps 1 and 6. A reusable
 `mkdir -p ~/agenticubed-showcase` can silently merge into an existing directory;
 `mktemp -d` cannot.
@@ -182,9 +207,17 @@ cd "$A3_STAGE_DIR"
       ```bash
       git init -b main
       git config user.name  "James T. Richmond"
-      git config user.email "<ID>+JamesTRichmond@users.noreply.github.com"
+      git config user.email "170839886+JamesTRichmond@users.noreply.github.com"
       git config --get user.email    # read it back
       ```
+
+      The numeric prefix is the GitHub account ID for `JamesTRichmond`, resolved
+      from the API on 2026-08-02. Confirm it against GitHub → Settings → Emails
+      before use; if the account has since been renamed, the ID stays but the
+      username part changes. Also enable **Keep my email addresses private** and
+      **Block command line pushes that expose my email** while you are on that
+      page — the second one turns a mistake here into a rejected push instead of
+      a permanent public record.
 
 - [ ] The **complete staged diff** reviewed, not merely `git status`:
 
