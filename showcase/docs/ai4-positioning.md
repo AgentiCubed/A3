@@ -2,6 +2,12 @@
 
 The short version, for conversations. Written to be spoken, not read aloud.
 
+> **Same facts as the README, stated once here so this document cannot drift into
+> a stronger claim.** AgentiCubed is building a governed social-operations layer.
+> The governed orchestration substrate works today, in a private repository. It
+> **does not currently connect to social platforms** — no platform adapter
+> exists. Nothing in this public repository runs.
+
 ---
 
 ## One sentence
@@ -120,7 +126,7 @@ than agreed with:
   [@AgentiCubed](https://github.com/AgentiCubed)
 - LinkedIn: *(add before publishing)*
 - X: *(add before publishing)*
-- Email: *(add a public-facing address before publishing)*
 
-*This repository is the public showcase. The implementation is private. If the
-conversation warrants it, I am happy to go deeper than what is written here.*
+*This repository is the public architecture showcase. The implementation is
+private, and nothing here runs. If the conversation warrants it, I am happy to go
+deeper than what is written here.*

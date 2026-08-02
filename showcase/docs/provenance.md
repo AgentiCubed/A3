@@ -62,9 +62,18 @@ it *doesn't* stop.
 
 ## Episode 2 — A vendor retired the platform underneath the build
 
-**What happened.** GitHub retired GitHub Models — playground, catalog, and
-inference API — on 2026-07-30. The endpoint began returning `410 Gone`. Work that
-had run green through 28 July failed from 31 July with no code change on our side.
+**GitHub's public facts.** GitHub announced on 2026-07-01 that GitHub Models
+would be fully retired, and retired it — playground, catalog, and inference API —
+on 2026-07-30. Both statements are GitHub's own, in its changelog:
+
+- [GitHub Models is being fully retired on July 30, 2026](https://github.blog/changelog/2026-07-01-github-models-is-being-fully-retired-on-july-30-2026/) (2026-07-01)
+- [GitHub Models is now retired](https://github.blog/changelog/2026-07-30-github-models-is-now-retired/) (2026-07-30)
+
+**What that meant here.** The endpoint began returning `410 Gone`. Work that had
+run green through 28 July failed from 31 July with no code change on this side.
+Everything below is AgentiCubed's own response, not GitHub's; nothing here rests
+on non-public information, and none of it is a criticism of GitHub's decision,
+which was announced with notice.
 
 **What made it expensive.** Not the retirement itself. The retirement was
 announced, and vendors are allowed to make decisions. What cost days was that the
@@ -176,8 +185,15 @@ otherwise you have two specifications, and they will diverge.
 
 ## Attribution
 
-AgentiCubed is designed and built by **James Richmond**. AI coding assistants are
-used extensively throughout, under the same governance the product describes:
-proposals are reviewed, decisions are recorded with named authority, and
-independent review is separated from authorship. The system's own governance
-process is applied to the building of the system.
+AgentiCubed is designed and built by **James Richmond**. AI-assisted tools
+contributed to drafting and implementation throughout. James Richmond reviewed
+the published material, verified the claims and evidence identified in this
+repository, and accepts responsibility for the final artifact.
+
+Two process claims, stated narrowly because they are the supportable ones:
+architectural and directional decisions are captured as written decision records
+with named authority, and the Phase 0 governance review was performed by a
+reviewer who was not the drafter. That is a document-and-review discipline
+borrowed from the product's thinking. It is *not* the product's runtime
+governance — no approval gate or automated evaluator sits between an assistant
+and this repository, and it would be an overclaim to imply otherwise.
