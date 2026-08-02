@@ -563,3 +563,63 @@ def test_retirement_guidance_is_available_for_operators():
     assert "gemini" in retirement_guidance("github_models")
     assert retirement_guidance("gemini") is None
     assert retirement_guidance("mock") is None
+
+
+async def test_gemini_style_model_prefix_is_applied_when_missing(monkeypatch):
+    """Gemini 404s on a bare model name; accept both spellings."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    seen: list[str] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content)["model"])
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        )
+
+    provider = OpenAICompatibleProvider(
+        name="gemini",
+        base_url=_COMPAT_BASE_URL,
+        default_model="gemini-flash-latest",
+        default_credential_ref="GEMINI_API_KEY",
+        model_prefix="models/",
+        transport=httpx.MockTransport(_handler),
+    )
+    await provider.run(AgentRunRequest(prompt="hi", model="gemini-2.5-flash"))
+    await provider.run(AgentRunRequest(prompt="hi", model="models/gemini-2.5-pro"))
+    await provider.run(AgentRunRequest(prompt="hi"))
+
+    # Bare name gets the namespace; an already-qualified name is untouched;
+    # the default is qualified too.
+    assert seen == [
+        "models/gemini-2.5-flash",
+        "models/gemini-2.5-pro",
+        "models/gemini-flash-latest",
+    ]
+
+
+async def test_model_prefix_is_opt_in_per_provider(monkeypatch):
+    """Providers without a namespace (OpenAI, Ollama) must not be rewritten."""
+    monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
+    seen: list[str] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content)["model"])
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        )
+
+    provider = OpenAICompatibleProvider(
+        name="ollama",
+        base_url="http://localhost:11434/v1",
+        default_model="llama3.2",
+        default_credential_ref="OLLAMA_API_KEY",
+        requires_credential=False,
+        transport=httpx.MockTransport(_handler),
+    )
+    await provider.run(AgentRunRequest(prompt="hi", model="llama3.2"))
+    assert seen == ["llama3.2"]
+
+
+def test_registered_gemini_qualifies_models():
+    assert get_adapter("gemini")._qualified_model("gemini-2.5-flash") == ("models/gemini-2.5-flash")
+    assert get_adapter("ollama")._qualified_model("llama3.2") == "llama3.2"

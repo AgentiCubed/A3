@@ -80,6 +80,7 @@ class OpenAICompatibleProvider:
         default_model: str,
         default_credential_ref: str,
         requires_credential: bool = True,
+        model_prefix: str = "",
         extra_headers: dict[str, str] | None = None,
         timeout_seconds: float = 60.0,
         transport: httpx.AsyncBaseTransport | None = None,
@@ -89,6 +90,7 @@ class OpenAICompatibleProvider:
         self._default_model = default_model
         self._default_credential_ref = default_credential_ref
         self._requires_credential = requires_credential
+        self._model_prefix = model_prefix
         self._extra_headers = dict(extra_headers or {})
         self._timeout = timeout_seconds
         self._transport = transport
@@ -117,6 +119,18 @@ class OpenAICompatibleProvider:
             raise error
         return token
 
+    def _qualified_model(self, model: str) -> str:
+        """Apply a provider's namespace to a bare model name.
+
+        Gemini's catalog names every model ``models/<id>`` and returns 404 for
+        the bare form, so an operator who reasonably types ``gemini-2.5-flash``
+        would get "no such model" with nothing pointing at the missing prefix.
+        Accept both spellings rather than make the operator know.
+        """
+        if self._model_prefix and not model.startswith(self._model_prefix):
+            return f"{self._model_prefix}{model}"
+        return model
+
     def _build(
         self, request: AgentRunRequest, *, token: str | None, with_response_format: bool
     ) -> tuple[dict[str, Any], dict[str, str]]:
@@ -127,7 +141,7 @@ class OpenAICompatibleProvider:
             messages.append({"role": "user", "content": request.prompt})
 
             payload: dict[str, Any] = {
-                "model": request.model or self._default_model,
+                "model": self._qualified_model(request.model or self._default_model),
                 "max_tokens": int(request.params.get("max_tokens", _DEFAULT_MAX_TOKENS)),
                 "messages": messages,
             }

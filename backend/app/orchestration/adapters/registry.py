@@ -24,7 +24,14 @@ from app.orchestration.ports import AgentAdapter
 # free tier may use prompts to improve Google's models, so confidential work
 # belongs on a local provider instead.
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
-GEMINI_DEFAULT_MODEL = "gemini-2.5-flash"
+# Gemini namespaces every catalog entry as ``models/<id>``; the adapter adds
+# the prefix so a bare name also works. The default is the moving "latest
+# flash" alias rather than a pinned version: a pinned identifier is exactly
+# what died when GitHub Models retired, and the model actually used is
+# recorded on every execution, so history stays reproducible even as the
+# alias advances. Pin explicitly with --model when a run must be frozen.
+GEMINI_MODEL_PREFIX = "models/"
+GEMINI_DEFAULT_MODEL = "gemini-flash-latest"
 
 # Ollama on the operator's own machine: no credential, no quota, no network.
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
@@ -38,6 +45,7 @@ _REGISTRY: dict[str, AgentAdapter] = {
         base_url=GEMINI_BASE_URL,
         default_model=GEMINI_DEFAULT_MODEL,
         default_credential_ref="GEMINI_API_KEY",
+        model_prefix=GEMINI_MODEL_PREFIX,
     ),
     "ollama": OpenAICompatibleProvider(
         name="ollama",
