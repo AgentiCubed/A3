@@ -402,20 +402,28 @@ async def generate_plan(
     try:
         adapter = get_adapter(planner.provider)
         credential_ref = (planner.config or {}).get("api_key_ref")
-        async with asyncio.timeout(30):
+        async with asyncio.timeout(60):
             result = await adapter.run(
                 AgentRunRequest(
                     prompt=_prompt(project),
                     model=planner.model,
                     credential_ref=credential_ref,
-                    params={"expected_format": PLAN_CONTRACT},
+                    params={
+                        "expected_format": PLAN_CONTRACT,
+                        # A full multi-task plan is thousands of JSON tokens;
+                        # the previous default truncated it into invalid JSON.
+                        "max_tokens": 4096,
+                        # Force pure JSON so the strict contract parser never
+                        # trips over prose or code fences.
+                        "response_format": {"type": "json_object"},
+                    },
                 )
             )
         raw = result.output
         spec = parse_plan(raw)
     except TimeoutError:
         error_code = "planner_timeout"
-        diagnostic = "planner did not return within the 30-second budget"
+        diagnostic = "planner did not return within the 60-second budget"
     except ValueError as exc:
         error_code = "invalid_plan"
         diagnostic = str(exc)[:500]

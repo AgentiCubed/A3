@@ -96,11 +96,20 @@ class GitHubModelsProvider:
 
             payload: dict[str, Any] = {
                 "model": model,
-                "max_tokens": int(request.params.get("max_tokens", 128)),
+                # 128 was a demo-scale floor that truncated real plans and
+                # deliverables into unparseable fragments; 2048 is a usable
+                # default and callers (planner/executor) request more.
+                "max_tokens": int(request.params.get("max_tokens", 2048)),
                 "messages": messages,
             }
             if "temperature" in request.params:
                 payload["temperature"] = request.params["temperature"]
+            # Let a caller demand a pure-JSON response (e.g. the planner's
+            # strict plan_json_v1 contract) so the model cannot wrap it in
+            # prose or markdown that then fails to parse.
+            response_format = request.params.get("response_format")
+            if response_format:
+                payload["response_format"] = response_format
             if request.tools:
                 payload["tools"] = [
                     {
