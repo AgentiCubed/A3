@@ -157,8 +157,8 @@ Run against the `showcase/` tree before creating the public repo:
       equivalent. Zero findings.
 - [ ] **B2.** Grep for high-risk substrings, case-insensitive: `api_key`, `apikey`,
       `secret`, `token`, `password`, `bearer`, `private_key`, `BEGIN.*PRIVATE`,
-      `AQ.`, `sk-`, `ghp_`, `github_pat_`, `AIza`. Every hit must be an intentional
-      mention of the *concept*, never a value.
+      `AQ\.`, `sk-`, `ghp_`, `github_pat_`, `gho_`, `ghu_`, `ghs_`, `ghr_`,
+      `AIza`. Every hit must be an intentional mention of the *concept*, never a value.
 - [ ] **B3.** Grep for personal and infrastructure leakage: `localhost`, `127.0.0.1`,
       `/home/`, `/Users/`, `C:\`, your real email, machine names.
 - [ ] **B4.** Grep for private-repo leakage: `AgentiCubed/A3`, `backend/app`,
@@ -170,6 +170,9 @@ Run against the `showcase/` tree before creating the public repo:
 - [ ] **B7.** Every relative link in every Markdown file resolves.
 - [ ] **B8.** Every Mermaid block renders on GitHub (check the rendered README
       *after* the first push, before announcing).
+- [ ] **B9.** A `.gitignore` file is present in `showcase/` and covers at least
+      `.DS_Store`, `Thumbs.db`, and other OS-generated artifacts. Confirm with
+      `git status` after `git add -A` that no stray files are staged.
 
 ### C — Human read-through
 
@@ -202,8 +205,11 @@ one sitting, asking one question per pass:
       projects **disabled** (nothing to put in them).
 - [ ] **D6.** Secret scanning and push protection enabled — free on public repos,
       and a genuine backstop against a future careless commit.
-- [ ] **D7.** Branch protection on `main`: no force-push, no deletion. History
-      rewrites on a public repo are how private data becomes permanently archived.
+- [ ] **D7.** Branch protection on `main`: no force-push, no deletion, and
+      **require a pull request before merging** (creates an audit trail even
+      when you are the sole maintainer). If CI is ever connected, also require
+      status checks. History rewrites on a public repo are how private data
+      becomes permanently archived.
 - [ ] **D8.** Confirm the private `AgentiCubed/A3` repository is still **private**.
       Check this explicitly. It is the one mistake with no remedy.
 
