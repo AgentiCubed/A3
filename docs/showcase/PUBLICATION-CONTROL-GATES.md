@@ -168,6 +168,17 @@ Read every public file end to end, in separate passes. Do not combine them.
 > container user is `root`. On your machine `whoami` is your real username, so
 > that check becomes meaningful rather than noisy — read its hits properly.
 
+> **Run `./scripts/showcase-gate5.sh` rather than typing these by hand.** The
+> script performs every step in this section, stops at the first failure, and
+> never touches GitHub — no remote, no push, no repository, no visibility
+> change. Typing twenty commands and eyeballing their output is how a check gets
+> silently skipped; the commands below are the reference for what the script
+> does and why.
+>
+> The script asks for confirmation twice — once on the file inventory, once on
+> the commit identity — because those are the two decisions a script should
+> never make for you.
+
 Supersedes `PUBLICATION-CHECKLIST.md` Part 3 steps 1 and 6. A reusable
 `mkdir -p ~/agenticubed-showcase` can silently merge into an existing directory;
 `mktemp -d` cannot.
