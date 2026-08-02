@@ -4,21 +4,29 @@
     "status": "FABRICATED — non-functional sample data",
     "warning": "This file does not execute and does not correspond to any real run. Identifiers, agents, timestamps, scores, and content are invented. It is a documentation aid for readers who prefer JSON to prose.",
     "schema_note": "Field names illustrate the concepts described in docs/architecture.md. They are not the production contract and should not be treated as an integration target.",
-    "generated_for": "AgentiCubed public showcase"
+    "generated_for": "AgentiCubed public showcase",
+    "license": "MIT",
+    "spdx_license_identifier": "MIT",
+    "copyright": "2026 James Richmond"
   },
-
   "run": {
     "run_id": "run_EXAMPLE_0001",
     "objective": "Publish a short technical note about the project's approval-gate design across three surfaces.",
     "constraints": {
       "tone": "plain, technical, no marketing language",
-      "surfaces": ["microblog", "federated", "professional"],
-      "must_not": ["make performance claims", "reference unpublished work"]
+      "surfaces": [
+        "microblog",
+        "federated",
+        "professional"
+      ],
+      "must_not": [
+        "make performance claims",
+        "reference unpublished work"
+      ]
     },
     "status": "closed",
     "created_at": "2026-01-15T09:00:00Z"
   },
-
   "intake_restatement": {
     "_note": "Design intent: the operator sees and corrects the system's own understanding BEFORE planning. Correcting here is cheap; correcting in the deliverable is not.",
     "understood_objective": "Write one short technical note explaining why irreversible actions block on human approval, and adapt it for three publishing surfaces with different length and tone constraints.",
@@ -29,7 +37,6 @@
     "operator_correction": "Audience is correct. Raise the microblog limit — a thread is acceptable.",
     "confirmed_at": "2026-01-15T09:04:00Z"
   },
-
   "plan": {
     "plan_id": "plan_EXAMPLE_0001",
     "version": 2,
@@ -41,7 +48,9 @@
         "key": "draft_core",
         "title": "Draft the core technical note",
         "description": "Explain the approval gate: what it blocks, why standing permission is not approval, and where rejection routes.",
-        "required_capabilities": ["writing.technical"],
+        "required_capabilities": [
+          "writing.technical"
+        ],
         "estimate_hours": 1.0,
         "priority": 1,
         "acceptance_criteria": [
@@ -49,14 +58,24 @@
             "key": "explains_gate_vs_permission",
             "check": "contains_concepts",
             "params": {
-              "concepts": ["standing permission", "approval gate", "rejection routing"]
+              "concepts": [
+                "standing permission",
+                "approval gate",
+                "rejection routing"
+              ]
             },
             "weight": 0.5
           },
           {
             "key": "no_unsupported_claims",
             "check": "absent_patterns",
-            "params": { "patterns": ["fastest", "state of the art", "guaranteed"] },
+            "params": {
+              "patterns": [
+                "fastest",
+                "state of the art",
+                "guaranteed"
+              ]
+            },
             "weight": 0.5
           }
         ]
@@ -65,14 +84,18 @@
         "key": "adapt_microblog",
         "title": "Adapt for the microblog surface",
         "description": "Restructure the note as a thread under the surface's per-post length constraint.",
-        "required_capabilities": ["writing.adaptation"],
+        "required_capabilities": [
+          "writing.adaptation"
+        ],
         "estimate_hours": 0.5,
         "priority": 2,
         "acceptance_criteria": [
           {
             "key": "per_post_length",
             "check": "max_length_per_segment",
-            "params": { "limit": 280 },
+            "params": {
+              "limit": 280
+            },
             "weight": 1.0
           }
         ]
@@ -81,22 +104,34 @@
         "key": "adapt_professional",
         "title": "Adapt for the professional surface",
         "description": "Expand into a single long-form post with a concrete opening example.",
-        "required_capabilities": ["writing.adaptation"],
+        "required_capabilities": [
+          "writing.adaptation"
+        ],
         "estimate_hours": 0.5,
         "priority": 2,
         "acceptance_criteria": [
           {
             "key": "has_concrete_example",
             "check": "contains_concepts",
-            "params": { "concepts": ["worked example"] },
+            "params": {
+              "concepts": [
+                "worked example"
+              ]
+            },
             "weight": 1.0
           }
         ]
       }
     ],
     "dependencies": [
-      { "predecessor_key": "draft_core", "successor_key": "adapt_microblog" },
-      { "predecessor_key": "draft_core", "successor_key": "adapt_professional" }
+      {
+        "predecessor_key": "draft_core",
+        "successor_key": "adapt_microblog"
+      },
+      {
+        "predecessor_key": "draft_core",
+        "successor_key": "adapt_professional"
+      }
     ],
     "_dependency_note": "Validated as a DAG before approval is offered. A cycle is rejected at validation, so the scheduler can never deadlock on a plan it accepted.",
     "project_acceptance": {
@@ -110,7 +145,6 @@
       "Publication is an irreversible external action and will stop at an approval gate."
     ]
   },
-
   "plan_history": [
     {
       "version": 1,
@@ -127,7 +161,6 @@
       "comment": "Approved. Publication still gated."
     }
   ],
-
   "assignments": [
     {
       "task_key": "draft_core",
@@ -135,10 +168,17 @@
       "matched_on": "writing.technical",
       "_note": "Matched by declared capability, not by name. Swapping the actor behind a capability changes nothing about the plan."
     },
-    { "task_key": "adapt_microblog", "agent_id": "agent_EXAMPLE_writer", "matched_on": "writing.adaptation" },
-    { "task_key": "adapt_professional", "agent_id": "agent_EXAMPLE_writer", "matched_on": "writing.adaptation" }
+    {
+      "task_key": "adapt_microblog",
+      "agent_id": "agent_EXAMPLE_writer",
+      "matched_on": "writing.adaptation"
+    },
+    {
+      "task_key": "adapt_professional",
+      "agent_id": "agent_EXAMPLE_writer",
+      "matched_on": "writing.adaptation"
+    }
   ],
-
   "executions": [
     {
       "execution_id": "exec_EXAMPLE_0001",
@@ -172,7 +212,6 @@
       "status": "evaluated_passed"
     }
   ],
-
   "evaluations": [
     {
       "evaluation_id": "eval_EXAMPLE_0001",
@@ -182,7 +221,11 @@
       "verdict": "fail",
       "score": 0.5,
       "criteria": [
-        { "key": "explains_gate_vs_permission", "passed": true, "score": 1.0 },
+        {
+          "key": "explains_gate_vs_permission",
+          "passed": true,
+          "score": 1.0
+        },
         {
           "key": "no_unsupported_claims",
           "passed": false,
@@ -198,12 +241,19 @@
       "verdict": "pass",
       "score": 1.0,
       "criteria": [
-        { "key": "explains_gate_vs_permission", "passed": true, "score": 1.0 },
-        { "key": "no_unsupported_claims", "passed": true, "score": 1.0 }
+        {
+          "key": "explains_gate_vs_permission",
+          "passed": true,
+          "score": 1.0
+        },
+        {
+          "key": "no_unsupported_claims",
+          "passed": true,
+          "score": 1.0
+        }
       ]
     }
   ],
-
   "remediation": [
     {
       "remediation_id": "rem_EXAMPLE_0001",
@@ -214,11 +264,13 @@
       },
       "action": "revise_with_targeted_feedback",
       "justification": "Single, precisely-located criterion failure. Revision is cheaper than reassignment.",
-      "budget": { "attempts_used": 1, "attempts_allowed": 3 },
+      "budget": {
+        "attempts_used": 1,
+        "attempts_allowed": 3
+      },
       "_note": "Bounded. On exhaustion the run escalates to a human rather than continuing to retry."
     }
   ],
-
   "approvals": [
     {
       "approval_id": "appr_EXAMPLE_0001",
@@ -232,19 +284,55 @@
       "_note": "The acting agent held a valid, scoped, unexpired grant for this capability and was STILL blocked. Permission is not approval."
     }
   ],
-
   "audit": [
-    { "at": "2026-01-15T09:04:00Z", "actor": "user_EXAMPLE_operator", "action": "intake.restatement_confirmed" },
-    { "at": "2026-01-15T09:12:00Z", "actor": "user_EXAMPLE_operator", "action": "plan.rejected", "plan_version": 1 },
-    { "at": "2026-01-15T09:19:00Z", "actor": "user_EXAMPLE_operator", "action": "plan.approved", "plan_version": 2 },
-    { "at": "2026-01-15T09:31:00Z", "actor": "agent_EXAMPLE_evaluator", "action": "evaluation.recorded", "verdict": "fail" },
-    { "at": "2026-01-15T09:33:00Z", "actor": "system", "action": "remediation.selected", "policy_action": "revise_with_targeted_feedback" },
-    { "at": "2026-01-15T10:38:00Z", "actor": "system", "action": "approval.requested", "sensitivity": "high" },
-    { "at": "2026-01-15T10:41:00Z", "actor": "user_EXAMPLE_operator", "action": "approval.granted" },
-    { "at": "2026-01-15T10:44:00Z", "actor": "system", "action": "project.closed", "acceptance_met": true }
+    {
+      "at": "2026-01-15T09:04:00Z",
+      "actor": "user_EXAMPLE_operator",
+      "action": "intake.restatement_confirmed"
+    },
+    {
+      "at": "2026-01-15T09:12:00Z",
+      "actor": "user_EXAMPLE_operator",
+      "action": "plan.rejected",
+      "plan_version": 1
+    },
+    {
+      "at": "2026-01-15T09:19:00Z",
+      "actor": "user_EXAMPLE_operator",
+      "action": "plan.approved",
+      "plan_version": 2
+    },
+    {
+      "at": "2026-01-15T09:31:00Z",
+      "actor": "agent_EXAMPLE_evaluator",
+      "action": "evaluation.recorded",
+      "verdict": "fail"
+    },
+    {
+      "at": "2026-01-15T09:33:00Z",
+      "actor": "system",
+      "action": "remediation.selected",
+      "policy_action": "revise_with_targeted_feedback"
+    },
+    {
+      "at": "2026-01-15T10:38:00Z",
+      "actor": "system",
+      "action": "approval.requested",
+      "sensitivity": "high"
+    },
+    {
+      "at": "2026-01-15T10:41:00Z",
+      "actor": "user_EXAMPLE_operator",
+      "action": "approval.granted"
+    },
+    {
+      "at": "2026-01-15T10:44:00Z",
+      "actor": "system",
+      "action": "project.closed",
+      "acceptance_met": true
+    }
   ],
   "_audit_note": "Append-only, with redacted before/after values omitted here for readability. Enforced at the application layer AND independently at the storage layer.",
-
   "_absent_by_design": [
     "credentials, tokens, and credential references",
     "production prompts and routing logic",

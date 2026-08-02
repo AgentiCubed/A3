@@ -4,22 +4,39 @@
     "status": "FABRICATED — non-functional sample data",
     "warning": "Every handle, name, identifier, timestamp, and piece of content below is invented. No real account, person, organization, or post is represented. This file does not execute and calls nothing.",
     "design_status": "The subject graph and platform adapters described here are DESIGN, not built. See docs/roadmap.md — H2.",
-    "schema_note": "Field names illustrate concepts from docs/architecture.md §6. They are not the production contract and are not an integration target."
+    "schema_note": "Field names illustrate concepts from docs/architecture.md §6. They are not the production contract and are not an integration target.",
+    "license": "MIT",
+    "spdx_license_identifier": "MIT",
+    "copyright": "2026 James Richmond"
   },
-
   "subject": {
     "subject_id": "subj_EXAMPLE_0001",
     "display_name": "Example Subject",
     "_note": "The durable unit. Platform accounts are projections OF this subject, not the identity itself. Memory, reputation, and policy attach here, so they survive a platform being added, lost, or replaced.",
     "projections": [
-      { "platform": "microblog", "handle": "@example_handle", "verified_link": "self_asserted" },
-      { "platform": "federated", "handle": "@example_handle@example.invalid", "verified_link": "cryptographic" },
-      { "platform": "professional", "handle": "example-subject", "verified_link": "operator_asserted" },
-      { "platform": "video", "handle": "@ExampleChannel", "verified_link": "unresolved" }
+      {
+        "platform": "microblog",
+        "handle": "@example_handle",
+        "verified_link": "self_asserted"
+      },
+      {
+        "platform": "federated",
+        "handle": "@example_handle@example.invalid",
+        "verified_link": "cryptographic"
+      },
+      {
+        "platform": "professional",
+        "handle": "example-subject",
+        "verified_link": "operator_asserted"
+      },
+      {
+        "platform": "video",
+        "handle": "@ExampleChannel",
+        "verified_link": "unresolved"
+      }
     ],
     "_resolution_note": "verified_link records HOW a projection was tied to the subject. 'unresolved' is a first-class value: an unproven link is never silently promoted to a proven one."
   },
-
   "normalized_events": [
     {
       "event_id": "evt_EXAMPLE_0001",
@@ -28,9 +45,15 @@
       "kind": "mention",
       "resolved_subject_id": "subj_EXAMPLE_0001",
       "resolution_confidence": "high",
-      "author": { "platform_handle": "@another_example", "resolved_subject_id": null },
+      "author": {
+        "platform_handle": "@another_example",
+        "resolved_subject_id": null
+      },
       "content_excerpt": "The approval-gate framing here is the part people keep skipping.",
-      "signals": { "engagement_tier": "low", "sentiment": "positive" },
+      "signals": {
+        "engagement_tier": "low",
+        "sentiment": "positive"
+      },
       "_note": "The author resolves to no known subject. Null is correct and is not backfilled with a guess."
     },
     {
@@ -40,9 +63,15 @@
       "kind": "reply",
       "resolved_subject_id": "subj_EXAMPLE_0001",
       "resolution_confidence": "high",
-      "author": { "platform_handle": "@third_example@example.invalid", "resolved_subject_id": "subj_EXAMPLE_0002" },
+      "author": {
+        "platform_handle": "@third_example@example.invalid",
+        "resolved_subject_id": "subj_EXAMPLE_0002"
+      },
       "content_excerpt": "Disagree — per-action approval will not scale past a handful of surfaces.",
-      "signals": { "engagement_tier": "low", "sentiment": "critical" },
+      "signals": {
+        "engagement_tier": "low",
+        "sentiment": "critical"
+      },
       "_note": "Same conversation, different network. Correlation happens at the subject layer, so this lands in one timeline rather than two disconnected inboxes."
     },
     {
@@ -52,9 +81,15 @@
       "kind": "reference",
       "resolved_subject_id": "subj_EXAMPLE_0001",
       "resolution_confidence": "medium",
-      "author": { "platform_handle": "fourth-example", "resolved_subject_id": null },
+      "author": {
+        "platform_handle": "fourth-example",
+        "resolved_subject_id": null
+      },
       "content_excerpt": "Related to the governed-agent discussion happening elsewhere this week.",
-      "signals": { "engagement_tier": "medium", "sentiment": "neutral" },
+      "signals": {
+        "engagement_tier": "medium",
+        "sentiment": "neutral"
+      },
       "_note": "Medium confidence: name-similarity only, no verified link. Medium-confidence resolutions are surfaced as candidates for human confirmation, never merged automatically."
     },
     {
@@ -64,13 +99,18 @@
       "kind": "comment",
       "resolved_subject_id": null,
       "resolution_confidence": "none",
-      "author": { "platform_handle": "@fifth_example", "resolved_subject_id": null },
+      "author": {
+        "platform_handle": "@fifth_example",
+        "resolved_subject_id": null
+      },
       "content_excerpt": "Where can I read more about the evaluator separation?",
-      "signals": { "engagement_tier": "low", "sentiment": "positive" },
+      "signals": {
+        "engagement_tier": "low",
+        "sentiment": "positive"
+      },
       "_note": "Unresolved and retained as unresolved. An unattributed observation is more useful than a wrongly-attributed one."
     }
   ],
-
   "correlated_view": {
     "_note": "The point of the layer: one timeline per subject, not one inbox per network.",
     "subject_id": "subj_EXAMPLE_0001",
@@ -78,10 +118,26 @@
     "event_count": 4,
     "resolved": 3,
     "unresolved": 1,
-    "platforms_observed": ["microblog", "federated", "professional", "video"],
+    "platforms_observed": [
+      "microblog",
+      "federated",
+      "professional",
+      "video"
+    ],
     "themes": [
-      { "theme": "approval gates", "event_ids": ["evt_EXAMPLE_0001", "evt_EXAMPLE_0002"] },
-      { "theme": "evaluator separation", "event_ids": ["evt_EXAMPLE_0004"] }
+      {
+        "theme": "approval gates",
+        "event_ids": [
+          "evt_EXAMPLE_0001",
+          "evt_EXAMPLE_0002"
+        ]
+      },
+      {
+        "theme": "evaluator separation",
+        "event_ids": [
+          "evt_EXAMPLE_0004"
+        ]
+      }
     ],
     "open_thread": {
       "event_id": "evt_EXAMPLE_0002",
@@ -90,15 +146,30 @@
       "_gate": "Any reply is an irreversible external action. It stops at an approval gate regardless of standing permission. See docs/security-boundaries.md — I5."
     }
   },
-
   "adapter_contract_sketch": {
     "_note": "Conceptual only. The real port is not published, and no adapter implementation appears in this repository.",
-    "capabilities": ["observe", "read", "publish"],
+    "capabilities": [
+      "observe",
+      "read",
+      "publish"
+    ],
     "per_surface_constraints": {
-      "microblog": { "max_length": 280, "supports_threads": true },
-      "federated": { "max_length": 500, "supports_threads": true },
-      "professional": { "max_length": 3000, "supports_threads": false },
-      "video": { "max_length": 10000, "supports_threads": false }
+      "microblog": {
+        "max_length": 280,
+        "supports_threads": true
+      },
+      "federated": {
+        "max_length": 500,
+        "supports_threads": true
+      },
+      "professional": {
+        "max_length": 3000,
+        "supports_threads": false
+      },
+      "video": {
+        "max_length": 10000,
+        "supports_threads": false
+      }
     },
     "_constraint_note": "Values are illustrative placeholders, not a claim about any platform's current limits.",
     "sequencing_rule": "Read-only adapters ship before write adapters. A wrong read produces a bad report; a wrong write produces a public post from an account you own.",
@@ -107,7 +178,6 @@
       "_note": "A withdrawn platform's adapter is retained as a tombstone that fails with a typed error and migration guidance, rather than deleted — which would turn every stored reference into an opaque crash."
     }
   },
-
   "_absent_by_design": [
     "real platform API endpoints, request shapes, or response bodies",
     "authentication, OAuth, or session handling of any kind",

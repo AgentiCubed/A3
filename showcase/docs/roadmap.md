@@ -1,8 +1,11 @@
 # Roadmap
 
-> Directional, not a delivery commitment. Dates are deliberately absent; sequence
-> and rationale are the useful parts. Status labels are honest — "design" means
-> specified and not built, and it will keep saying that until it is built.
+> Directional, not a delivery commitment. Horizons are an **ordering**, not a
+> schedule: H0 and H1 carry dates because they describe work that has happened or
+> is happening; H2 and H3 carry none, because committing a date to unstarted work
+> is exactly the overclaiming this document exists to avoid. Status labels are
+> honest — "design" means specified and not built, and it will keep saying that
+> until it is built.
 
 ---
 
@@ -32,7 +35,7 @@ flowchart LR
 
 ---
 
-## H0 — Substrate *(largely complete)*
+## H0 — Substrate *(largely complete as of 2026 H2)*
 
 The governed loop, end to end, against live model providers.
 
@@ -58,7 +61,7 @@ cause at the point of failure.
 
 ---
 
-## H1 — Surfaces *(in progress)*
+## H1 — Surfaces *(in progress, 2026 H2)*
 
 Making the governed system legible to the person operating it. An audit trail
 nobody can read is not accountability.
@@ -82,7 +85,7 @@ cheap end.
 
 ---
 
-## H2 — Networks *(design)*
+## H2 — Networks *(design — no date committed)*
 
 Only after the substrate can be trusted with a credential.
 
@@ -102,7 +105,7 @@ read path is how that confidence gets earned.
 
 ---
 
-## H3 — Layer *(design)*
+## H3 — Layer *(design — no date committed)*
 
 The operating system proper.
 

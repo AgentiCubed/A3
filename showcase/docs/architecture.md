@@ -158,18 +158,25 @@ graph accumulates rather than restarting from the objective each time.
 
 ### 3.6 Evaluation
 
-Two kinds, both required:
+Two kinds, layered — one always runs, one is added when an evaluator is assigned:
 
-- **Deterministic checks** — verifiable properties of the artifact. These do not
-  involve a model and cannot be argued with.
-- **Rubric evaluation by an independent agent** — a graded verdict against the
-  task's declared acceptance criteria, produced by an actor that is *never* the
-  executor. This is enforced at dispatch and re-validated when the evaluation is
-  written.
+- **Deterministic checks** *(always)* — verifiable properties of the artifact,
+  graded against the task's declared acceptance criteria. No model is involved
+  and the result cannot be argued with. This is the floor: every execution is
+  evaluated, whether or not an evaluator agent exists.
+- **Rubric evaluation by an independent agent** *(when one is assigned)* — a
+  graded verdict from an actor that is *never* the executor. Separation is
+  enforced at dispatch, when the evaluator is bound to the task, and re-validated
+  when the evaluation is written.
 
-Evaluator output is parsed **fail-closed**: a verdict that cannot be parsed into
-the expected structure is a failure, not a pass. An evaluator that returns prose
-where a structured verdict was required does not accidentally approve anything.
+When both run, the verdicts **combine** rather than one overriding the other, so
+adding a model-based judge can only tighten the result — it can never rescue an
+output the deterministic checks already failed.
+
+Evaluator output is parsed **fail-closed**, and so is evaluator *availability*: a
+verdict that cannot be parsed into the expected structure is a failure, and an
+evaluator that errors or cannot be reached is a failure too. An unreachable judge
+never becomes a silent pass.
 
 ### 3.7 Remediation
 

@@ -10,9 +10,19 @@ as first-class primitives — coordinated once, then projected onto whichever
 services happen to exist that year: X, Threads, Bluesky, Mastodon, LinkedIn,
 Reddit, YouTube, and whatever replaces them.
 
-This repository is a **public conceptual showcase**. It explains the problem, the
-thesis, the architecture, and the governance model. The working implementation is
-private.
+> **Status, before anything else.** AgentiCubed is building a governed
+> social-operations layer. This public repository presents the architecture and
+> reasoning behind its governed execution model; **it does not currently connect
+> to social platforms.** The long-term thesis is an agentic social operating
+> system spanning fragmented networks. The present capability is the governed
+> orchestration substrate needed to plan, approve, execute, evaluate, remediate,
+> and close agentic work safely — and that substrate lives in a private
+> repository, not this one.
+
+This repository is a **public architecture showcase**. It explains the problem,
+the thesis, the architecture, and the governance model. It contains prose,
+diagrams, and fabricated sample data — there is nothing here to run, and no
+result on this page was produced by code in this repository.
 
 ---
 
@@ -90,8 +100,8 @@ outward to surfaces, not the other way around.
 
 ## What this repository is
 
-A **conceptual and architectural showcase** — a public artifact describing how the
-system is designed and why.
+An **architecture showcase** — a public artifact describing how the system is
+designed and why.
 
 It contains:
 
@@ -101,6 +111,23 @@ It contains:
 - Provenance notes: real decisions, including ones that were wrong first
 - Sanitized, non-functional mock data illustrating the shapes involved
 - Positioning material for conversations at AI4
+
+### What you can and cannot do with this repository
+
+Stated plainly, because "showcase" is a word people read optimistically:
+
+| You can | You cannot |
+|---------|------------|
+| Read the architecture and judge whether the boundaries are sound | Run anything — there is no executable code here |
+| Inspect the fabricated sample data and see the shapes involved | Reproduce any claimed behaviour from this repository |
+| Evaluate the security model as a set of stated invariants | Verify those invariants yourself — the enforcing code is private |
+| Argue with the reasoning, and tell me where it is wrong | Audit the implementation |
+
+Every `Working` label in the [status table](#current-status) refers to the
+**private** implementation and is backed by evidence held privately. Those labels
+are claims made on my own authority, not results you can check here. Treating
+them as independently verified would be a mistake, so I would rather say so than
+let the word "showcase" do quiet work.
 
 ---
 
@@ -250,6 +277,11 @@ Full detail: [`docs/architecture.md`](docs/architecture.md).
 Illustrative, and deliberately unglamorous — these are the shapes the operating
 layer is designed for.
 
+**These are design contexts, not current capability.** Cases 1, 2, 4, and 5
+involve social and publishing platforms, and no platform adapter exists today.
+They describe what the substrate is being built to carry, and they are the reason
+its boundaries sit where they do. Case 3 is the shape that runs now.
+
 **1. Cross-platform publication with a human gate.**
 An objective ("publish the launch note") decomposes into per-surface drafting
 tasks with per-surface constraints. Each draft is evaluated against explicit
@@ -284,25 +316,32 @@ whether it succeeded or not.
 
 Honest labels. Nothing below is aspirational unless it says so.
 
-| Area | Status |
-|------|--------|
-| Governed loop — plan → approve → execute → evaluate → remediate → close | **Working.** Runs end to end against live model providers. |
-| Strict plan contract with schema validation at the boundary | **Working.** |
-| Human approval gates on irreversible and high-sensitivity actions | **Working.** |
-| Executor / evaluator separation | **Working.** Enforced structurally. |
-| Append-only audit with database-level immutability guards | **Working.** |
-| Default-deny, scoped, expiring tool permissions | **Working.** |
-| Credential-by-reference with redaction on logs and audit records | **Working.** |
-| Provider adapter layer (model providers interchangeable, retirement-tolerant) | **Working.** |
-| Governance corpus — constitution, decision records, ontology, traceability | **Working.** Phase 0 formally accepted. |
-| Operator console — projects, plans, approvals, live execution feed | **Working.** |
-| Cross-platform identity / subject graph | **Design.** Specified, not built. |
-| Social platform adapters | **Design.** Deliberately last — the substrate comes first. |
-| Durable cross-platform memory | **Design.** |
-| Multi-tenant hosted offering | **Not started.** |
+Read the **Evidence** column first. `Working` means it runs in the private
+implementation and is covered by tests I have run — it does **not** mean you can
+verify it from this repository, because the enforcing code is not here. `Design`
+means specified and not built, and no evidence is claimed for it.
 
-The working system is a private repository. This showcase is a description of it,
-not a copy of it.
+| Area | Status | Evidence |
+|------|--------|----------|
+| Governed loop — plan → approve → execute → evaluate → remediate → close | **Working** | Private end-to-end lifecycle test; run against live model providers |
+| Strict plan contract with schema validation at the boundary | **Working** | Private schema and contract tests |
+| Human approval gates on irreversible and high-sensitivity actions | **Working** | Private approval-gate integration tests |
+| Executor / evaluator separation | **Working** | Private dispatch and evaluation-write tests |
+| Append-only audit with database-level immutability guards | **Working** | Private audit tests + a database-level trigger |
+| Default-deny, scoped, expiring tool permissions | **Working** | Private tool-runtime tests |
+| Credential-by-reference with redaction on logs and audit records | **Working** | Private redaction and provider tests |
+| Provider adapter layer (model providers interchangeable, retirement-tolerant) | **Working** | Private provider adapter tests |
+| Governance corpus — constitution, decision records, ontology, traceability | **Working** | Private decision records; Phase 0 accepted after independent review |
+| Operator console — projects, plans, approvals, live execution feed | **Working** | Private end-to-end browser tests |
+| Cross-platform identity / subject graph | **Design** | None claimed |
+| Social platform adapters | **Design** | None claimed — deliberately last; the substrate comes first |
+| Durable cross-platform memory | **Design** | None claimed |
+| Multi-tenant hosted offering | **Not started** | None claimed |
+
+Every piece of evidence above is private. That is an honest limitation of a
+showcase repository, not a technicality: if independent verification matters to
+you, the right response is to ask me for a walkthrough, not to take the table on
+faith.
 
 ---
 
@@ -323,10 +362,15 @@ flowchart LR
 
 | Horizon | Status |
 |---------|--------|
-| H0 — Substrate | Largely complete |
-| H1 — Surfaces | In progress |
-| H2 — Networks | Design |
-| H3 — Layer | Design |
+| H0 — Substrate | Largely complete as of 2026 H2 |
+| H1 — Surfaces | In progress, 2026 H2 |
+| H2 — Networks | Design — no date committed |
+| H3 — Layer | Design — no date committed |
+
+Horizons are an **ordering**, not a schedule. H0 and H1 carry dates because they
+describe work that has happened or is happening. H2 and H3 carry none, because
+committing a date to unstarted work would be the same overclaiming the status
+table exists to prevent.
 
 The ordering is the point. Adapters are last because an ungoverned adapter is a
 liability with an API key attached.
@@ -375,6 +419,7 @@ running instance.
 | [`docs/ai4-positioning.md`](docs/ai4-positioning.md) | The short version, for conversations |
 | [`demo/`](demo/) | Sanitized mock payloads showing the shapes involved |
 | [`assets/diagrams/`](assets/diagrams/) | Mermaid sources for the diagrams above |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | What is welcome here, and what will be closed |
 
 ---
 
@@ -388,9 +433,8 @@ I would like to talk.
 
 - **GitHub:** [@JamesTRichmond](https://github.com/JamesTRichmond) · organization
   [@AgentiCubed](https://github.com/AgentiCubed)
-- **LinkedIn:** *(add before publishing)*
-- **X:** *(add before publishing)*
-- **Email:** *(add a public-facing address before publishing)*
+- **LinkedIn:** [linkedin.com/in/jamestrichmond](https://www.linkedin.com/in/jamestrichmond)
+- **X:** [@jamestrichmond](https://x.com/jamestrichmond)
 
 Good conversations to have: where approval gates belong in an agentic pipeline;
 whether evaluation should be structural or statistical; what a durable
@@ -401,9 +445,25 @@ agent a real account.
 
 ## License
 
-Code and sample data in this repository are MIT licensed — see [`LICENSE`](LICENSE).
-Prose documentation is Creative Commons Attribution 4.0 — see
-[`LICENSE-DOCS.md`](LICENSE-DOCS.md).
+GitHub's license detector reads a single root `LICENSE` file, so the repository
+header will not show the split. This table is the authoritative map:
 
-This repository is a showcase and does not accept feature contributions. Issues
-pointing out errors in the documentation are welcome.
+| Paths | License |
+|-------|---------|
+| `demo/`, `assets/` | MIT — see [`LICENSE`](LICENSE) |
+| `README.md`, `CONTRIBUTING.md`, `docs/` | CC BY 4.0 — see [`LICENSE-DOCS.md`](LICENSE-DOCS.md) |
+| The AgentiCubed implementation | Not published here; no license granted |
+
+The AgentiCubed name and logo are not covered by these licenses and may not be
+used without permission. Copyright licenses and trademark rights are separate
+things.
+
+Note that CC BY 4.0 is a broad grant, not merely a credit requirement: it permits
+adaptation and commercial reuse, subject to attribution. That is intentional for a
+document whose value is being read.
+
+## Contributions
+
+Corrections and clarifications are welcome via issues. This is a documentation
+showcase, not an active codebase, so feature pull requests will be closed — with
+thanks. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
