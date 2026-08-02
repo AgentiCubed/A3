@@ -1,0 +1,20 @@
+%% AgentiCubed — an irreversible action stopping at a human approval gate.
+%% Rendered in: docs/architecture.md (§4)
+%% The point: a valid standing permission still does not bypass the gate.
+sequenceDiagram
+    participant Op as Operator
+    participant OL as Operating layer
+    participant Pol as Policy engine
+    participant Ag as Agent
+    participant Ext as External service
+
+    Op->>OL: approve plan (version-pinned)
+    OL->>Ag: dispatch task
+    Ag->>OL: request action (publish)
+    OL->>Pol: permitted? sensitivity?
+    Pol-->>OL: permitted, high sensitivity
+    OL->>OL: block — AWAITING_APPROVAL
+    OL-->>Op: approval request + evidence
+    Op->>OL: approve (recorded decision)
+    OL->>Ext: perform action via adapter
+    OL->>OL: append audit event

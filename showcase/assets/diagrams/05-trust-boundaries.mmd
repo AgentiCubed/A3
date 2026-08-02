@@ -1,0 +1,31 @@
+%% AgentiCubed — trust boundaries.
+%% Rendered in: docs/security-boundaries.md (§2)
+%% The load-bearing edge is the dotted one: external content INFLUENCES an agent,
+%% but never AUTHORIZES anything. Authorization flows only from an identified
+%% human, through policy, into a scoped grant.
+flowchart TB
+    subgraph U["Trusted — identified humans"]
+        u1["Operators & approvers"]
+    end
+
+    subgraph OL["Trusted core — enforces invariants"]
+        c1["Policy & permissions"]
+        c2["Approval gates"]
+        c3["Audit"]
+    end
+
+    subgraph A["Semi-trusted — bounded, audited"]
+        a1["Agents"]
+    end
+
+    subgraph X["Untrusted"]
+        x1["Model provider output"]
+        x2["External content read by agents"]
+        x3["Third-party services"]
+    end
+
+    u1 -->|"authorizes"| OL
+    OL -->|"grants scoped, expiring capability"| a1
+    a1 -->|"requests action — always checked"| OL
+    x1 & x2 & x3 -.->|"influences, never authorizes"| a1
+    OL -->|"gated, adapter-mediated"| x3

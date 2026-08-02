@@ -1,0 +1,36 @@
+%% AgentiCubed — the operating layer above fragmented networks.
+%% Rendered in: README.md ("Architecture overview")
+flowchart TB
+    subgraph S["Surfaces"]
+        direction LR
+        s1["Operator console"]
+        s2["Approval queue"]
+        s3["Analytics & audit views"]
+    end
+
+    subgraph OL["Operating layer — platform-neutral"]
+        direction TB
+        id["Identity & subject graph"]
+        pol["Policy & permissions<br/><small>default-deny</small>"]
+        orch["Orchestration<br/><small>governed task graph</small>"]
+        appr["Approval gates"]
+        evalr["Evaluation & remediation"]
+        mem["Memory & retrieval"]
+        aud["Append-only audit"]
+    end
+
+    subgraph PA["Adapter boundary — ports"]
+        direction LR
+        pa1["Platform adapters"]
+        pa2["Model provider adapters"]
+        pa3["Tool adapters"]
+    end
+
+    subgraph N["External services"]
+        direction LR
+        n1["Social & publishing networks"]
+        n2["Model providers"]
+        n3["Third-party tools"]
+    end
+
+    S --> OL --> PA --> N
