@@ -3,11 +3,11 @@
 Companion to ``app.seed.demo``: the demo proves the governed loop offline
 with the deterministic ``mock`` adapter; this seed registers a planner,
 two executors, and an independent evaluator that call a real model
-provider (default: ``github_models``, the zero-cost GitHub Models tier)
+provider (default: ``gemini`` on Google AI Studio's free tier)
 so new projects produce genuine model output.
 
 The provider credential is resolved by reference at call time (e.g. the
-``GITHUB_MODELS_TOKEN`` environment variable); no secret value is stored.
+``GEMINI_API_KEY`` environment variable); no secret value is stored.
 Idempotent: an agent whose name already exists in the organization is
 left untouched.
 """
@@ -97,7 +97,7 @@ async def _main(email: str, provider: str, model: str) -> None:  # pragma: no co
         print(line)  # noqa: T201
     print(  # noqa: T201
         "\nCredential is resolved by reference at call time; ensure the "
-        "provider token (e.g. GITHUB_MODELS_TOKEN) is present in the "
+        "provider token (e.g. GEMINI_API_KEY) is present in the "
         "runtime environment."
     )
 
@@ -110,13 +110,13 @@ if __name__ == "__main__":  # pragma: no cover
     parser.add_argument("--email", required=True, help="Owner account email")
     parser.add_argument(
         "--provider",
-        default="github_models",
-        help="Provider adapter name (default: github_models)",
+        default="gemini",
+        help="Provider adapter name (default: gemini)",
     )
     parser.add_argument(
         "--model",
-        default="openai/gpt-4.1",
-        help="Model ID (default: openai/gpt-4.1)",
+        default="gemini-2.5-flash",
+        help="Model ID (default: gemini-2.5-flash)",
     )
     args = parser.parse_args()
     asyncio.run(_main(args.email, args.provider, args.model))

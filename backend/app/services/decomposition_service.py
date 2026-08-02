@@ -37,8 +37,8 @@ from app.models.audit_event import AuditEvent
 from app.models.decomposition_plan import DecompositionPlan
 from app.models.project import Project
 from app.models.task import Task, TaskDependency
-from app.orchestration.adapters.registry import get_adapter
-from app.orchestration.ports import AgentRunRequest
+from app.orchestration.adapters.registry import get_adapter, retirement_guidance
+from app.orchestration.ports import AgentRunRequest, ProviderCallError
 from app.orchestration.state_machine.states import ExecutionState
 from app.scheduling.graph import CycleError, DependencyGraph
 from app.schemas.decomposition import PlanSpec, PlanTaskAssignmentIn
@@ -429,7 +429,18 @@ async def generate_plan(
         diagnostic = str(exc)[:500]
     except Exception as exc:  # noqa: BLE001 - every planner failure must fail closed
         error_code = "planner_error"
-        diagnostic = f"planner failed with {type(exc).__name__}"
+        # A ProviderCallError already carries a public-safe status/category
+        # (e.g. provider_http_status=410 provider_error_category=not_found).
+        # Recording only the class name discarded exactly the discriminator an
+        # operator needs — a retired endpoint and a malformed plan both read as
+        # "plan_generation_failed" — so keep the diagnostic the executor path
+        # has always kept. Retirement guidance is appended when the provider is
+        # a known tombstone.
+        if isinstance(exc, ProviderCallError):
+            guidance = retirement_guidance(planner.provider)
+            diagnostic = f"{exc.public_message} ({guidance})" if guidance else exc.public_message
+        else:
+            diagnostic = f"planner failed with {type(exc).__name__}"
 
     spec_dict = spec.model_dump(mode="json", exclude_none=True) if spec else None
     canonical_spec = (

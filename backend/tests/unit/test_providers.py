@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
 from app.core.secrets import CredentialNotConfigured
 from app.orchestration.adapters.anthropic_provider import AnthropicProvider, _estimate_cost
-from app.orchestration.adapters.github_models_provider import GitHubModelsProvider
 from app.orchestration.adapters.mock_provider import MockProvider
+from app.orchestration.adapters.openai_compatible_provider import (
+    OpenAICompatibleProvider,
+    RetiredProvider,
+)
 from app.orchestration.adapters.registry import (
     UnknownProvider,
     available_providers,
     get_adapter,
+    retirement_guidance,
 )
 from app.orchestration.ports import (
     AgentRunRequest,
@@ -21,6 +27,19 @@ from app.orchestration.ports import (
     parse_provider_diagnostic,
 )
 from app.services.decomposition_service import parse_plan
+
+_COMPAT_BASE_URL = "https://compat.example.invalid/v1"
+
+
+def _compat(**kwargs) -> OpenAICompatibleProvider:
+    """A gemini-shaped OpenAI-compatible adapter pointed at a stub host."""
+    return OpenAICompatibleProvider(
+        name="gemini",
+        base_url=_COMPAT_BASE_URL,
+        default_model="gemini-2.5-flash",
+        default_credential_ref="GEMINI_API_KEY",
+        **kwargs,
+    )
 
 
 async def test_mock_provider_is_deterministic():
@@ -100,9 +119,15 @@ def test_registry_resolution():
     assert get_adapter(None).name == "mock"
     assert get_adapter("mock").name == "mock"
     assert get_adapter("anthropic").name == "anthropic"
-    assert get_adapter("github_models").name == "github_models"
+    assert get_adapter("gemini").name == "gemini"
+    assert get_adapter("ollama").name == "ollama"
     assert "anthropic" in available_providers()
-    assert "github_models" in available_providers()
+    assert "gemini" in available_providers()
+    assert "ollama" in available_providers()
+    # The retired provider still resolves (stored agents must fail readably)
+    # but is not selectable for new work.
+    assert isinstance(get_adapter("github_models"), RetiredProvider)
+    assert "github_models" not in available_providers()
     with pytest.raises(UnknownProvider):
         get_adapter("does-not-exist")
 
@@ -115,18 +140,18 @@ async def test_anthropic_resolves_credential_before_network(monkeypatch):
         await provider.run(AgentRunRequest(prompt="hi"))
 
 
-async def test_github_models_resolves_credential_before_network(monkeypatch):
-    monkeypatch.delenv("GITHUB_MODELS_TOKEN", raising=False)
-    provider = GitHubModelsProvider()
+async def test_openai_compatible_resolves_credential_before_network(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    provider = _compat()
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="hi"))
     assert str(caught.value) == ("provider_http_status=none provider_error_category=authentication")
 
 
-async def test_github_models_redacts_missing_credential_reference(monkeypatch):
+async def test_openai_compatible_redacts_missing_credential_reference(monkeypatch):
     credential_ref = "secret-credential-reference-sentinel"
     monkeypatch.delenv(credential_ref, raising=False)
-    provider = GitHubModelsProvider()
+    provider = _compat()
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="hi", credential_ref=credential_ref))
 
@@ -136,8 +161,8 @@ async def test_github_models_redacts_missing_credential_reference(monkeypatch):
     assert credential_ref not in repr(caught.value)
 
 
-async def test_github_models_redacts_malformed_credential_reference():
-    provider = GitHubModelsProvider()
+async def test_openai_compatible_redacts_malformed_credential_reference():
+    provider = _compat()
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(
             AgentRunRequest(
@@ -154,9 +179,9 @@ async def test_github_models_redacts_malformed_credential_reference():
     assert "secret" not in repr(caught.value)
 
 
-async def test_github_models_redacts_invalid_request_inputs(monkeypatch):
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
-    provider = GitHubModelsProvider()
+async def test_openai_compatible_redacts_invalid_request_inputs(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-token-sentinel")
+    provider = _compat()
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(
             AgentRunRequest(
@@ -173,13 +198,13 @@ async def test_github_models_redacts_invalid_request_inputs(monkeypatch):
     assert "secret" not in repr(caught.value)
 
 
-async def test_github_models_maps_live_response_without_persisting_token(monkeypatch):
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "test-token")
+async def test_openai_compatible_maps_live_response_without_persisting_token(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
 
     def _handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["authorization"] == "Bearer test-token"
-        payload = __import__("json").loads(request.content)
-        assert payload["model"] == "openai/gpt-4.1"
+        payload = json.loads(request.content)
+        assert payload["model"] == "gemini-2.5-flash"
         assert payload["messages"] == [{"role": "user", "content": "Say hello"}]
         return httpx.Response(
             200,
@@ -190,29 +215,28 @@ async def test_github_models_maps_live_response_without_persisting_token(monkeyp
             },
         )
 
-    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    provider = _compat(transport=httpx.MockTransport(_handler))
     result = await provider.run(AgentRunRequest(prompt="Say hello"))
     assert result.output == "hello"
-    assert result.provider == "github_models"
+    assert result.provider == "gemini"
     assert result.tokens_used == 6
     assert result.raw_id == "chatcmpl-receipt"
     assert "test-token" not in repr(result)
 
 
-async def test_github_models_uses_documented_request_header_as_receipt(monkeypatch):
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "test-token")
+async def test_openai_compatible_tolerates_response_without_id_or_usage(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
 
     def _handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            headers={"x-github-request-id": "request-receipt"},
             json={"choices": [{"message": {"role": "assistant", "content": "hello"}}]},
         )
 
-    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    provider = _compat(transport=httpx.MockTransport(_handler))
     result = await provider.run(AgentRunRequest(prompt="Say hello"))
     assert result.tokens_used == 0
-    assert result.raw_id == "request-receipt"
+    assert result.raw_id is None
 
 
 @pytest.mark.parametrize(
@@ -229,12 +253,12 @@ async def test_github_models_uses_documented_request_header_as_receipt(monkeypat
         (504, ProviderErrorCategory.TIMEOUT),
     ],
 )
-async def test_github_models_maps_http_errors_to_safe_diagnostics(
+async def test_openai_compatible_maps_http_errors_to_safe_diagnostics(
     monkeypatch, status_code, category
 ):
     token = "secret-token-sentinel"
     prompt = "secret-prompt-sentinel"
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", token)
+    monkeypatch.setenv("GEMINI_API_KEY", token)
 
     def _handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -243,7 +267,7 @@ async def test_github_models_maps_http_errors_to_safe_diagnostics(
             json={"error": "secret-body-sentinel"},
         )
 
-    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    provider = _compat(transport=httpx.MockTransport(_handler))
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt=prompt))
 
@@ -260,7 +284,7 @@ async def test_github_models_maps_http_errors_to_safe_diagnostics(
         prompt,
         "secret-header-sentinel",
         "secret-body-sentinel",
-        "models.github.ai",
+        "compat.example.invalid",
     ):
         assert secret not in rendered
 
@@ -272,13 +296,13 @@ async def test_github_models_maps_http_errors_to_safe_diagnostics(
         (httpx.ConnectError, ProviderErrorCategory.NETWORK_ERROR),
     ],
 )
-async def test_github_models_redacts_transport_errors(monkeypatch, transport_error, category):
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+async def test_openai_compatible_redacts_transport_errors(monkeypatch, transport_error, category):
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-token-sentinel")
 
     def _handler(request: httpx.Request) -> httpx.Response:
         raise transport_error("secret-network-sentinel", request=request)
 
-    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    provider = _compat(transport=httpx.MockTransport(_handler))
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="secret-prompt-sentinel"))
 
@@ -289,13 +313,13 @@ async def test_github_models_redacts_transport_errors(monkeypatch, transport_err
     assert "secret" not in repr(caught.value)
 
 
-async def test_github_models_redacts_invalid_success_response(monkeypatch):
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+async def test_openai_compatible_redacts_invalid_success_response(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-token-sentinel")
 
     def _handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, text="secret-invalid-json-sentinel")
 
-    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    provider = _compat(transport=httpx.MockTransport(_handler))
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="secret-prompt-sentinel"))
 
@@ -307,8 +331,8 @@ async def test_github_models_redacts_invalid_success_response(monkeypatch):
     assert "secret" not in repr(caught.value)
 
 
-async def test_github_models_redacts_unexpected_response_parse_error(monkeypatch):
-    monkeypatch.setenv("GITHUB_MODELS_TOKEN", "secret-token-sentinel")
+async def test_openai_compatible_redacts_unexpected_response_parse_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "secret-token-sentinel")
 
     def _handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
@@ -320,7 +344,7 @@ async def test_github_models_redacts_unexpected_response_parse_error(monkeypatch
             ),
         )
 
-    provider = GitHubModelsProvider(transport=httpx.MockTransport(_handler))
+    provider = _compat(transport=httpx.MockTransport(_handler))
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="secret-prompt-sentinel"))
 
@@ -360,3 +384,182 @@ def test_estimate_cost_unknown_model_falls_back():
 
 def test_estimate_cost_zero_tokens():
     assert _estimate_cost("claude-haiku-3-5", 0, 0) == 0.0
+
+
+# ── Behaviour introduced by the 2026-08-02 provider migration ─────────────
+# GitHub Models was retired on 2026-07-30 (410 Gone). These cover the
+# properties that made that outage expensive to diagnose: an unreadable
+# status mapping, an unconditional response_format, and a hard-deleted
+# adapter that would have orphaned stored agents.
+
+
+async def test_openai_compatible_sends_full_token_budget_and_model(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    seen: dict = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        seen["_url"] = str(request.url)
+        seen["_auth"] = request.headers.get("authorization")
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    await provider.run(AgentRunRequest(prompt="hi", model="gemini-2.5-pro"))
+
+    assert seen["_url"] == f"{_COMPAT_BASE_URL}/chat/completions"
+    assert seen["_auth"] == "Bearer test-token"
+    assert seen["model"] == "gemini-2.5-pro"
+    # A demo-scale floor (128) truncated real plans into unparseable JSON.
+    assert seen["max_tokens"] == 2048
+
+
+async def test_openai_compatible_uses_default_model_when_unset(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    seen: dict = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    await provider.run(AgentRunRequest(prompt="hi"))
+    assert seen["model"] == "gemini-2.5-flash"
+
+
+async def test_openai_compatible_forwards_requested_response_format(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    seen: dict = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(request.content))
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "{}"}}]}
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    await provider.run(
+        AgentRunRequest(
+            prompt="plan",
+            params={"response_format": {"type": "json_object"}, "max_tokens": 4096},
+        )
+    )
+    assert seen["response_format"] == {"type": "json_object"}
+    assert seen["max_tokens"] == 4096
+
+
+async def test_openai_compatible_retries_once_without_unsupported_response_format(monkeypatch):
+    """A model that rejects JSON mode must not fail the whole plan."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    attempts: list[dict] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        attempts.append(body)
+        if "response_format" in body:
+            return httpx.Response(400, json={"error": "response_format is not supported"})
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "plain"}}]}
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    result = await provider.run(
+        AgentRunRequest(prompt="plan", params={"response_format": {"type": "json_object"}})
+    )
+
+    assert result.output == "plain"
+    assert len(attempts) == 2
+    assert "response_format" in attempts[0]
+    assert "response_format" not in attempts[1]
+
+
+async def test_openai_compatible_does_not_retry_when_no_response_format_requested(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    attempts: list[str] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        attempts.append(str(request.url))
+        return httpx.Response(400, json={"error": "bad"})
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError):
+        await provider.run(AgentRunRequest(prompt="hi"))
+    assert len(attempts) == 1
+
+
+async def test_openai_compatible_surfaces_retry_failure_status(monkeypatch):
+    """When the retry also fails, the second status is what gets reported."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        return httpx.Response(400 if "response_format" in body else 429, json={})
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(
+            AgentRunRequest(prompt="hi", params={"response_format": {"type": "json_object"}})
+        )
+    assert caught.value.http_status == 429
+    assert caught.value.category is ProviderErrorCategory.RATE_LIMITED
+
+
+async def test_openai_compatible_maps_410_gone_to_not_found(monkeypatch):
+    """The GitHub Models retirement signal must read as 'gone', not 'bad request'."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(410, json={"error": "gone"})
+
+    provider = _compat(transport=httpx.MockTransport(_handler))
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="hi"))
+    assert caught.value.http_status == 410
+    assert caught.value.category is ProviderErrorCategory.NOT_FOUND
+    assert str(caught.value) == "provider_http_status=410 provider_error_category=not_found"
+
+
+async def test_local_provider_runs_without_a_credential(monkeypatch):
+    """Ollama accepts unauthenticated local calls; absence of a key is not an error."""
+    monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
+    seen: dict = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        seen["auth"] = request.headers.get("authorization")
+        return httpx.Response(
+            200, json={"choices": [{"message": {"role": "assistant", "content": "local"}}]}
+        )
+
+    provider = OpenAICompatibleProvider(
+        name="ollama",
+        base_url="http://localhost:11434/v1",
+        default_model="llama3.2",
+        default_credential_ref="OLLAMA_API_KEY",
+        requires_credential=False,
+        transport=httpx.MockTransport(_handler),
+    )
+    result = await provider.run(AgentRunRequest(prompt="hi"))
+    assert result.output == "local"
+    assert result.provider == "ollama"
+    assert seen["auth"] is None
+
+
+async def test_retired_provider_fails_with_a_typed_gone_error():
+    """Stored agents on a retired provider fail readably, not with a crash."""
+    provider = RetiredProvider(name="github_models", retired_on="2026-07-30", replacement="gemini")
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="hi"))
+    assert caught.value.http_status == 410
+    assert caught.value.category is ProviderErrorCategory.NOT_FOUND
+    assert "2026-07-30" in provider.guidance
+    assert "gemini" in provider.guidance
+
+
+def test_retirement_guidance_is_available_for_operators():
+    assert retirement_guidance("github_models") is not None
+    assert "gemini" in retirement_guidance("github_models")
+    assert retirement_guidance("gemini") is None
+    assert retirement_guidance("mock") is None

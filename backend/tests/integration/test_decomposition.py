@@ -15,7 +15,12 @@ from app.models.audit_event import AuditEvent
 from app.models.decomposition_plan import DecompositionPlan
 from app.models.project import Project
 from app.orchestration.adapters.mock_provider import MockProvider
-from app.orchestration.ports import AgentRunResult
+from app.orchestration.adapters.registry import get_adapter
+from app.orchestration.ports import (
+    AgentRunResult,
+    ProviderCallError,
+    ProviderErrorCategory,
+)
 from app.services import decomposition_service
 from tests.conftest import TestSessionFactory
 
@@ -40,10 +45,10 @@ def _project(client, headers, objective="Produce an evidence-backed market brief
     ).json()
 
 
-def _planner(client, headers) -> str:
+def _planner(client, headers, provider: str = "mock") -> str:
     agent_id = client.post(
         "/api/v1/agents",
-        json={"name": "Planner", "kind": "ai", "provider": "mock", "model": "mock-plan"},
+        json={"name": "Planner", "kind": "ai", "provider": provider, "model": "mock-plan"},
         headers=headers,
     ).json()["id"]
     response = client.post(
@@ -403,3 +408,54 @@ def test_rejected_draft_never_materializes_and_cannot_be_decided_twice(client):
         headers=headers,
     )
     assert again.status_code == 409
+
+
+def test_provider_failure_records_status_and_category_not_just_a_class_name(client, monkeypatch):
+    """A dead endpoint and a malformed plan must not read identically.
+
+    GitHub Models' 2026-07-30 retirement returned 410 Gone, but the planner's
+    broad handler recorded only ``planner failed with ProviderCallError`` —
+    discarding the status that distinguishes "the endpoint is gone" from "the
+    model wrote bad JSON". Three misdiagnoses followed. The status/category
+    must reach the stored diagnostic that the API returns.
+    """
+
+    class _GoneProvider:
+        name = "gemini"
+
+        async def run(self, request):
+            raise ProviderCallError(
+                http_status=410,
+                category=ProviderErrorCategory.NOT_FOUND,
+            )
+
+    monkeypatch.setattr(decomposition_service, "get_adapter", lambda provider: _GoneProvider())
+    headers = _auth(client)
+    project = _project(client, headers, "produce a brief")
+    response = _generate(client, headers, project["id"], _planner(client, headers))
+    assert response.status_code == 422
+
+    plans = client.get(f"/api/v1/projects/{project['id']}/plans", headers=headers).json()
+    assert plans[0]["error_code"] == "planner_error"
+    assert plans[0]["diagnostic"] == ("provider_http_status=410 provider_error_category=not_found")
+    # A truncation failure remains distinguishable: it stores output, this
+    # does not reach the model at all.
+    assert plans[0]["provider_output_chars"] == 0
+
+
+def test_retired_provider_diagnostic_names_the_replacement(client, monkeypatch):
+    """An agent still pointing at a retired provider gets migration guidance."""
+    monkeypatch.setattr(
+        decomposition_service,
+        "get_adapter",
+        lambda provider: get_adapter("github_models"),
+    )
+    headers = _auth(client)
+    project = _project(client, headers, "produce a brief")
+    _generate(client, headers, project["id"], _planner(client, headers, provider="github_models"))
+
+    plans = client.get(f"/api/v1/projects/{project['id']}/plans", headers=headers).json()
+    diagnostic = plans[0]["diagnostic"]
+    assert "provider_http_status=410" in diagnostic
+    assert "retired on 2026-07-30" in diagnostic
+    assert "gemini" in diagnostic
