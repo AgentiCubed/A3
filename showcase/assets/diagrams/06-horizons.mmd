@@ -1,0 +1,11 @@
+%% AgentiCubed — roadmap horizons.
+%% Rendered in: README.md ("Roadmap"). A label-free variant appears in docs/roadmap.md.
+%% The ordering is the argument: adapters come last because an ungoverned
+%% adapter is a liability with an API key attached.
+flowchart LR
+    H0["<b>H0 — Substrate</b><br/><small>governed loop · approval gates<br/>audit · provider adapters</small>"]
+    H1["<b>H1 — Surfaces</b><br/><small>console depth · transcripts<br/>intake refinement</small>"]
+    H2["<b>H2 — Networks</b><br/><small>platform adapter port<br/>read-only adapters · subject graph</small>"]
+    H3["<b>H3 — Layer</b><br/><small>durable memory · policy authoring<br/>multi-tenant</small>"]
+
+    H0 --> H1 --> H2 --> H3

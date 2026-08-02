@@ -1,0 +1,26 @@
+%% AgentiCubed — platforms and providers as interchangeable adapters behind ports.
+%% Rendered in: docs/architecture.md (§5). A shorter variant appears in README.md.
+%% Note the tombstone: a retired adapter is retained, never deleted.
+flowchart LR
+    subgraph Core["Domain"]
+        svc["Orchestration services"]
+    end
+
+    subgraph Ports["Ports"]
+        mp["ModelProvider"]
+        pa["PlatformAdapter"]
+    end
+
+    subgraph Adapters["Adapters"]
+        direction TB
+        m1["Hosted provider A"]
+        m2["Hosted provider B"]
+        m3["Local provider"]
+        m4["Retired — tombstone"]
+        s1["Network adapter: microblog"]
+        s2["Network adapter: federated"]
+        s3["Network adapter: professional"]
+    end
+
+    svc --> mp --> m1 & m2 & m3 & m4
+    svc --> pa --> s1 & s2 & s3

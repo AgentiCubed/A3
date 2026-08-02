@@ -1,0 +1,77 @@
+# This repository holds documentation and hand-written sample data only. These
+# rules are a backstop against accidentally committing something that does not
+# belong in a public repo — not a description of what the project uses.
+
+# ── Secrets and credentials — never, under any circumstance ──────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa*
+id_ed25519*
+*credential*
+*secret*
+*token*
+.netrc
+.npmrc
+.pypirc
+gha-creds-*.json
+service-account*.json
+client_secret*.json
+
+# ── Anything staged from the private implementation ─────────────────────
+/private/
+/internal/
+/scratch/
+*.private.*
+*.internal.*
+
+# ── Editor, OS, and tooling noise ───────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local state written by AI coding assistants (any vendor) — never public
+.claude/
+.cursor/
+.aider*
+.continue/
+.copilot/
+.windsurf/
+
+# ── Build and dependency artifacts (should not appear here at all) ──────
+node_modules/
+dist/
+build/
+.next/
+out/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+coverage/
+*.log
+
+# ── Large or lossy binaries: keep diagrams as Mermaid source ────────────
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+*.sqlite
+*.db
+*.dump

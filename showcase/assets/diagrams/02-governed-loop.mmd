@@ -1,0 +1,24 @@
+%% AgentiCubed — the governed loop, full form with contract validation and escalation.
+%% Rendered in: docs/architecture.md (§3). A shorter variant appears in README.md.
+flowchart LR
+    Intake["Intake<br/><small>objective + constraints</small>"]
+    Plan["Plan<br/><small>decompose to a DAG</small>"]
+    Contract{"Contract<br/>valid?"}
+    Approve{"Human<br/>approval"}
+    Assign["Assign<br/><small>capability matching</small>"]
+    Execute["Execute<br/><small>via adapter</small>"]
+    Evaluate["Evaluate<br/><small>independent grader</small>"]
+    Gate{"Criteria<br/>met?"}
+    Remediate["Remediate<br/><small>bounded policy</small>"]
+    Escalate(["Escalate to human"])
+    Close(["Close + retrospective"])
+
+    Intake --> Plan --> Contract
+    Contract -->|no| Plan
+    Contract -->|yes| Approve
+    Approve -->|rejected| Plan
+    Approve -->|approved| Assign --> Execute --> Evaluate --> Gate
+    Gate -->|yes| Close
+    Gate -->|no| Remediate
+    Remediate -->|budget remains| Execute
+    Remediate -->|budget exhausted| Escalate
