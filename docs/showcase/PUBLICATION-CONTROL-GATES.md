@@ -143,26 +143,28 @@ Read every public file end to end, in separate passes. Do not combine them.
 
 ## Gate 5 — Clean one-use local staging repository
 
-> **Rehearsal result, 2026-08-02.** Every step below was executed end to end
-> against the current `showcase/` tree in a disposable environment, and every
-> check passed: 22 files staged, no symlinks, no nested git metadata, no OS
-> droppings, no control documents, no `.github/workflows/`, no binaries; all
-> content scans clean; `git diff --cached --check` clean; exactly one commit;
-> both author and committer lines showing the noreply address; no remote; clean
-> tree; `git fsck` clean.
+> **GATE 5 PASSED — real run, 2026-08-02, James's machine, via
+> `./scripts/showcase-gate5.sh`.** 22 files staged; no symlinks, nested git
+> metadata, OS droppings, control documents, workflows, or binaries; all
+> content scans clean; gitleaks 8.30.1 directory scan **and** git-history scan
+> both zero findings; 51/51 links and heading anchors resolve; both JSON files
+> parse with the `FABRICATED` marker; no whitespace errors; exactly one commit;
+> author and committer both `James T. Richmond
+> <170839886+JamesTRichmond@users.noreply.github.com>`; no remote configured;
+> clean working tree; `git fsck` clean.
 >
-> **The rehearsal is not the artifact.** It ran in an ephemeral container and no
-> longer exists. Gate 5 must be run again on your own machine, because the
-> staging repository it produces is the thing Gate 6 pushes. What the rehearsal
-> buys is certainty that the procedure and the bytes are sound before you spend
-> the attention.
+> **Approved commit:** `03ea8259aaaffd7ef0555cad9e48ef05c8d2b02e` — recorded in
+> the Gate 7 release record below.
 >
-> **Two tools were unavailable in the rehearsal environment and must be run for
-> real:** `gitleaks dir .` and `gitleaks git .` (B1 and the post-commit history
-> scan). Everything else was covered by equivalent scans. `exiftool` was also
-> absent but has nothing to act on — the tree contains no binaries, only text
-> and two JSON files.
+> **The staging folder is temporary and machine-local.** It lives under
+> `/var/folders/.../agenticubed-showcase.j7TFDK` on James's Mac and is the exact
+> thing Gate 6 pushes — do not delete it before Gate 6 is run, and do not run
+> Gate 5 again unless content changes, since a second run produces a *different*
+> commit that would need to replace this one everywhere it is referenced.
 >
+> *(Prior note, superseded: an earlier container-based rehearsal on 2026-08-02
+> covered every check except gitleaks, which was unavailable in that
+> environment. This entry is the real run and is authoritative.)*
 > **One scan reads differently on your machine.** The `grep -RniF "$(whoami)"`
 > check matched the ordinary English word "root" in the rehearsal, because the
 > container user is `root`. On your machine `whoami` is your real username, so
@@ -293,20 +295,20 @@ Publication is prohibited until every field is complete.
 | Field | Value |
 |---|---|
 | Public repository | `AgentiCubed/agenticubed-showcase` |
-| Approved commit hash | `PENDING` |
-| Source-tree review date | `PENDING` |
-| Staging review date | `PENDING` |
-| Gitleaks version | `PENDING` |
-| Gitleaks directory result | `PENDING` |
-| Gitleaks git-history result | `PENDING` |
-| JSON validation result | `PENDING` |
-| Link validation result | `PENDING` |
-| Human-review result | `PENDING` |
-| `AgentiCubed/A3` visibility verified | `PENDING` |
-| Showcase private-preflight verified | `PENDING` |
-| Licensing decision approved | `PENDING` |
-| Contact destinations approved | `PENDING` |
-| QR destination approved | `PENDING` |
+| Approved commit hash | `03ea8259aaaffd7ef0555cad9e48ef05c8d2b02e` |
+| Source-tree review date | 2026-08-02 (Gate 4) |
+| Staging review date | 2026-08-02 — real run, `./scripts/showcase-gate5.sh`, operator's machine |
+| Gitleaks version | 8.30.1 |
+| Gitleaks directory result | 0 findings (scanned ~103.73 KB) |
+| Gitleaks git-history result | 0 findings (1 commit scanned) |
+| JSON validation result | 2/2 parse, both carry `FABRICATED` |
+| Link validation result | 51/51 relative links + anchors resolve |
+| Human-review result | `PENDING` — Gate 4 passes A–D still to be signed off by James |
+| `AgentiCubed/A3` visibility verified | `PENDING` — reconfirm at Gate 6 |
+| Showcase private-preflight verified | `PENDING` — Gate 6 not yet run |
+| Licensing decision approved | Yes — D4, MIT + CC BY 4.0 |
+| Contact destinations approved | Yes — D5, LinkedIn + X live; email withheld by design |
+| QR destination approved | `PENDING` — D9, generated only after Gate 9 |
 | Unresolved exceptions | must be `NONE` |
 
 - [ ] Every Gate 0–6 box complete.
