@@ -40,6 +40,7 @@ Four placeholders are deliberately left blank rather than guessed:
 | Location | What to add |
 |---|---|
 | `NOW` block | Exact AI4 dates, if you want them stated. |
+| ACTIVE SYSTEMS → A³ Showcase | Nothing to write, but **verify the link resolves**. It points at `AgentiCubed/agenticubed-showcase`, the destination named in `docs/showcase/PUBLICATION-CHECKLIST.md`. That repo does not exist yet, so publish the showcase before — or alongside — this profile, or the page's headline public link is dead. |
 | ACTIVE SYSTEMS → StreamKill | A one-line description. The repo itself also has no description set on GitHub — worth fixing in both places. |
 | CONTACT → Email | A public-facing address. `showcase/docs/ai4-positioning.md` already flags that a personal inbox is the wrong thing to publish here. |
 | CONTACT → LinkedIn | Profile URL. |
@@ -79,13 +80,22 @@ existing one and change only the name and `logo=` slug.
 
 **Hero.** `assets/hero-dark.svg` and `assets/hero-light.svg` are the same
 composition in two palettes, swapped by `<picture>` + `prefers-color-scheme` so
-it tracks the viewer's GitHub theme. Both carry two SMIL animations — a sweep
-along the top rail and a slow vertical scanline — plus a pulsing `ACTIVE`
-indicator. These animate inside GitHub's image proxy; they are also the first
-thing to remove if you ever want it stiller. Type is set in generic families
+it tracks the viewer's GitHub theme. Both carry three animations — a sweep along
+the top rail, a slow vertical scanline, and a pulsing status LED — which run
+inside GitHub's image proxy. Type is set in generic families
 (`monospace`, `Helvetica/Arial`) because the SVG renders on the viewer's machine
 with the viewer's fonts, and the layout carries enough horizontal slack to absorb
 the metric differences between platforms.
+
+**Motion and contrast.** The hero animations are CSS `@keyframes`, not SMIL,
+specifically so they can be gated: each SVG carries a
+`@media (prefers-reduced-motion: reduce)` block that stops the sweep and the LED
+and removes the scanline outright. That preference is a real accessibility
+setting, not a nicety — if you add motion, gate it in the same block. The media
+query resolves against the viewer's own system even though the SVG is embedded as
+an image. Small type is held at or above a 4.5:1 contrast ratio against its
+surface in both palettes; the readout labels (`#8CA3B5` dark, `#52627A` light)
+are the tightest and should not be dimmed further for the sake of hierarchy.
 
 **Structure.** Hero → status row → nav → thesis → NOW → systems table → method →
 stack → open questions → contact. Depth lives inside `<details>` blocks so the

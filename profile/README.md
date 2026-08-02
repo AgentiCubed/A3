@@ -27,7 +27,8 @@ Most agentic systems die one of three ways: the agent does something irreversibl
 | System | What it is | State |
 |---|---|:--|
 | **[AgentiCubed / A³](https://github.com/AgentiCubed)** | Agentic project-orchestration platform. Objectives → governed task graph → agent assignment → independent evaluation → bounded remediation → gated closeout. | `BUILD` `PRIVATE` |
-| **[A³ Showcase](https://github.com/AgentiCubed)** | Public conceptual showcase for the above — problem, thesis, architecture, trust boundaries, provenance. Read this one first. | `STAGED` |
+<!-- This link goes live when the showcase is published per docs/showcase/PUBLICATION-CHECKLIST.md. Confirm the repo exists before publishing this profile. -->
+| **[A³ Showcase](https://github.com/AgentiCubed/agenticubed-showcase)** | Public conceptual showcase for the above — problem, thesis, architecture, trust boundaries, provenance. Read this one first. | `STAGED` |
 | **[petrichor](https://github.com/AgentiCubed/petrichor)** | Grounded valence, olfaction-first: thesis plus a state-flip demo. | `RESEARCH` |
 | **[BoomerEZ](https://github.com/JamesTRichmond/BoomerEZ)** | Free, single-file programs for people who were never taught the computer words. Nothing to install, nothing to sign up for. | `LIVE` |
 | **[SalesAssistant](https://jamestrichmond.github.io/SalesAssistant/)** | Deployed sales-support tool. | `LIVE` |
