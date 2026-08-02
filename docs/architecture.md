@@ -18,7 +18,7 @@ definition:
 
 ## 2. Layered architecture
 
-````mermaid`
+```mermaid
 flowchart TB
     %% Styling classes
     classDef ui fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000
@@ -27,6 +27,32 @@ flowchart TB
     classDef engine fill:#e6ffe6,stroke:#2ca02c,stroke-width:2px,color:#000
     classDef provider fill:#ffe6e6,stroke:#d62728,stroke-width:2px,color:#000
     classDef crosscut fill:#f9f9f9,stroke:#555,stroke-width:1px,color:#000,stroke-dasharray: 5 5
+
+    %% Layer definitions
+    UI["UI (Next.js / React / TypeScript) \n Dashboards, Kanban, Gantt, Dependency Graph, Approvals"]:::ui
+    
+    API["API Layer (FastAPI app/api/v1) \n Thin Controllers, Auth, RBAC Enforcement, Request Validation"]:::api
+    
+    SVC["Project-Domain Services (app/services) \n Projects, Methodology Recommender, WBS/Decomposition \n Capability Analysis, Matching, Risk/Decision Logs, Metrics \n (Provider-Neutral: No SDK or Celery Imports)"]:::service
+
+    subgraph Engines ["Execution Engines"]
+        direction LR
+        Orch["Orchestration (app/orchestration) \n State Machine, Dispatch, AgentAdapter Port"]:::engine
+        Eval["Evaluation (app/evaluation) \n Deterministic Validators, Evaluator Agents"]:::engine
+        Rem["Remediation (app/remediation) \n Policy Engine: Maps Gaps -> Remediation Action"]:::engine
+    end
+
+    PROV["Provider Integrations (app/orchestration/adapters) \n MockProvider (Deterministic), Anthropic Adapter, (Extensible)"]:::provider
+    
+    XCUT["Cross-Cutting Services \n app/core (Config, Security/RBAC, Logging, Audit) \n app/db (SQLAlchemy Session, Unit of Work) \n app/workers (Celery behind WorkflowEngine port)"]:::crosscut
+
+    %% Connections indicating dependency (pointing inward/downward)
+    UI -->|"REST/JSON (OpenAPI), SSE"| API
+    API -->|"Calls services (never DB directly)"| SVC
+    SVC --> Orch
+    SVC --> Eval
+    SVC --> Rem
+    Orch -->|"AgentAdapter Port (Provider-Neutral)"| PROV
 
     %% Layer definitions
     UI["UI (Next.js / React / TypeScript) \n Dashboards, Kanban, Gantt, Dependency Graph, Approvals"]:::ui
