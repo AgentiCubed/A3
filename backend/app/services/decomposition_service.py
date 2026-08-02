@@ -120,18 +120,59 @@ class ApprovedMaterialization:
 
 
 def _prompt(project: Project) -> str:
+    # The contract is shown, not described. Listing allowed *values* while
+    # leaving the model to guess field *names* produced plans that omitted
+    # required keys (e.g. acceptance_criteria[].check) and were rejected —
+    # a validation failure the model had no way to anticipate.
     return f"""Create an executable project plan for the objective below.
 
-Return only a JSON object matching plan_json_v1. It must contain:
-- tasks: 1-50 tasks with unique keys, titles, descriptions, estimates,
-  required_capabilities, priority, and deterministic acceptance_criteria
-- dependencies: predecessor_key and successor_key references forming a DAG
-- project_acceptance: criteria and/or named deliverables
-- assumptions and warnings
+Return ONLY a JSON object matching plan_json_v1 — no prose, no markdown
+fence. Copy this structure exactly; every field shown is required unless
+marked optional:
 
-Only use supported rubric checks: {', '.join(sorted(_GENERATED_CHECKS))}.
-Only use governed capabilities: {', '.join(sorted(KNOWN_CAPABILITIES))}.
-Do not assign agents and do not execute work. A human must approve the draft.
+{{
+  "tasks": [
+    {{
+      "key": "research",
+      "title": "Research the source material",
+      "description": "What this task must produce.",
+      "estimate_hours": 1.0,
+      "required_capabilities": ["research.literature"],
+      "priority": 3,
+      "acceptance_criteria": [
+        {{"key": "has_output", "check": "non_empty", "params": {{}}, "weight": 1.0}},
+        {{"key": "covers_terms", "check": "contains_all",
+          "params": {{"keywords": ["scope", "sources"]}}, "weight": 1.0}}
+      ]
+    }}
+  ],
+  "dependencies": [
+    {{"predecessor_key": "research", "successor_key": "deliver",
+      "dependency_type": "finish_to_start", "lag_hours": 0.0}}
+  ],
+  "project_acceptance": {{
+    "criteria": [{{"key": "complete", "check": "non_empty", "params": {{}}, "weight": 1.0}}],
+    "deliverables": ["research brief"]
+  }},
+  "assumptions": ["Stated assumption."],
+  "warnings": []
+}}
+
+Rules:
+- Every task needs at least one acceptance criterion, and every criterion
+  needs both "key" and "check".
+- "check" must be one of: {', '.join(sorted(_GENERATED_CHECKS))}.
+- Parameters per check: non_empty and is_json take {{}}; min_length takes
+  {{"min": <int>}}; max_length takes {{"max": <int>}}; contains_all and
+  contains_any take {{"keywords": ["..."]}}. No other parameters are valid.
+- "required_capabilities" may only use: {', '.join(sorted(KNOWN_CAPABILITIES))}.
+- "key" values are unique, lowercase, and match ^[a-zA-Z0-9_.-]+$.
+- Dependencies reference existing task keys and must form a DAG;
+  dependency_type is always "finish_to_start" and lag_hours always 0.
+- priority is 1-5; estimate_hours is a non-negative number.
+- Decompose the objective into as many tasks as it genuinely needs, each
+  with a distinct deliverable, ordered by dependency.
+- Do not assign agents and do not execute work. A human approves the draft.
 
 --- OBJECTIVE ---
 {project.objective}

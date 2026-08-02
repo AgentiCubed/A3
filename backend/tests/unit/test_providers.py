@@ -623,3 +623,57 @@ async def test_model_prefix_is_opt_in_per_provider(monkeypatch):
 def test_registered_gemini_qualifies_models():
     assert get_adapter("gemini")._qualified_model("gemini-2.5-flash") == ("models/gemini-2.5-flash")
     assert get_adapter("ollama")._qualified_model("llama3.2") == "llama3.2"
+
+
+def test_planner_prompt_example_satisfies_the_plan_contract():
+    """The prompt teaches by example, so the example must itself be valid.
+
+    Gemini's first live plan was rejected for omitting
+    acceptance_criteria[].check — a field the prompt named only by its
+    allowed values, never its shape. The prompt now embeds a worked plan;
+    if that example ever drifts from the contract it would teach every
+    planner to emit invalid plans, so it is parsed here with the real
+    validator.
+    """
+    from app.services.decomposition_service import _prompt
+
+    class _Project:
+        objective = "contract check"
+
+    text = _prompt(_Project())
+    start = text.index('{\n  "tasks"')
+    depth = 0
+    end = start
+    for index, char in enumerate(text[start:], start):
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                end = index + 1
+                break
+    payload = json.loads(text[start:end])
+
+    # The example's dependency names a successor the single sample task does
+    # not define; supply it so the DAG check exercises the real edge.
+    payload["tasks"].append(
+        {
+            "key": "deliver",
+            "title": "Deliver",
+            "description": "d",
+            "estimate_hours": 1.0,
+            "required_capabilities": ["writing.report"],
+            "priority": 3,
+            "acceptance_criteria": [
+                {"key": "k", "check": "non_empty", "params": {}, "weight": 1.0}
+            ],
+        }
+    )
+    spec = parse_plan(json.dumps(payload))
+    assert len(spec.tasks) == 2
+    assert spec.dependencies[0].predecessor_key == "research"
+    # Every criterion in the example carries the field whose absence caused
+    # the original rejection.
+    for task in spec.tasks:
+        for criterion in task.acceptance_criteria:
+            assert criterion.check
