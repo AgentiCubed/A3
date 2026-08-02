@@ -1,6 +1,8 @@
 # Agentic3 Product-Realization Program
 
-**Status:** Proposed; effective only after DR-0006 is ratified and merged  
+**Status:** Proposed; effective only after
+[DR-0006](../governance/decisions/DR-0006-Product-Realization-Canon.md) is
+ratified and merged  
 **Governing issue:** [#106](https://github.com/AgentiCubed/A3/issues/106)  
 **Baseline:** `AgentiCubed/A3@7061cd6d130d7863bf66bc12173c7896373da5b5`  
 **Registry:** [WORKSTREAM-REGISTRY.json](WORKSTREAM-REGISTRY.json)

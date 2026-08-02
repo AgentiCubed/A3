@@ -52,6 +52,14 @@ specification governs the architecture of Agentic³ as a system-of-record and
 engineering institution; it does not retro-specify the platform, and the
 platform does not automatically instantiate this spec.
 
+Realization sequencing toward this specification is coordinated by the
+subordinate [Product-Realization Program](PRODUCT-REALIZATION-PROGRAM.md) and
+its [workstream registry](WORKSTREAM-REGISTRY.json) (proposed under
+[DR-0006](../governance/decisions/DR-0006-Product-Realization-Canon.md)).
+That program governs delivery order, path ownership, and evidence only; it
+does not alter this document's draft status, promote candidates, or add
+architectural authority.
+
 ## 1. Mission
 
 Agentic³ exists to coordinate human and autonomous contributors through
