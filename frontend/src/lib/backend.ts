@@ -38,9 +38,20 @@ export function errorDetail(body: unknown): string {
     if (typeof detail === "string") return detail;
     if (detail && typeof detail === "object") {
       const record = detail as Record<string, unknown>;
-      const parts = [record.error, record.reason, record.hint].filter(
-        (part): part is string => typeof part === "string",
-      );
+      // `code` and `detail` carry the cause: plan generation returns
+      // {error: "plan_generation_failed", code: "planner_error", detail:
+      // "provider_http_status=410 provider_error_category=not_found"}.
+      // Dropping them showed operators only the generic label while the
+      // actual reason sat in the database — the single most expensive
+      // diagnostic failure in this project's history. Every field that
+      // explains a failure must reach the screen.
+      const parts = [
+        record.error,
+        record.reason,
+        record.hint,
+        record.code,
+        record.detail,
+      ].filter((part): part is string => typeof part === "string");
       if (parts.length > 0) return parts.join(" — ");
       return JSON.stringify(detail);
     }
