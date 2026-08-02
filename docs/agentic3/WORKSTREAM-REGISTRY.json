@@ -1,0 +1,243 @@
+{
+  "schema_version": "1.0",
+  "canon_version": "0.1.0-proposed",
+  "baseline": {
+    "repository": "AgentiCubed/A3",
+    "ref": "main",
+    "commit": "7061cd6d130d7863bf66bc12173c7896373da5b5",
+    "issue": 106,
+    "governing_inputs": [
+      "docs/governance/constitution/Constitution-v1.0.md",
+      "docs/governance/decisions/DR-0005-Phase-0-Acceptance.md",
+      "docs/agentic3/ARCHITECTURE-v2.md",
+      "docs/agentic3/IMPLEMENTATION-BLUEPRINT.md",
+      "docs/governance/runtime/Runtime-Domain-Specification-v1.0.md"
+    ]
+  },
+  "allowed_states": [
+    "proposed",
+    "authorized",
+    "active",
+    "blocked",
+    "implemented",
+    "verified",
+    "released",
+    "superseded"
+  ],
+  "workstreams": [
+    {
+      "id": "GOV-01",
+      "title": "Product-realization canon and enforcement",
+      "owner_role": "Principal / Cubit program steward",
+      "state": "active",
+      "dependencies": [],
+      "owned_paths": [
+        "docs/agentic3/PRODUCT-REALIZATION-PROGRAM.md",
+        "docs/agentic3/WORKSTREAM-REGISTRY.json",
+        "docs/governance/decisions/DR-0006-Product-Realization-Canon.md",
+        "scripts/check_product_canon.py",
+        "backend/tests/unit/test_product_canon.py"
+      ],
+      "contract_surfaces": [
+        "canon precedence",
+        "workstream registry schema",
+        "parallel-work convergence"
+      ],
+      "acceptance_evidence": [
+        "issue:106",
+        "draft PR",
+        "independent STD-0002 review",
+        "CI validator result"
+      ],
+      "collision_policy": "No other PR changes program or registry semantics until GOV-01 is reconciled on main."
+    },
+    {
+      "id": "RT-01",
+      "title": "Agentic3 Phase 1 event-ledger vertical slice",
+      "owner_role": "Runtime lead",
+      "state": "proposed",
+      "dependencies": [
+        "GOV-01"
+      ],
+      "owned_paths": [
+        "backend/app/agentic3/**",
+        "backend/alembic/versions/<new-runtime-event-revision>.py"
+      ],
+      "contract_surfaces": [
+        "RuntimeEventV1",
+        "ingest receipt",
+        "append-only event ledger",
+        "outbox"
+      ],
+      "acceptance_evidence": [
+        "duplicate ingest has one effect",
+        "ambiguity quarantine",
+        "audit reconstruction",
+        "upgrade and downgrade"
+      ],
+      "collision_policy": "The versioned event contract lands before product consumers integrate."
+    },
+    {
+      "id": "EXP-01",
+      "title": "Truthful intake, provider readiness, health, and diagnostics",
+      "owner_role": "Product experience lead",
+      "state": "proposed",
+      "dependencies": [
+        "GOV-01"
+      ],
+      "owned_paths": [
+        "frontend/** (intake and provider surfaces; exact paths assigned at authorization)",
+        "backend/app/api/** (intake and readiness endpoints; exact paths assigned at authorization)"
+      ],
+      "contract_surfaces": [
+        "project draft versus analysis",
+        "provider readiness",
+        "component health",
+        "diagnostic error"
+      ],
+      "acceptance_evidence": [
+        "save draft makes no model call",
+        "provider/model identified",
+        "degraded health on blocked planning",
+        "org-isolation tests"
+      ],
+      "collision_policy": "Authorization packet must replace broad reservations with live-fetched exact paths."
+    },
+    {
+      "id": "PLAN-01",
+      "title": "Validated planning and inspectable task graph",
+      "owner_role": "Planning domain lead",
+      "state": "proposed",
+      "dependencies": [
+        "EXP-01"
+      ],
+      "owned_paths": [
+        "backend/app/schemas/** (plan contracts; exact paths assigned at authorization)",
+        "frontend/** (plan and graph surfaces; exact paths assigned at authorization)"
+      ],
+      "contract_surfaces": [
+        "structured plan",
+        "task dependency graph",
+        "acceptance criteria",
+        "plan version"
+      ],
+      "acceptance_evidence": [
+        "malformed plan rejected",
+        "cycle rejected",
+        "plan editable before execution",
+        "org-isolation tests"
+      ],
+      "collision_policy": "Existing project/task contracts remain authoritative until an expand-and-contract plan is approved."
+    },
+    {
+      "id": "TRACE-01",
+      "title": "Human and technical execution evidence",
+      "owner_role": "Runtime observability lead",
+      "state": "proposed",
+      "dependencies": [
+        "RT-01",
+        "EXP-01"
+      ],
+      "owned_paths": [
+        "backend/app/agentic3/runtime/** (trace projection)",
+        "frontend/** (execution trace surfaces; exact paths assigned at authorization)"
+      ],
+      "contract_surfaces": [
+        "trace ID",
+        "event taxonomy",
+        "technical payload projection",
+        "component health"
+      ],
+      "acceptance_evidence": [
+        "model and tool events correlated",
+        "secrets redacted",
+        "human and technical views reconstruct run"
+      ],
+      "collision_policy": "Consumes RuntimeEventV1 without adding incompatible fields to the producer contract."
+    },
+    {
+      "id": "ART-01",
+      "title": "Artifact contracts and workspace",
+      "owner_role": "Artifact domain lead",
+      "state": "proposed",
+      "dependencies": [
+        "PLAN-01",
+        "TRACE-01"
+      ],
+      "owned_paths": [
+        "backend/app/** (artifact contract extensions; exact paths assigned at authorization)",
+        "frontend/** (artifact workspace; exact paths assigned at authorization)"
+      ],
+      "contract_surfaces": [
+        "artifact type",
+        "version",
+        "producer provenance",
+        "validation status",
+        "export"
+      ],
+      "acceptance_evidence": [
+        "artifact preview or download",
+        "version comparison",
+        "producer trace",
+        "type-specific validation"
+      ],
+      "collision_policy": "Extends existing content-addressed artifact storage; no parallel replacement."
+    },
+    {
+      "id": "CTRL-01",
+      "title": "Approvals, controls, evaluation, and remediation",
+      "owner_role": "Governed execution lead",
+      "state": "proposed",
+      "dependencies": [
+        "PLAN-01",
+        "TRACE-01",
+        "ART-01"
+      ],
+      "owned_paths": [
+        "backend/app/evaluation/**",
+        "backend/app/remediation/**",
+        "frontend/** (controls and approvals; exact paths assigned at authorization)"
+      ],
+      "contract_surfaces": [
+        "approval request",
+        "execution control",
+        "evaluation result",
+        "remediation proposal"
+      ],
+      "acceptance_evidence": [
+        "deny and org-isolation tests",
+        "executor/evaluator separation",
+        "bounded retry",
+        "halt semantics"
+      ],
+      "collision_policy": "State transitions remain state-machine owned; no direct status writes."
+    },
+    {
+      "id": "3D-01",
+      "title": "Deterministic procedural 3D proof",
+      "owner_role": "3D artifact lead",
+      "state": "proposed",
+      "dependencies": [
+        "ART-01",
+        "CTRL-01"
+      ],
+      "owned_paths": [
+        "frontend/** (Three.js viewer; exact paths assigned at authorization)",
+        "backend/app/** (3D validator adapter; exact paths assigned at authorization)"
+      ],
+      "contract_surfaces": [
+        "scene specification",
+        "GLB artifact",
+        "render evidence",
+        "geometry validation"
+      ],
+      "acceptance_evidence": [
+        "actual GLB or scene",
+        "file integrity",
+        "material and scale checks",
+        "desktop and mobile render proof"
+      ],
+      "collision_policy": "No neural generation claim until deterministic scene creation and validation are verified."
+    }
+  ]
+}
