@@ -18,7 +18,8 @@ definition:
 
 ## 2. Layered architecture
 
-```flowchart TB
+```
+flowchart TB
     %% Styling classes
     classDef ui fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000
     classDef api fill:#f2e6ff,stroke:#9467bd,stroke-width:2px,color:#000
