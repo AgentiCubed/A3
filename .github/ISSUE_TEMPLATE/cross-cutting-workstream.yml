@@ -1,0 +1,62 @@
+name: Cross-cutting workstream
+description: Track a monorepo initiative that spans multiple apps or layers.
+title: "[Workstream]: "
+labels:
+  - type:epic
+  - status:needs-triage
+body:
+  - type: input
+    id: objective
+    attributes:
+      label: Objective
+      description: The outcome this workstream exists to deliver.
+      placeholder: Reduce operator-visible failures during live runs.
+    validations:
+      required: true
+  - type: checkboxes
+    id: areas
+    attributes:
+      label: Apps and surfaces
+      options:
+        - label: backend API and services
+        - label: frontend app
+        - label: worker/runtime path
+        - label: deploy/ops
+        - label: docs/governance
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Describe the slices this workstream should cover.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: Explicit exclusions so the workstream stays bounded.
+  - type: textarea
+    id: child_issues
+    attributes:
+      label: Proposed child issues
+      description: List the focused issues expected to roll up under this workstream.
+      placeholder: |
+        - #123 backend slice
+        - #124 frontend slice
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Exit criteria
+      description: Conditions required before this workstream can close.
+      placeholder: |
+        - [ ] All child issues are closed
+        - [ ] End-to-end validation is recorded
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and rollout notes
+      description: Security, migration, and release coordination concerns.
