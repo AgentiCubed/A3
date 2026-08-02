@@ -48,7 +48,7 @@ def test_live_provider_via_real_celery_and_redis():
     from app.orchestration.ports import parse_provider_diagnostic
     from app.workers.celery_app import celery_app
 
-    _required_env("GITHUB_MODELS_TOKEN")
+    _required_env("GEMINI_API_KEY")
     model = _required_env("LIVE_PROVIDER_MODEL")
     evidence_path = Path(_required_env("LIVE_PROVIDER_EVIDENCE_PATH"))
     broker_url = _required_env("CELERY_BROKER_URL")
@@ -113,9 +113,9 @@ def test_live_provider_via_real_celery_and_redis():
                 json={
                     "name": "GitHub Models live worker",
                     "kind": "ai",
-                    "provider": "github_models",
+                    "provider": "gemini",
                     "model": model,
-                    "config": {"api_key_ref": "GITHUB_MODELS_TOKEN"},
+                    "config": {"api_key_ref": "GEMINI_API_KEY"},
                 },
                 headers=headers,
             )
@@ -220,7 +220,7 @@ def test_live_provider_via_real_celery_and_redis():
                     f"provider_error_category={category_text})",
                     pytrace=False,
                 )
-            assert execution["provider"] == "github_models"
+            assert execution["provider"] == "gemini"
             assert execution["error"] is None
             assert execution["output"]
             if nonce not in execution["output"]:

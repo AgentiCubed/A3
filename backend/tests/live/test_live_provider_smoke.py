@@ -1,11 +1,11 @@
 """Opt-in live-provider smoke (next-steps Step 3, gap G4).
 
-Runs ONE real task through ``GitHubModelsProvider`` — dispatch → execution →
+Runs ONE real task through the ``gemini`` provider — dispatch → execution →
 evaluation — against the live GitHub Models API, asserting **shape, not
 content**. GitHub Models is the standing free inference tier, so this nightly
 proof costs nothing to run. It is deliberately excluded from hermetic CI
 (assumption A15): it runs only when ``LIVE_PROVIDER_SMOKE=1`` and
-``GITHUB_MODELS_TOKEN`` are both present, via the manually-triggered /
+``GEMINI_API_KEY`` are both present, via the manually-triggered /
 nightly ``live-provider-smoke`` workflow.
 
 The Celery-spine variant of this proof lives in
@@ -21,8 +21,8 @@ import uuid
 import pytest
 
 pytestmark = pytest.mark.skipif(
-    os.environ.get("LIVE_PROVIDER_SMOKE") != "1" or not os.environ.get("GITHUB_MODELS_TOKEN"),
-    reason="live smoke is opt-in: set LIVE_PROVIDER_SMOKE=1 and GITHUB_MODELS_TOKEN",
+    os.environ.get("LIVE_PROVIDER_SMOKE") != "1" or not os.environ.get("GEMINI_API_KEY"),
+    reason="live smoke is opt-in: set LIVE_PROVIDER_SMOKE=1 and GEMINI_API_KEY",
 )
 
 
@@ -59,9 +59,9 @@ def test_one_real_task_through_the_live_provider(client):
         json={
             "name": "Live Model",
             "kind": "ai",
-            "provider": "github_models",
+            "provider": "gemini",
             # credential by reference only — resolved from the env at call time
-            "config": {"api_key_ref": "GITHUB_MODELS_TOKEN"},
+            "config": {"api_key_ref": "GEMINI_API_KEY"},
         },
         headers=headers,
     ).json()["id"]
@@ -97,7 +97,7 @@ def test_one_real_task_through_the_live_provider(client):
     completed = [e for e in execs if e["state"] == "completed"]
     assert completed, execs
     final = completed[-1]
-    assert final["provider"] == "github_models"
+    assert final["provider"] == "gemini"
     assert final["tokens_used"] > 0
     # GitHub Models is a free tier: cost is recorded as zero, never negative.
     assert final["cost_estimate"] >= 0
