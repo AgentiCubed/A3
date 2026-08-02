@@ -18,40 +18,40 @@ definition:
 
 ## 2. Layered architecture
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│ UI (Next.js / React / TypeScript)                                  │
-│   dashboards · Kanban · Gantt · dependency graph · approvals       │
-└───────────────▲────────────────────────────────────────────────────┘
-                │ REST/JSON (OpenAPI), SSE for live execution updates
-┌───────────────┴────────────────────────────────────────────────────┐
-│ API layer (FastAPI)  app/api/v1                                      │
-│   thin controllers · auth · RBAC enforcement · request validation   │
-└───────────────▲────────────────────────────────────────────────────┘
-                │ calls services (never the DB directly)
-┌───────────────┴────────────────────────────────────────────────────┐
-│ Project-domain services  app/services                               │
-│   projects · methodology recommender · WBS/decomposition ·          │
-│   capability analysis · matching · risk/decision logs · metrics     │
-│   ── provider-neutral, no model SDK imports, no Celery imports ──    │
-└──────▲───────────────────────────────▲───────────────────▲──────────┘
-       │                                │                   │
-┌──────┴────────────┐  ┌───────────────┴───────┐  ┌─────────┴──────────┐
-│ Orchestration      │  │ Evaluation            │  │ Remediation         │
-│ app/orchestration  │  │ app/evaluation        │  │ app/remediation     │
-│  state machine ·   │  │  deterministic        │  │  policy engine maps │
-│  dispatch ·        │  │  validators +         │  │  evaluation gaps →  │
-│  AgentAdapter port │  │  evaluator agents     │  │  remediation action │
-└──────▲─────────────┘  └───────────────────────┘  └────────────────────┘
-       │ AgentAdapter port (provider-neutral)
-┌──────┴──────────────────────────────────────────────────────────────┐
-│ Provider integrations  app/orchestration/adapters                    │
-│   MockProvider (deterministic) · Anthropic adapter · (extensible)    │
-└───────────────────────────────────────────────────────────────────────┘
+```flowchart TB
+    %% Styling classes
+    classDef ui fill:#e6f3ff,stroke:#1f77b4,stroke-width:2px,color:#000
+    classDef api fill:#f2e6ff,stroke:#9467bd,stroke-width:2px,color:#000
+    classDef service fill:#fff2e6,stroke:#ff7f0e,stroke-width:2px,color:#000
+    classDef engine fill:#e6ffe6,stroke:#2ca02c,stroke-width:2px,color:#000
+    classDef provider fill:#ffe6e6,stroke:#d62728,stroke-width:2px,color:#000
+    classDef crosscut fill:#f9f9f9,stroke:#555,stroke-width:1px,color:#000,stroke-dasharray: 5 5
 
-Cross-cutting: app/core (config, security/RBAC, structured logging, audit),
-app/db (SQLAlchemy session + Unit of Work), app/workers (Celery behind the
-WorkflowEngine port).
+    %% Layer definitions
+    UI["UI (Next.js / React / TypeScript) \n Dashboards, Kanban, Gantt, Dependency Graph, Approvals"]:::ui
+    
+    API["API Layer (FastAPI app/api/v1) \n Thin Controllers, Auth, RBAC Enforcement, Request Validation"]:::api
+    
+    SVC["Project-Domain Services (app/services) \n Projects, Methodology Recommender, WBS/Decomposition \n Capability Analysis, Matching, Risk/Decision Logs, Metrics \n (Provider-Neutral: No SDK or Celery Imports)"]:::service
+
+    subgraph Engines ["Execution Engines"]
+        direction LR
+        Orch["Orchestration (app/orchestration) \n State Machine, Dispatch, AgentAdapter Port"]:::engine
+        Eval["Evaluation (app/evaluation) \n Deterministic Validators, Evaluator Agents"]:::engine
+        Rem["Remediation (app/remediation) \n Policy Engine: Maps Gaps -> Remediation Action"]:::engine
+    end
+
+    PROV["Provider Integrations (app/orchestration/adapters) \n MockProvider (Deterministic), Anthropic Adapter, (Extensible)"]:::provider
+    
+    XCUT["Cross-Cutting Services \n app/core (Config, Security/RBAC, Logging, Audit) \n app/db (SQLAlchemy Session, Unit of Work) \n app/workers (Celery behind WorkflowEngine port)"]:::crosscut
+
+    %% Connections indicating dependency (pointing inward/downward)
+    UI -->|"REST/JSON (OpenAPI), SSE"| API
+    API -->|"Calls services (never DB directly)"| SVC
+    SVC --> Orch
+    SVC --> Eval
+    SVC --> Rem
+    Orch -->|"AgentAdapter Port (Provider-Neutral)"| PROV
 ```
 
 ### Dependency rule
