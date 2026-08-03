@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Test page — newsletter modal (late-injected)</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; }
+    .overlay {
+      position: fixed; inset: 0; z-index: 5000;
+      background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: white; border-radius: 12px; padding: 32px; max-width: 420px; position: relative;
+    }
+    .modal .close { position: absolute; top: 10px; right: 14px; background: none; border: 0; font-size: 22px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Recipes for extremely ripe bananas</h1>
+  <p>This page injects a newsletter modal 1.5 seconds after load and locks scroll —
+     exercising the MutationObserver path and scroll-unlock.</p>
+  <script>
+    setTimeout(() => {
+      document.body.style.overflow = 'hidden';
+      const overlay = document.createElement('div');
+      overlay.className = 'overlay';
+      overlay.innerHTML = `
+        <div class="modal" role="dialog" aria-modal="true">
+          <button class="close" aria-label="Close">×</button>
+          <h2>Subscribe to our newsletter!</h2>
+          <p>Get banana bread recipes straight to your inbox. Sign up with your email address.</p>
+          <input type="email" placeholder="ape@jungle.example" />
+          <button>Subscribe</button>
+        </div>`;
+      overlay.querySelector('.close').addEventListener('click', () => {
+        overlay.remove();
+        document.body.style.overflow = '';
+      });
+      document.body.appendChild(overlay);
+    }, 1500);
+  </script>
+</body>
+</html>

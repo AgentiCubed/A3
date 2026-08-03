@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bananers — Learn</title>
+  <link rel="stylesheet" href="../theme/tokens.css" />
+  <style>
+    body { max-width: 860px; margin: 0 auto; padding: 24px 18px 60px; }
+    header { margin-bottom: 22px; }
+    section { margin-bottom: 30px; }
+    .roster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+    .char-card { text-align: center; }
+    .char-card svg { width: 64px; height: 96px; }
+    .char-card .outfit { font-size: 11.5px; }
+    .char-card .bio { font-size: 12.5px; text-align: left; margin-top: 8px; }
+    .char-card[data-active='true'] { border-color: var(--bn-accent); border-width: 2px; }
+    .mem-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .mem-detail { font-size: 12.5px; }
+    .mem-detail dt { font-weight: 600; margin-top: 6px; }
+    .mem-detail dd { margin: 0; }
+    .pref-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bn-border); }
+    .pref-row:last-child { border-bottom: 0; }
+    dialog { background: var(--bn-surface); color: var(--bn-text); border: 1px solid var(--bn-border); border-radius: 12px; padding: 18px; max-width: 380px; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+    .dialog-actions { display: flex; gap: 10px; margin-top: 14px; justify-content: flex-end; }
+    .danger-zone { border-color: var(--bn-error); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="title"></h1>
+    <p class="bn-muted" id="permission-note"></p>
+  </header>
+
+  <section id="sec-roster">
+    <h2>The roster</h2>
+    <p class="bn-muted" id="roster-intro"></p>
+    <div class="roster-grid" id="roster"></div>
+  </section>
+
+  <section id="sec-ripeness">
+    <h2>Ripeness</h2>
+    <p class="bn-muted" id="ripeness-intro"></p>
+    <div class="bn-card" id="ripeness-holder"></div>
+  </section>
+
+  <section id="sec-prefs">
+    <h2>The show</h2>
+    <p class="bn-muted" id="prefs-intro"></p>
+    <div class="bn-card" id="type-prefs"></div>
+  </section>
+
+  <section id="sec-memory">
+    <h2>Memory</h2>
+    <p class="bn-muted" id="memory-intro"></p>
+    <div id="memory"></div>
+    <div class="bn-card danger-zone" id="danger">
+      <button class="bn-btn danger" id="reset-all"></button>
+    </div>
+  </section>
+
+  <dialog id="confirm">
+    <h3 id="confirm-title"></h3>
+    <p id="confirm-body"></p>
+    <div class="dialog-actions">
+      <button class="bn-btn secondary" id="confirm-cancel"></button>
+      <button class="bn-btn" id="confirm-ok"></button>
+    </div>
+  </dialog>
+
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>
