@@ -37,10 +37,12 @@ global):
 node bananers/test/run-tests.mjs
 ```
 
-Loads the extension headless, drives three synthetic banner pages, and
+Loads the extension headless, drives six synthetic banner pages, and
 asserts the whole contract: learning, safe dismissal (site records
 *rejected* consent), pre-paint suppression on revisit, one-time micro-prompt,
-per-type opt-in, scroll unlock, dashboard rendering — 36 assertions.
+per-type opt-in, scroll unlock, dashboard rendering — plus safety regressions
+for localized labels, sticky navbars, and positional-selector hazards — 49
+assertions.
 
 ## Regenerate icons
 

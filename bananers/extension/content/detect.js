@@ -96,11 +96,24 @@
       if (!dialogish && !bar && z < C.DETECT.MIN_Z_INDEX && cov < 0.5) continue;
 
       const type = classify(el);
-      const hasAffordance = !!findDismissCandidates(el, { quick: true }).length;
+      const affordances = findDismissCandidates(el, { quick: true });
+      const hasAffordance = affordances.length > 0;
+      const hasCloser = affordances.some((d) => d.kind === "reject" || d.kind === "close");
+      const idcls = `${el.id} ${typeof el.className === "string" ? el.className : ""}`;
       // Bare full-screen veils (no text, nothing clickable) are backdrops, not
       // popups — skip them here; findBackdrops() attaches them to the real
       // candidate so slice/css strategies still take them down.
       if (cov >= 0.85 && !hasAffordance && (el.innerText || "").trim().length < 40) continue;
+      // Full-width top/bottom bars are only banners with positive evidence —
+      // otherwise sticky nav/header/footer bars would be treated as popups and
+      // "dismissed" (clicking their links, removing the header). Require a
+      // recognized type, a reject/close affordance, or a CMP vendor token; and
+      // reject link-heavy nav strips outright.
+      if (bar && !dialogish) {
+        const links = el.querySelectorAll("a[href]").length;
+        const looksLikeBanner = type !== T.GENERIC || hasCloser || CMP_TOKEN.test(idcls);
+        if (!looksLikeBanner || links >= 3) continue;
+      }
       const score =
         cov * 100 +
         Math.min(z, 10000) / 100 +
@@ -154,10 +167,14 @@
 
       const acceptIdx = C.ACCEPT_WORDS.findIndex((w) => wordMatch(label, w));
       const rejectIdx = C.REJECT_WORDS.findIndex((w) => wordMatch(label, w));
-      // "reject all" contains no accept word, but "accept all" contains none of
-      // reject's either; when both match (rare), reject wins only if it is the
-      // more specific (longer) match.
-      const isAccept = acceptIdx >= 0 && (rejectIdx < 0 || C.ACCEPT_WORDS[acceptIdx].length > C.REJECT_WORDS[rejectIdx].length);
+      // Fail-closed classification (safety invariant): ANY accept word marks
+      // the control 'accept' — including the ambiguous both-words case — so it
+      // is never clicked. 'reject' requires a reject word AND no accept word.
+      // Everything unrecognized stays 'neutral' and, under neverAccept, is
+      // never clicked (see dismiss.js clickable()); this is what keeps a
+      // localized "Alle akzeptieren"/"Alle ablehnen" pair from defaulting to
+      // whichever appears first in the DOM.
+      const isAccept = acceptIdx >= 0;
       const isReject = rejectIdx >= 0 && !isAccept;
       const isClose = !isReject && !isAccept && (
         C.CLOSE_WORDS.some((w) => wordMatch(label, w)) ||

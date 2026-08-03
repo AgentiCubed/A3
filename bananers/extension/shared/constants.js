@@ -33,6 +33,7 @@
       GRANT_AND_DEPLOY: "bananers:grant-and-deploy",
       REVOKE_ORIGIN: "bananers:revoke-origin",
       LIST_GRANTS: "bananers:list-grants",
+      DISABLE_ORIGIN: "bananers:disable-origin",
     },
 
     // Words that indicate a control ACCEPTS/opts in. Bananers never click these

@@ -12,14 +12,13 @@
  *   hostIndex     { [host]: [fpId, ...] }
  *   eventLog      [ { ts, host, fpId, type, bananerId, action, outcome } ]
  *
- * FingerprintRecord:
- *   { id, host, origin, type, signature: { hash, tokens[] , selector },
- *     strategy: { kind, clickSelector?, killSelectors[], notes? },
- *     bananerId, createdAt, lastSeenAt, timesDismissed, timesFailed,
- *     replay: [ { t, act, label } ] }
- *
- * Cross-device sync via chrome.storage.sync is a stretch goal (quota: 100KB
- * total / 8KB per item) — see docs/DESIGN.md §9.
+ * Cross-context write safety: patch() only writes back the top-level keys a
+ * mutation actually TOUCHED (its `keys` list), so a settings write from the
+ * options page can never clobber a fingerprint write from a content script,
+ * and vice-versa (chrome.storage.local.set merges at the top-key level). A
+ * narrower residual race remains for two contexts editing the SAME key
+ * concurrently (e.g. two tabs learning different banners in the same tick);
+ * that is acceptable for v1 and documented in docs/DESIGN.md §4.2.
  */
 (() => {
   const B = (globalThis.Bananers ??= {});
@@ -42,9 +41,7 @@
     eventLog: [],
   });
 
-  // Serialize read-modify-write cycles within this JS context. Cross-context
-  // races (SW vs content script) are tolerated for v1: writers own disjoint
-  // keys in practice (content: fingerprints/log; pages: settings).
+  // Serialize read-modify-write cycles within this JS context.
   let chain = Promise.resolve();
   const withLock = (fn) => (chain = chain.then(fn, fn));
 
@@ -72,14 +69,21 @@
       return { settings, fingerprints: fps };
     },
 
-    async patch(mutator) {
+    /* Read-modify-write, persisting ONLY the named top-level keys.
+     * `keys` defaults to the settings-only case for the options page. */
+    async patch(mutator, keys) {
       return withLock(async () => {
         const state = await S.getAll();
         const out = (await mutator(state)) || state;
-        await chrome.storage.local.set(out);
+        const persistKeys = keys && keys.length ? keys : Object.keys(out);
+        const slice = {};
+        for (const k of persistKeys) slice[k] = out[k];
+        await chrome.storage.local.set(slice);
         return out;
       });
     },
+
+    patchSettings: (fn) => S.patch((st) => { fn(st.settings, st); return st; }, ["settings"]),
 
     fpIdFor: (host, hash) => `${host}::${hash}`,
 
@@ -90,7 +94,7 @@
         list.add(fp.id);
         st.hostIndex[fp.host] = [...list];
         return st;
-      });
+      }, ["fingerprints", "hostIndex"]);
     },
 
     async touchFingerprint(id, apply) {
@@ -98,7 +102,7 @@
         const fp = st.fingerprints[id];
         if (fp) apply(fp);
         return st;
-      });
+      }, ["fingerprints"]);
     },
 
     async forgetFingerprint(id) {
@@ -110,7 +114,7 @@
           if (!st.hostIndex[fp.host].length) delete st.hostIndex[fp.host];
         }
         return st;
-      });
+      }, ["fingerprints", "hostIndex"]);
     },
 
     async log(evt) {
@@ -118,7 +122,7 @@
         st.eventLog.push({ ts: Date.now(), ...evt });
         if (st.eventLog.length > C.LOG_CAP) st.eventLog = st.eventLog.slice(-C.LOG_CAP);
         return st;
-      });
+      }, ["eventLog"]);
     },
 
     /* One-time micro-prompt bookkeeping: returns true exactly once per type. */
@@ -130,7 +134,7 @@
           first = true;
         }
         return st;
-      });
+      }, ["microPrompt"]);
       return first;
     },
 
@@ -138,7 +142,7 @@
       return S.patch((st) => {
         st.settings.typeOverrides[type] = { show: !!show };
         return st;
-      });
+      }, ["settings"]);
     },
 
     async wipeMemory() {
@@ -147,7 +151,7 @@
         st.hostIndex = {};
         st.eventLog = [];
         return st;
-      });
+      }, ["fingerprints", "hostIndex", "eventLog"]);
     },
   };
 

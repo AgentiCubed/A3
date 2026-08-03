@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Test: localized (German) consent</title>
+  <style>
+    #loc-root { position: fixed; inset: 0; z-index: 9999; display: flex;
+      align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+    .box { background: #fff; padding: 26px; border-radius: 12px; width: 420px; }
+    .box button { padding: 10px 16px; margin-right: 8px; border-radius: 8px; cursor: pointer; }
+    #loc-accept { background: #2563eb; color: #fff; border: 0; }
+  </style>
+</head>
+<body>
+  <h1>Eine Nachrichtenseite</h1>
+  <script>
+    // Labels are German and match NEITHER the English accept nor reject word
+    // lists, so both controls are "neutral". Under neverAccept the extension
+    // must click NEITHER and fall through to containment.
+    window.__locAccepted = false;
+    window.__locRejected = false;
+    setTimeout(() => {
+      const root = document.createElement('div');
+      root.id = 'loc-root';
+      root.setAttribute('role', 'dialog');
+      root.innerHTML = `
+        <div class="box">
+          <h2>Wir schätzen Ihre Privatsphäre</h2>
+          <p>Wir verwenden Cookies und ähnliche Technologien.</p>
+          <button id="loc-accept">Alle akzeptieren</button>
+          <button id="loc-reject">Alle ablehnen</button>
+        </div>`;
+      document.body.appendChild(root);
+      document.documentElement.style.overflow = 'hidden';
+      root.querySelector('#loc-accept').addEventListener('click', () => {
+        window.__locAccepted = true; root.remove();
+      });
+      root.querySelector('#loc-reject').addEventListener('click', () => {
+        window.__locRejected = true; root.remove();
+      });
+    }, 150);
+  </script>
+</body>
+</html>

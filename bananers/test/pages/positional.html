@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Test: positional-selector banner (no stable attrs)</title>
+</head>
+<body>
+  <!-- A stable, legitimate first-party element. The banner's positional
+       selector must NEVER hide or remove this. -->
+  <div id="app-root"><h1>My application</h1><p id="app-content">Real content.</p></div>
+
+  <script>
+    // The banner container has NO id/class/data/role, forcing bestSelector into
+    // its positional (nth-of-type) fallback. A leading sibling is inserted on
+    // the SECOND visit to shift DOM order — the classic positional hazard that
+    // would make a naively-stored selector point at first-party content.
+    window.__popClosed = false;
+    const visit = Number(sessionStorage.getItem('visit') || '0') + 1;
+    sessionStorage.setItem('visit', String(visit));
+    if (visit >= 2) {
+      const spacer = document.createElement('div');
+      spacer.textContent = 'inserted-before-banner';
+      document.body.insertBefore(spacer, document.body.firstChild);
+    }
+    setTimeout(() => {
+      const veil = document.createElement('div');
+      veil.style.cssText = 'position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.5)';
+      const pop = document.createElement('div');
+      pop.style.cssText = 'position:fixed;top:10%;left:10%;width:640px;height:360px;' +
+        'z-index:8001;background:#fff;padding:26px;border-radius:12px';
+      pop.innerHTML = '<h2>Join our newsletter</h2>' +
+        '<p>Get updates in your inbox — do not miss a post.</p>' +
+        '<button>No thanks</button>';
+      document.body.append(veil, pop);
+      pop.querySelector('button').addEventListener('click', () => {
+        window.__popClosed = true; veil.remove(); pop.remove();
+      });
+    }, 150);
+  </script>
+</body>
+</html>
