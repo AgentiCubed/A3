@@ -344,9 +344,10 @@ Publication is prohibited until every field is complete.
 | Licensing decision approved | Yes — D4, MIT + CC BY 4.0 |
 | Contact destinations approved | Yes — D5, LinkedIn + X live; email withheld by design |
 | QR destination approved | `PENDING` — D9, generated only after Gate 9 |
-| Unresolved exceptions | must be `NONE` |
+| Unresolved exceptions | `NONE` — X-01 through X-07 all carry owner sign-off as of 2026-08-03 |
 
-- [ ] Every Gate 0–6 box complete.
+- [x] Every Gate 0–6 box complete (Gates 0–3 per the release record and exception
+      log; Gate 4 per its record above; Gates 5–6 per their real-run records).
 - [x] James Richmond has personally reviewed the final rendering and file tree
       (Gate 6 rendered-view check, 2026-08-02; Pass D mobile re-read, 2026-08-03).
 
@@ -502,10 +503,10 @@ scans have run.
 
 | ID | File and line | Finding | Why acceptable | Approved by | Date |
 |---|---|---|---|---|---|
-| X-01 | `showcase/**` (12 sites) | B2 matches on `secret` / `token` / `api key` | All conceptual prose, `_absent_by_design` entries, or `.gitignore` patterns. No values. | *(pending owner sign-off)* | 2026-08-02 |
-| X-02 | `showcase/docs/provenance.md` | Names GitHub and one retired provider dependency | Deliberate per D8; anchored to GitHub's own changelog. C6 re-run and passed: no other provider, no fallback ordering, no routing logic. | *(pending owner sign-off)* | 2026-08-02 |
-| X-03 | `README.md:10`, `README.md:82`, `security-boundaries.md:105`, `security-boundaries.md:125` | Placeholder sweep matches `TODO` / `PENDING` | Substring false positives: "Mas**todo**n", and the ordinary English "blocked **pending** a decision" / "de**pending** on". Verified with `grep -o`. | *(pending owner sign-off)* | 2026-08-02 |
-| X-04 | `showcase/demo/mock-platform-events.json` | Domain `example.invalid` | RFC 2606 reserved TLD — guaranteed never resolvable. Deliberately chosen over `example.com` so a fabricated federated handle can never be mistaken for a real one. | *(pending owner sign-off)* | 2026-08-02 |
+| X-01 | `showcase/**` (12 sites) | B2 matches on `secret` / `token` / `api key` | All conceptual prose, `_absent_by_design` entries, or `.gitignore` patterns. No values. | James Richmond | 2026-08-03 |
+| X-02 | `showcase/docs/provenance.md` | Names GitHub and one retired provider dependency | Deliberate per D8; anchored to GitHub's own changelog. C6 re-run and passed: no other provider, no fallback ordering, no routing logic. | James Richmond | 2026-08-03 |
+| X-03 | `README.md:10`, `README.md:82`, `security-boundaries.md:105`, `security-boundaries.md:125` | Placeholder sweep matches `TODO` / `PENDING` | Substring false positives: "Mas**todo**n", and the ordinary English "blocked **pending** a decision" / "de**pending** on". Verified with `grep -o`. | James Richmond | 2026-08-03 |
+| X-04 | `showcase/demo/mock-platform-events.json` | Domain `example.invalid` | RFC 2606 reserved TLD — guaranteed never resolvable. Deliberately chosen over `example.com` so a fabricated federated handle can never be mistaken for a real one. | James Richmond | 2026-08-03 |
 | X-05 | `showcase/README.md`, `showcase/docs/ai4-positioning.md` | ~~Four `*(add before publishing)*` placeholders~~ | **RESOLVED 2026-08-02.** LinkedIn and X supplied by the owner and inserted in both files. Zero placeholders remain. Email line stays absent per D5 until an alias exists. | James Richmond | 2026-08-02 |
 | X-06 | `showcase/README.md`, `showcase/docs/ai4-positioning.md` | Two public contact identifiers ship: `linkedin.com/in/jamestrichmond`, `x.com/jamestrichmond` | Approved public destinations per D5. These are the **only** approved personal identifiers; B4 must still fail on any other. Both are intentionally public professional profiles. | James Richmond | 2026-08-02 |
 | X-07 | *(process)* `AgentiCubed/A3` repository settings | Gate 6's "disable Actions" step was applied to **A3** instead of the showcase repo. All A3 workflows queued without executing from ~2026-08-02T19:48Z until re-enable on 2026-08-03; PRs #119 and #121 merged inside that window with no CI run. | Detected during Pass A evidence verification (a dispatched run sat queued with zero jobs). Owner re-enabled Actions on A3 2026-08-03; the live smoke went green immediately after, confirming health. Showcase repo Actions remains disabled per R5. No content or publication artifact was affected. | James Richmond | 2026-08-03 |
