@@ -1,0 +1,120 @@
+/* Shared surface styling. Colors come exclusively from the --bn-* custom
+   properties written by theme.js — nothing here hard-codes a color except the
+   texture inks, which sit at <=0.06 opacity and cannot affect text contrast. */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bn-bg);
+  color: var(--bn-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body, .bn-card, button { transition: none !important; }
+}
+
+/* --- textures (peel fiber / sugar speckles / bruise blotches) ------------- */
+
+:root[data-bn-texture] body {
+  background-image: var(--bn-texture-image, none);
+  background-attachment: fixed;
+}
+:root[data-bn-texture='peel'] body {
+  --bn-texture-image: repeating-linear-gradient(
+    92deg, rgba(60, 45, 10, 0.04) 0 2px, transparent 2px 14px);
+}
+:root[data-bn-texture='speckle'] body {
+  --bn-texture-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cg fill='%235c3a12' fill-opacity='0.06'%3E%3Ccircle cx='12' cy='18' r='3'/%3E%3Ccircle cx='58' cy='9' r='2'/%3E%3Ccircle cx='75' cy='48' r='3.5'/%3E%3Ccircle cx='30' cy='62' r='2.5'/%3E%3Ccircle cx='52' cy='80' r='3'/%3E%3C/g%3E%3C/svg%3E");
+}
+:root[data-bn-texture='bruise'] body {
+  --bn-texture-image:
+    radial-gradient(140px 90px at 15% 20%, rgba(0, 0, 0, 0.06), transparent 70%),
+    radial-gradient(180px 120px at 85% 75%, rgba(0, 0, 0, 0.05), transparent 70%);
+}
+
+/* --- primitives ------------------------------------------------------------ */
+
+.bn-card {
+  background: var(--bn-surface);
+  border: 1px solid var(--bn-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.bn-card.elevated { background: var(--bn-surface-elevated); }
+
+h1, h2, h3 { margin: 0 0 6px; }
+.bn-muted { color: var(--bn-text-secondary); }
+.bn-error-text { color: var(--bn-error); }
+
+button.bn-btn {
+  background: var(--bn-accent);
+  color: var(--bn-accent-text);
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+button.bn-btn.secondary {
+  background: transparent;
+  color: var(--bn-text);
+  border: 1px solid var(--bn-border);
+}
+button.bn-btn.danger { background: var(--bn-error); color: var(--bn-bg); }
+:is(button, input, a):focus-visible {
+  outline: 3px solid var(--bn-focus);
+  outline-offset: 2px;
+}
+
+.bn-toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+
+/* --- ripeness slider ------------------------------------------------------- */
+
+.bn-ripeness { position: relative; padding: 6px 0 46px; }
+.bn-ripeness-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--bn-track);
+  border: 1px solid var(--bn-border);
+  cursor: pointer;
+}
+.bn-ripeness-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: var(--bn-thumb) center / contain no-repeat;
+  cursor: grab;
+}
+.bn-ripeness-input::-moz-range-thumb {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  background: var(--bn-thumb) center / contain no-repeat;
+  cursor: grab;
+}
+.bn-ripeness-ticks { position: relative; height: 34px; margin-top: 6px; }
+.bn-ripeness-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  background: none;
+  border: 0;
+  color: var(--bn-text-secondary);
+  font-size: 10.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 4px 2px;
+}
+.bn-ripeness-tick:first-child { transform: translateX(0); }
+.bn-ripeness-tick:last-child { transform: translateX(-100%); }
+.bn-ripeness-tick:hover { color: var(--bn-text); }

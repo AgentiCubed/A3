@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Test page — cookie banner</title>
+  <style>
+    body { font-family: sans-serif; padding: 40px; }
+    #cookie-consent {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+      background: #1f2937; color: #f9fafb; padding: 20px 28px;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    #cookie-consent button { padding: 10px 16px; border-radius: 6px; border: 0; cursor: pointer; }
+    .accept { background: #10b981; color: white; }
+    .reject { background: #374151; color: #f9fafb; }
+  </style>
+</head>
+<body>
+  <h1>An ordinary article about jungle canopy ecology</h1>
+  <p>Scroll-worthy content lives here. The cookie banner below should be detected,
+     classified as cookie-consent, and dismissed via the privacy-preserving button.</p>
+  <div id="cookie-consent" role="dialog" aria-label="Cookie consent">
+    <p>We use cookies and similar tracking technologies to improve your experience.
+       See our privacy policy for details about consent and GDPR rights.</p>
+    <div>
+      <button class="reject" onclick="document.getElementById('cookie-consent').remove()">Reject all</button>
+      <button class="accept" onclick="document.getElementById('cookie-consent').remove()">Accept all</button>
+    </div>
+  </div>
+</body>
+</html>
