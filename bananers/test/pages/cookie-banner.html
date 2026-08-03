@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Test: cookie consent modal</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 40px; }
+    article { max-width: 640px; margin: 0 auto; }
+    #cmp-root {
+      position: fixed; inset: 0; z-index: 9999; display: flex;
+      align-items: center; justify-content: center; background: rgba(0,0,0,.55);
+    }
+    .cmp-dialog {
+      background: #fff; border-radius: 12px; padding: 28px; width: 440px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.3);
+    }
+    .cmp-dialog h2 { margin-top: 0; }
+    .cmp-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .cmp-actions button { padding: 10px 16px; border-radius: 8px; border: 1px solid #999; cursor: pointer; }
+    #cmp-accept { background: #2563eb; color: #fff; border: 0; }
+  </style>
+</head>
+<body>
+  <article>
+    <h1>An ordinary news article</h1>
+    <p>Scrollable content the visitor actually wanted to read.</p>
+  </article>
+
+  <script>
+    // Instrumentation for the e2e harness.
+    window.__accepted = false;
+    window.__rejected = false;
+    window.__visibleAtInsert = null;   // was the banner visibly rendered when inserted?
+    window.__everVisibleMs = 0;
+
+    function buildBanner() {
+      const root = document.createElement('div');
+      root.id = 'cmp-root';
+      root.setAttribute('role', 'dialog');
+      root.setAttribute('aria-modal', 'true');
+      root.innerHTML = `
+        <div class="cmp-dialog">
+          <h2>We value your privacy</h2>
+          <p>We and our 843 partners use cookies and similar tracking technologies.
+             Manage your consent or accept to continue.</p>
+          <div class="cmp-actions">
+            <button id="cmp-accept">Accept all</button>
+            <button id="cmp-reject">Reject all</button>
+            <button id="cmp-settings">Cookie settings</button>
+          </div>
+        </div>`;
+      document.body.appendChild(root);
+      document.documentElement.style.overflow = 'hidden';
+
+      // Record whether the banner was actually visible at insertion time.
+      // Re-query by id: if it is already detached by the first frame it was
+      // dismissed before the user could perceive it (getComputedStyle on a
+      // detached node returns '' and would false-positive as "visible").
+      requestAnimationFrame(() => {
+        const live = document.getElementById('cmp-root');
+        if (!live || !live.isConnected) { window.__visibleAtInsert = false; return; }
+        const cs = getComputedStyle(live);
+        window.__visibleAtInsert = cs.display !== 'none' && cs.visibility !== 'hidden';
+        if (window.__visibleAtInsert) {
+          const t0 = performance.now();
+          const iv = setInterval(() => {
+            const live = document.getElementById('cmp-root');
+            if (!live || getComputedStyle(live).display === 'none') {
+              window.__everVisibleMs = performance.now() - t0;
+              clearInterval(iv);
+            }
+          }, 50);
+        }
+      });
+
+      root.querySelector('#cmp-accept').addEventListener('click', () => {
+        window.__accepted = true;
+        localStorage.setItem('consent', 'accepted');
+        root.remove();
+        document.documentElement.style.overflow = '';
+      });
+      root.querySelector('#cmp-reject').addEventListener('click', () => {
+        window.__rejected = true;
+        localStorage.setItem('consent', 'rejected');
+        root.remove();
+        document.documentElement.style.overflow = '';
+      });
+    }
+
+    // CMPs typically render shortly after load; keep showing on every visit
+    // (this test site ignores stored consent on purpose — worst-case site).
+    setTimeout(buildBanner, 120);
+  </script>
+</body>
+</html>

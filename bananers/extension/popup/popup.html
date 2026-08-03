@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bananers</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <span class="logo">🍌</span>
+    <div>
+      <h1>Bananers</h1>
+      <p id="site-line" class="muted">Checking this page…</p>
+    </div>
+  </header>
+
+  <section id="status" class="card" hidden></section>
+
+  <section class="card">
+    <h2>Pick your bananer</h2>
+    <div id="roster" class="roster" role="radiogroup" aria-label="Choose a bananer"></div>
+    <p id="char-blurb" class="muted blurb"></p>
+  </section>
+
+  <label class="remember">
+    <input type="checkbox" id="remember" checked />
+    <span>Remember this site so its popups vanish automatically next time</span>
+  </label>
+
+  <button id="deploy" class="deploy" disabled>Deploy bananer</button>
+  <p id="result" class="result" hidden></p>
+
+  <footer>
+    <a href="#" id="open-dashboard">Open Learn dashboard →</a>
+  </footer>
+
+  <script src="../shared/constants.js"></script>
+  <script src="../shared/characters.js"></script>
+  <script src="../shared/storage.js"></script>
+  <script src="../shared/policy.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
