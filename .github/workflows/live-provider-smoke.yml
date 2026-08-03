@@ -1,11 +1,16 @@
 name: Live provider smoke
 
 # Next-steps Step 3 (gap G4): standing evidence that the real inference path
-# works. One real task through GitHubModelsProvider — dispatch → execution →
-# evaluation — asserting shape, not content. GitHub Models is the free
-# inference tier, so the nightly run costs nothing. Opt-in and secret-gated
-# so hermetic CI stays mock-only (assumption A15): when the A3_MODELS_TOKEN
-# secret is absent the job SKIPS its steps and passes.
+# works. One real task through the `gemini` adapter — dispatch → execution →
+# evaluation — asserting shape, not content. Google AI Studio's free tier
+# means the nightly run costs nothing. Opt-in and secret-gated so hermetic CI
+# stays mock-only (assumption A15): when the GEMINI_API_KEY secret is absent
+# the job SKIPS its steps and passes.
+#
+# The gate and the test must agree on the credential. tests/live/
+# test_live_provider_smoke.py skips unless GEMINI_API_KEY is present, so
+# gating this job on any other secret produces a green run that silently
+# skipped — worse than a red one, because it looks like evidence.
 #
 # The Celery-spine variant of this proof is live-provider-proof.yml
 # (manual dispatch, Postgres + Redis); this one covers the inline API path.
@@ -29,13 +34,13 @@ jobs:
       - name: Detect credential
         id: cred
         env:
-          GITHUB_MODELS_TOKEN: ${{ secrets.A3_MODELS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          if [ -n "$GITHUB_MODELS_TOKEN" ]; then
+          if [ -n "$GEMINI_API_KEY" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "A3_MODELS_TOKEN secret not configured — skipping live smoke (job passes)."
+            echo "GEMINI_API_KEY secret not configured — skipping live smoke (job passes)."
           fi
       - uses: actions/setup-python@v5
         if: steps.cred.outputs.present == 'true'
@@ -48,6 +53,8 @@ jobs:
       - name: Live provider smoke (one real task, shape asserted)
         if: steps.cred.outputs.present == 'true'
         env:
-          GITHUB_MODELS_TOKEN: ${{ secrets.A3_MODELS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LIVE_PROVIDER_SMOKE: "1"
-        run: python -m pytest tests/live/test_live_provider_smoke.py -q
+        # -rs prints skip reasons. A skipped live test still exits 0, so
+        # without this a mis-set credential reads as a passing proof.
+        run: python -m pytest tests/live/test_live_provider_smoke.py -q -rs

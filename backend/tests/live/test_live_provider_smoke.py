@@ -1,8 +1,8 @@
 """Opt-in live-provider smoke (next-steps Step 3, gap G4).
 
 Runs ONE real task through the ``gemini`` provider — dispatch → execution →
-evaluation — against the live GitHub Models API, asserting **shape, not
-content**. GitHub Models is the standing free inference tier, so this nightly
+evaluation — against the live Google AI Studio OpenAI-compatibility endpoint,
+asserting **shape, not content**. AI Studio's free tier means this nightly
 proof costs nothing to run. It is deliberately excluded from hermetic CI
 (assumption A15): it runs only when ``LIVE_PROVIDER_SMOKE=1`` and
 ``GEMINI_API_KEY`` are both present, via the manually-triggered /
@@ -99,7 +99,7 @@ def test_one_real_task_through_the_live_provider(client):
     final = completed[-1]
     assert final["provider"] == "gemini"
     assert final["tokens_used"] > 0
-    # GitHub Models is a free tier: cost is recorded as zero, never negative.
+    # AI Studio's free tier: cost is recorded as zero, never negative.
     assert final["cost_estimate"] >= 0
 
     evals = client.get(
