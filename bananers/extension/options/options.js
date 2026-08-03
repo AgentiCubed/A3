@@ -103,12 +103,13 @@
 
   /* ---------- replays ---------- */
 
-  let selectedEvent = null;
+  let selectedEventKey = null;
+  const eventKey = (e) => `${e.ts}:${e.fpId || e.host}`;
 
   function renderReplays(st) {
     const events = [...st.eventLog].reverse().slice(0, 40);
-    $("#event-list").innerHTML = events.length ? events.map((e, i) => `
-      <div class="event ${selectedEvent === i ? "sel" : ""}" data-i="${i}">
+    $("#event-list").innerHTML = events.length ? events.map((e) => `
+      <div class="event ${selectedEventKey === eventKey(e) ? "sel" : ""}" data-key="${esc(eventKey(e))}">
         <span class="mini">${B.characters.spriteFor(e.bananerId)}</span>
         <div>
           <div>${e.action === "recall" ? "Auto-closed" : "Deployed on"} <b>${esc(e.host)}</b> — ${esc(TYPE_LABELS[e.type] || e.type || "popup")}</div>
@@ -119,8 +120,10 @@
 
     $("#event-list").querySelectorAll(".event").forEach((el) => {
       el.addEventListener("click", () => {
-        selectedEvent = Number(el.dataset.i);
-        playReplay(st, events[selectedEvent]);
+        const evt = events.find((e) => eventKey(e) === el.dataset.key);
+        if (!evt) return;
+        selectedEventKey = el.dataset.key;
+        playReplay(st, evt);
         renderReplays(st);
       });
     });
@@ -155,15 +158,15 @@
     sel.innerHTML = B.characters.ROSTER
       .map((c) => `<option value="${c.id}" ${st.settings.defaultBananer === c.id ? "selected" : ""}>${c.name}</option>`)
       .join("");
-    sel.onchange = () => B.store.patch((s) => { s.settings.defaultBananer = sel.value; return s; });
+    sel.onchange = () => B.store.patchSettings((s) => { s.defaultBananer = sel.value; });
 
     const sug = $("#suggest-toggle");
     sug.checked = st.settings.suggestBananer;
-    sug.onchange = () => B.store.patch((s) => { s.settings.suggestBananer = sug.checked; return s; });
+    sug.onchange = () => B.store.patchSettings((s) => { s.suggestBananer = sug.checked; });
 
     const motion = $("#motion-select");
     motion.value = st.settings.reducedMotion;
-    motion.onchange = () => B.store.patch((s) => { s.settings.reducedMotion = motion.value; return s; });
+    motion.onchange = () => B.store.patchSettings((s) => { s.reducedMotion = motion.value; });
 
     const grants = await chrome.runtime.sendMessage({ type: MSG.LIST_GRANTS }).catch(() => null);
     $("#grant-list").innerHTML = grants?.origins?.length
@@ -195,7 +198,7 @@
   }
 
   $("#onboard-done").addEventListener("click", async () => {
-    await B.store.patch((s) => { s.settings.onboarded = true; return s; });
+    await B.store.patchSettings((s) => { s.onboarded = true; });
     location.hash = "#roster";
   });
 

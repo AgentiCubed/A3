@@ -64,34 +64,30 @@
       killSelectors: findings.killSelectors,
       scrollLock: findings.scrollLock,
     };
-    let fpId;
-    if (known) {
-      fpId = known.fp.id;
-      await B.store.touchFingerprint(fpId, (rec) => {
-        rec.signature = { hash, tokens, selector };
-        rec.strategy = strategy;
-        rec.bananerId = char.id;
-        rec.lastSeenAt = Date.now();
-        rec.timesDismissed += 1;
-        rec.replay = steps.slice(0, B.constants.REPLAY_CAP);
-      });
-    } else {
-      fpId = B.store.fpIdFor(host, hash);
-      await B.store.saveFingerprint({
-        id: fpId,
-        host,
-        origin: location.origin,
-        type: cand.type,
-        signature: { hash, tokens, selector },
-        strategy,
-        bananerId: char.id,
-        createdAt: Date.now(),
-        lastSeenAt: Date.now(),
-        timesDismissed: 1,
-        timesFailed: 0,
-        replay: steps.slice(0, B.constants.REPLAY_CAP),
-      });
-    }
+    const now = Date.now();
+    const base = known?.fp || {
+      id: B.store.fpIdFor(host, hash),
+      host,
+      origin: location.origin,
+      createdAt: now,
+      timesDismissed: 0,
+      timesFailed: 0,
+    };
+    const record = {
+      ...base,
+      type: cand.type,
+      signature: { hash, tokens, selector },
+      strategy,
+      bananerId: char.id,
+      lastSeenAt: now,
+      timesDismissed: (base.timesDismissed || 0) + 1,
+      replay: steps.slice(0, B.constants.REPLAY_CAP),
+    };
+    const fpId = record.id;
+    await B.store.saveFingerprint(record);
+    // Keep the in-memory suppression snapshot current so a re-insertion on the
+    // same SPA page recalls this record instead of re-learning it.
+    B.suppress.remember(record);
 
     await B.store.log({
       host, fpId, type: cand.type, bananerId: char.id,
@@ -112,6 +108,10 @@
       switch (msg?.type) {
         case MSG.PING:
           return { ok: true, ready: true };
+        case MSG.DISABLE_ORIGIN:
+          // User revoked this origin: stop observing and remove page artifacts.
+          B.suppress.disable();
+          return { ok: true };
         case MSG.SCAN: {
           await domReady();
           const cands = B.detect.scan();

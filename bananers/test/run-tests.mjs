@@ -143,7 +143,7 @@ async function main() {
 
     const r1 = await deployVia(sw, `${BASE}/cookie-banner.html`, "peel-noir");
     check("deploy responds ok", r1?.ok === true, r1);
-    check("strategy is click-dismiss", r1?.kind === "click-dismiss", r1);
+    check("Peel Noir uses precise click (distinct from Bruce)", r1?.kind === "click-precise", r1);
     check("classified as cookie-consent", r1?.type === "cookie-consent", r1);
 
     await page.locator("#cmp-root").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
@@ -254,6 +254,66 @@ async function main() {
         const el = document.getElementById("ad-takeover");
         return el ? getComputedStyle(el).display === "none" : null;
       }), 6000));
+
+    /* ---- T7: localized labels — never click accept OR reject we can't read --- */
+    console.log("\nT7 · localized (German) consent: safety fall-through");
+    await page.goto(`${BASE}/localized-consent.html`);
+    await page.locator("#loc-root").waitFor({ state: "visible", timeout: 5000 });
+    const r7 = await deployVia(sw, `${BASE}/localized-consent.html`, "peel-noir");
+    check("localized deploy contained the banner", r7?.ok === true, r7);
+    check("used containment, not a click (slice/css)",
+      r7?.kind === "slice-remove" || r7?.kind === "css-kill", r7);
+    check("neither localized Accept NOR Reject was clicked",
+      await page.evaluate(() => window.__locAccepted === false && window.__locRejected === false));
+    check("localized banner gone",
+      await until(async () => (await page.locator("#loc-root").count()) === 0, 4000));
+
+    /* ---- T8: sticky navbar is not a popup ---- */
+    console.log("\nT8 · sticky navbar is not mistaken for a popup");
+    await page.goto(`${BASE}/navbar.html`);
+    await page.locator("#site-nav").waitFor({ state: "visible", timeout: 5000 });
+    const r8 = await deployVia(sw, `${BASE}/navbar.html`, "splitsu");
+    check("bananer stands down on a nav-only page", r8?.ok === false && r8?.error === "no-popups-found", r8);
+    check("navbar left intact", (await page.locator("#site-nav").count()) === 1);
+    check("nav links not clicked (still on navbar page)",
+      (await page.evaluate(() => location.pathname)).endsWith("navbar.html"));
+
+    /* ---- T9: positional selector never hides/removes first-party content ---- */
+    console.log("\nT9 · positional-selector safety");
+    await page.goto(`${BASE}/positional.html`);
+    await page.locator("#app-content").waitFor({ timeout: 5000 });
+    await page.waitForFunction(() => !!document.querySelector("body > div:nth-of-type(2)"), null, { timeout: 5000 })
+      .catch(() => {});
+    const r9 = await deployVia(sw, `${BASE}/positional.html`, "splitsu");
+    check("positional-banner deploy ok", r9?.ok === true, r9);
+    const posStore = await readStore(sw);
+    const posRec = Object.values(posStore.fingerprints).find((f) => f.host === "127.0.0.1" && f.origin.includes("127.0.0.1") && f.type === "newsletter" && f.signature.selector.includes(":nth-of-type("));
+    check("banner learned with a positional selector (forces the hazard path)", !!posRec, posRec?.signature?.selector);
+
+    await page.reload(); // visit 2 — a leading sibling shifts DOM order
+    check("first-party #app-content still present after revisit",
+      await until(async () => (await page.locator("#app-content").count()) === 1, 3000));
+    check("first-party #app-content still visible (not cloaked by positional sel)",
+      await page.evaluate(() => {
+        const el = document.getElementById("app-content");
+        return !!el && getComputedStyle(el).display !== "none";
+      }));
+    check("no cloak rule targets a positional selector",
+      await page.evaluate(() => {
+        const s = document.querySelector("style[data-bananers-cloak]");
+        return !s || !s.textContent.includes(":nth-of-type(");
+      }));
+    check("drifted banner still suppressed via verified/fuzzy path",
+      await until(async () => {
+        const shown = await page.evaluate(() => {
+          const veils = [...document.querySelectorAll("div")].filter((d) => {
+            const cs = getComputedStyle(d);
+            return cs.position === "fixed" && cs.display !== "none" && d.offsetWidth > 300 && d.offsetHeight > 200;
+          });
+          return veils.length;
+        });
+        return shown === 0;
+      }, 6000));
 
     /* ---- T6: extension pages render ---- */
     console.log("\nT6 · popup + Learn dashboard smoke");

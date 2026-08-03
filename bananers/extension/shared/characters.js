@@ -16,8 +16,8 @@
       investigation: "structural",
       investigationLabel: "Reads the DOM like a case file — ids, roles, aria attributes, suspicious markup.",
       technique: "lockpick",
-      techniqueLabel: "Picks the lock: finds the popup's own legitimate dismiss control and clicks it.",
-      strategyKind: "click-dismiss",
+      techniqueLabel: "Picks the lock: identifies the popup's own single best dismiss control and clicks precisely that one.",
+      strategyKind: "click-precise",
       accent: "#c9a227",
     },
     {

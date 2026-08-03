@@ -78,10 +78,13 @@
     try {
       const pattern = `${new URL(tab.url).protocol}//${new URL(tab.url).hostname}/*`;
 
-      if ($("#remember").checked && !siteState.granted) {
+      // Persistent access enables preemptive suppression on later visits.
+      // Without it the deploy is a one-shot under activeTab and the learned
+      // record can't be replayed — the result message must not promise recall.
+      let persistent = siteState.granted;
+      if (!persistent && $("#remember").checked) {
         // Must run in the popup to keep the user gesture.
-        const ok = await chrome.permissions.request({ origins: [pattern] });
-        if (!ok) showResult("No persistent access granted — deploying just this once.", false);
+        persistent = await chrome.permissions.request({ origins: [pattern] });
       }
 
       await chrome.runtime.sendMessage({ type: MSG.GRANT_AND_DEPLOY, tabId: tab.id });
@@ -98,7 +101,10 @@
 
       if (res?.ok) {
         const label = TYPE_LABELS[res.type] || res.type;
-        showResult(`${B.characters.byId(res.bananer).name} took down a ${label} popup (${res.kind}). It won't bother you here again.`);
+        const name = B.characters.byId(res.bananer).name;
+        showResult(persistent
+          ? `${name} took down a ${label} popup (${res.kind}). It won't bother you here again.`
+          : `${name} took down a ${label} popup (${res.kind}) — just this once. Tick “Remember this site” to have it handled automatically next time.`);
       } else if (res?.error === "no-popups-found") {
         showResult("No popups found on this page right now — the bananer stood down.", false);
       } else {
@@ -109,6 +115,8 @@
         type: MSG.GET_SITE_STATE, url: tab.url, tabId: tab.id,
       });
       renderStatus();
+    } catch (err) {
+      showResult(`Deploy failed (${err?.message || err}).`, true);
     } finally {
       btn.disabled = false;
       btn.textContent = "Deploy bananer";
@@ -133,18 +141,25 @@
     });
     renderStatus();
 
-    // If the content script is live, ask it what's on the page to suggest a
-    // matching bananer for the top candidate.
+    // Render the roster and enable deploy immediately — the scan-based
+    // suggestion is a best-effort enhancement layered on after.
+    renderRoster();
+    $("#deploy").disabled = false;
+
+    // If the content script is live, ask what's on the page to suggest a
+    // matching bananer. Time-boxed: its handler awaits DOMContentLoaded, which
+    // can be slow on a still-loading page, and must not block the UI.
     try {
-      const scan = await chrome.tabs.sendMessage(tab.id, { type: MSG.SCAN });
+      const scan = await Promise.race([
+        chrome.tabs.sendMessage(tab.id, { type: MSG.SCAN }),
+        new Promise((r) => setTimeout(() => r(null), 1200)),
+      ]);
       if (scan?.ok && scan.candidates.length && st.settings.suggestBananer) {
         suggestedId = B.characters.suggestFor(scan.candidates[0].type);
         selectedId = suggestedId;
+        renderRoster();
       }
     } catch { /* content not injected yet — fine */ }
-
-    renderRoster();
-    $("#deploy").disabled = false;
   }
 
   $("#deploy").addEventListener("click", deploy);

@@ -159,13 +159,23 @@ Two layers with distinct jobs:
 1. **Cloak (perception):** the injected stylesheet guarantees that any DOM
    matching a learned kill-selector *renders as nothing*, no matter when it
    arrives. This is what makes suppression pre-paint rather than
-   flash-and-close.
+   flash-and-close. **Only *stable* selectors** (identity-anchored: id, class,
+   data-attribute, role) are ever cloaked; positional `nth-of-type` fallbacks
+   are never pre-paint-hidden, because a later DOM-order change could point
+   them at unrelated first-party content. Positional selectors are still used
+   post-insertion, but only after verification (below).
 2. **Close (semantics):** recognition via the MutationObserver replays the
    real strategy — e.g. actually clicking the site's own "Reject all" so the
-   site registers refusal and stops re-serving the banner. While cloaked, the
-   element computes `display:none`, so the recall path verifies *removal from
-   the DOM* rather than invisibility (a subtle correctness point the e2e
-   suite pins down).
+   site registers refusal and stops re-serving the banner. **Every match is
+   re-verified** against the stored fingerprint (tokenize + similarity) before
+   any destructive action, and fuzzy matching runs *only* on popup-like
+   elements — so a structurally-similar SPA wrapper is never removed by a
+   `slice-remove` strategy. On a drift match the element is hidden immediately,
+   before the strategy runs, so recognition never degrades to a visible
+   flash-and-close. While cloaked, a click target computes `display:none`, so
+   click/Escape recall verifies *removal from the DOM* rather than invisibility;
+   the stored control is activated at most once across the retry loop (so a
+   consent API call is never fired repeatedly).
 
 **Honest boundary.** The storage read is asynchronous; for banners present in
 the initial server HTML there is a theoretical race with the very first
@@ -191,11 +201,18 @@ heuristic). Bare full-screen veils with no text/controls are classified as
 Clickables inside the popup are labeled (aria-label > text > value) and
 classified: `reject` (preferred, ordered by the REJECT_WORDS list) > `close`
 (glyphs, close/dismiss semantics, small-top-right-corner geometry) >
-`neutral` > `accept`. **Accept/opt-in controls are excluded from every
-strategy** while `settings.safety.neverAccept` is on (default; surfaced in
-the dashboard as a fixed principle). `realClick()` re-checks the label as a
-second line of defense. The e2e suite asserts the site recorded *rejected*
-consent.
+`neutral` > `accept`. The accept guard is **fail-closed**: *any* accept word
+in a control's accessible name marks it `accept`, and a control bearing *both*
+accept and reject phrasing is treated as ambiguous — neither is ever clicked.
+Under `neverAccept` (default), click strategies only ever activate
+*positively identified* `reject`/`close` controls; unrecognized `neutral`
+controls — including localized labels the word lists don't cover (e.g. German
+`Alle akzeptieren`/`Alle ablehnen`) — are never clicked and fall through to
+containment (slice/css-kill). This closes the hole where DOM order could
+otherwise decide that an unrecognized Accept button gets clicked first.
+`realClick()` re-checks the label as a final line of defense. The e2e suite
+asserts the site recorded *rejected* consent on English banners and that
+*neither* control is clicked on a localized one.
 
 ### 6.3 Fallback chains
 Every deploy ends popup-free (utility first): each character leads with its
@@ -287,14 +304,52 @@ a forward-looking note.
   degrades gracefully: with no probe reply, Glitch falls back to inline
   handlers + Escape protocol.
 
+## 11a. Post-review hardening
+
+After the initial implementation an adversarial multi-agent review and an
+independent automated reviewer converged on the same defect classes; all were
+fixed and are now regression-tested:
+
+- **Positional-selector safety (critical).** Positional `nth-of-type`
+  selectors are excluded from the pre-paint cloak, and every selector match is
+  verified against the fingerprint before any destructive action; fuzzy
+  matching is restricted to popup-like elements (§5). Prevents hiding/removing
+  first-party content on later visits.
+- **Fail-closed accept guard + neutral-not-clicked (§6.2).**
+- **Storage lost updates.** `patch()` writes back only the top-level keys a
+  mutation touched, so a settings write can't clobber a fingerprint write from
+  another context (§4.2).
+- **Service-worker robustness.** Registration is single-flight (no
+  duplicate-ID race between `permissions.onAdded` and `GRANT_AND_DEPLOY`), the
+  first deploy injects even if registration sync fails, and per-tab report
+  state lives in `chrome.storage.session` (survives SW termination), cleared on
+  navigation.
+- **Distinct techniques.** Peel Noir uses a precise single-control click
+  (`click-precise`); Bruce uses the exhaustive ranked loop (`click-dismiss`) —
+  no two characters share a closing implementation (spec §3).
+- **Navbar false-positive.** Full-width bars are only treated as banners with
+  positive evidence (recognized type, reject/close affordance, or CMP token)
+  and never when they are link-heavy nav strips.
+- **Scroll restore / revoke teardown.** A released scroll lock restores the
+  site's prior inline value rather than forcing `overflow:visible` forever;
+  revoking an origin messages open tabs to disconnect observers and remove
+  cloak styles.
+- **In-memory recall freshness.** A freshly learned record is merged into the
+  live suppression snapshot so an SPA re-insertion recalls it instead of
+  re-learning.
+
 ## 11. Test strategy
 
 `test/run-tests.mjs` runs the real extension in headless Chromium (Playwright
-`channel: 'chromium'`) against three synthetic banner pages, asserting the
-spec's behavioral contract end-to-end: learn/dismiss per character strategy,
-never-accept (the page records *rejected* consent), pre-paint cloak presence
-+ not-visible-at-insertion on revisit, silent strategy replay, one-time
-micro-prompt semantics, per-type opt-in round-trip, css-kill + scroll unlock,
-and dashboard/popup rendering. The production manifest stays permissionless;
-the harness bakes the post-opt-in state (static `127.0.0.1` grant) into a
-scratch copy, since native permission prompts aren't drivable in tests.
+`channel: 'chromium'`) against six synthetic banner pages (49 assertions),
+covering the spec's behavioral contract end-to-end: learn/dismiss per character
+strategy, never-accept (the page records *rejected* consent), pre-paint cloak
+presence + not-visible-at-insertion on revisit, silent strategy replay,
+one-time micro-prompt semantics, per-type opt-in round-trip, css-kill + scroll
+unlock, and dashboard/popup rendering — plus the post-review hardening (§11a):
+localized-label safety (neither Accept nor Reject clicked), sticky-navbar
+non-detection, and positional-selector safety (first-party content stays
+visible and un-removed across a DOM-order shift while the drifted banner is
+still suppressed). The production manifest stays permissionless; the harness
+bakes the post-opt-in state (static `127.0.0.1` grant) into a scratch copy,
+since native permission prompts aren't drivable in tests.

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Test: sticky navbar (not a popup)</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    #site-nav {
+      position: sticky; top: 0; z-index: 500; height: 64px; width: 100%;
+      background: #123; color: #fff; display: flex; align-items: center; gap: 20px;
+      padding: 0 24px;
+    }
+    #site-nav a { color: #fff; text-decoration: none; }
+    main { padding: 40px; }
+  </style>
+</head>
+<body>
+  <nav id="site-nav">
+    <a href="/home">Home</a>
+    <a href="/products">Products</a>
+    <a href="/pricing">Pricing</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+  </nav>
+  <main>
+    <h1>A normal page with a sticky header</h1>
+    <p>There is no popup here. The bananer should stand down, not shred the nav.</p>
+  </main>
+</body>
+</html>

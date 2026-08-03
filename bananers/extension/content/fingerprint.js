@@ -98,9 +98,18 @@
     catch { return null; }
   }
 
+  // A selector is "stable" if it is anchored to identity (id/class/data/role),
+  // not to sibling position. Only stable selectors are trusted on the
+  // pre-paint path (cloak) or as the sole basis for recall; positional
+  // fallbacks must be re-verified against the fingerprint once the element
+  // exists. See suppress.js / dismiss.js.
+  function isStableSelector(sel) {
+    return !!sel && !sel.includes(":nth-of-type(");
+  }
+
   /* Best-effort stable, unique selector for an element. */
   function bestSelector(el, doc = document) {
-    if (el.id && stableToken(el.id) !== null || (el.id && !/\d{3,}/.test(el.id) && el.id.length <= 40)) {
+    if (el.id && stableToken(el.id) !== null && el.id.length <= 40) {
       const s = uniqueIn(doc, `#${cssEscape(el.id)}`);
       if (s) return s;
     }
@@ -157,5 +166,5 @@
     return best;
   }
 
-  B.fingerprint = { tokenize, hashTokens, bestSelector, jaccard, match, stableToken };
+  B.fingerprint = { tokenize, hashTokens, bestSelector, isStableSelector, jaccard, match, stableToken };
 })();
