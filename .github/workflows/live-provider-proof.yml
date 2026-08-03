@@ -4,14 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: GitHub Models model identifier
+        # Bare Gemini model id; the adapter applies the `models/` prefix that
+        # Gemini's catalog requires.
+        description: Gemini model identifier
         required: true
-        default: openai/gpt-4.1
+        default: gemini-flash-latest
         type: string
 
 permissions:
   contents: read
-  models: read
 
 concurrency:
   group: live-provider-celery-proof
@@ -63,7 +64,7 @@ jobs:
         run: .venv/bin/alembic upgrade head
       - name: Run one live provider task through Celery and Redis
         env:
-          GITHUB_MODELS_TOKEN: ${{ secrets.A3_MODELS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           LIVE_PROVIDER_SMOKE: "1"
           LIVE_PROVIDER_MODEL: ${{ inputs.model }}
           LIVE_PROVIDER_EVIDENCE_PATH: ${{ github.workspace }}/live-provider-proof.json
