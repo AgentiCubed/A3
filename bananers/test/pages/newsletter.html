@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Test: newsletter interstitial</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 40px; }
+    #nl-overlay {
+      position: fixed; inset: 0; z-index: 5000; background: rgba(10,10,40,.6);
+    }
+    #nl-modal {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      z-index: 5001; background: #fff; border-radius: 14px; padding: 30px;
+      width: 400px; text-align: center;
+    }
+    #nl-close {
+      position: absolute; top: 10px; right: 12px; border: 0; background: none;
+      font-size: 20px; cursor: pointer;
+    }
+    #nl-modal input { width: 90%; padding: 10px; margin: 12px 0; }
+    #nl-modal .subscribe { background: #16a34a; color: #fff; border: 0; padding: 10px 22px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <h1>A recipe blog</h1>
+  <p>The recipe you came for is below the fold, as tradition demands.</p>
+
+  <script>
+    window.__subscribed = false;
+    window.__nlClosed = false;
+
+    setTimeout(() => {
+      const ov = document.createElement('div');
+      ov.id = 'nl-overlay';
+      const modal = document.createElement('div');
+      modal.id = 'nl-modal';
+      modal.innerHTML = `
+        <button id="nl-close" aria-label="Close">×</button>
+        <h2>Don't miss a single recipe!</h2>
+        <p>Join our newsletter and get weekly inspiration in your inbox.</p>
+        <input type="email" placeholder="Email address" />
+        <button class="subscribe">Subscribe</button>`;
+      document.body.append(ov, modal);
+
+      modal.querySelector('#nl-close').addEventListener('click', () => {
+        window.__nlClosed = true;
+        ov.remove(); modal.remove();
+      });
+      modal.querySelector('.subscribe').addEventListener('click', () => {
+        window.__subscribed = true;
+        ov.remove(); modal.remove();
+      });
+    }, 250);
+  </script>
+</body>
+</html>

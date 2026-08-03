@@ -1,0 +1,66 @@
+:root {
+  --bg: #171b24;
+  --panel: #1f2430;
+  --ink: #f4f1e8;
+  --muted: #9aa1b3;
+  --accent: #f7d154;
+  --accent-deep: #c9a227;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+body {
+  width: 340px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13.5px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding: 14px;
+}
+
+header { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.logo { font-size: 26px; }
+h1 { font-size: 17px; letter-spacing: .3px; }
+h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 8px; }
+.muted { color: var(--muted); font-size: 12px; }
+
+.card {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+#status { display: flex; gap: 14px; }
+#status .stat b { display: block; font-size: 17px; color: var(--accent); }
+#status .stat span { font-size: 11px; color: var(--muted); }
+
+.roster { display: flex; gap: 8px; justify-content: space-between; }
+.chip {
+  width: 54px; height: 54px; border-radius: 12px; border: 2px solid transparent;
+  background: #2a3040; cursor: pointer; padding: 4px; position: relative;
+}
+.chip svg { width: 100%; height: 100%; }
+.chip[aria-checked="true"] { border-color: var(--accent); background: #343c52; }
+.chip .suggest {
+  position: absolute; top: -7px; right: -7px; background: var(--accent);
+  color: #221c05; font-size: 9px; font-weight: 700; border-radius: 8px;
+  padding: 1px 5px;
+}
+.blurb { margin-top: 8px; min-height: 30px; }
+
+.remember { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.remember input { margin-top: 2px; accent-color: var(--accent-deep); }
+
+.deploy {
+  width: 100%; padding: 11px; border: 0; border-radius: 10px;
+  background: var(--accent); color: #221c05; font-size: 14.5px; font-weight: 700;
+  cursor: pointer; transition: filter .15s ease;
+}
+.deploy:hover:not(:disabled) { filter: brightness(1.08); }
+.deploy:disabled { background: #3a4152; color: #767d90; cursor: default; }
+
+.result { margin-top: 10px; font-size: 12.5px; padding: 8px 10px; border-radius: 8px; background: #22301f; color: #a8e79a; }
+.result.err { background: #332222; color: #e7a8a8; }
+
+footer { margin-top: 12px; text-align: center; }
+footer a { color: var(--accent); text-decoration: none; font-size: 12.5px; }

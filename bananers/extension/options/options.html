@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Bananers — Learn</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <aside>
+    <div class="brand"><span>🍌</span> Bananers <em>Learn</em></div>
+    <nav>
+      <a href="#roster" data-view="roster">Roster</a>
+      <a href="#memory" data-view="memory">Memory</a>
+      <a href="#replays" data-view="replays">Replays</a>
+      <a href="#settings" data-view="settings">Settings</a>
+      <a href="#onboarding" data-view="onboarding">How it works</a>
+    </nav>
+  </aside>
+
+  <main>
+    <section id="view-roster" class="view">
+      <h1>The roster</h1>
+      <p class="lede">Five companions. Same mission, five very different methods.</p>
+      <div id="roster-cards" class="cards"></div>
+    </section>
+
+    <section id="view-memory" class="view">
+      <h1>Banner memory</h1>
+      <p class="lede">Everything your bananers have learned, per site. Forgetting is always one click.</p>
+      <div class="panel">
+        <h2>Per-type behavior</h2>
+        <p class="muted">Default is to close learned popups before you ever see them. Opt in per type if you enjoy the show — this is the persistent control behind the one-time prompt.</p>
+        <div id="type-toggles" class="toggles"></div>
+      </div>
+      <div id="memory-list"></div>
+    </section>
+
+    <section id="view-replays" class="view">
+      <h1>Replays</h1>
+      <p class="lede">Recent takedowns, and how each popup came apart.</p>
+      <div class="split">
+        <div id="event-list" class="events"></div>
+        <div id="replay-stage" class="panel replay">
+          <p class="muted">Select a deployment to replay the investigation.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view">
+      <h1>Settings</h1>
+      <div class="panel">
+        <h2>Behavior</h2>
+        <label class="row">Default bananer
+          <select id="default-bananer"></select>
+        </label>
+        <label class="row">Suggest a bananer per popup type
+          <input type="checkbox" id="suggest-toggle" />
+        </label>
+        <label class="row">Motion
+          <select id="motion-select">
+            <option value="auto">Follow system preference</option>
+            <option value="reduce">Always reduce motion</option>
+          </select>
+        </label>
+        <p class="principle">🛡 Bananers never click “Accept”, “Agree”, or any opt-in control. They only reject, close, or contain.</p>
+      </div>
+      <div class="panel">
+        <h2>Site access</h2>
+        <p class="muted">Bananers only run on sites you explicitly allowed from the toolbar popup.</p>
+        <ul id="grant-list" class="grants"></ul>
+      </div>
+      <div class="panel danger">
+        <h2>Danger zone</h2>
+        <button id="wipe" class="btn warn">Forget everything</button>
+        <span class="muted">Clears all learned fingerprints, strategies, and the activity log.</span>
+      </div>
+    </section>
+
+    <section id="view-onboarding" class="view">
+      <h1>How Bananers works</h1>
+      <div class="panel">
+        <h2>What it does</h2>
+        <p>Deploy a bananer on a page with an annoying popup — a cookie consent modal, a newsletter interstitial, an ad takeover. The bananer investigates it in character (its structure, styles, and event listeners), dismisses it, and <b>remembers how</b>. Next time that banner appears, it's closed before you ever see it.</p>
+      </div>
+      <div class="panel">
+        <h2>Site access — the honest version</h2>
+        <p>Bananers requests <b>no site access at install time</b>. Access is granted per site, by you, when you first deploy there — that's the "Remember this site" checkbox in the popup. You can revoke any site in Settings at any time. Without a grant, nothing runs on a page.</p>
+      </div>
+      <div class="panel">
+        <h2>What it never does</h2>
+        <ul>
+          <li>Never clicks Accept/Agree — dismissals reject, close, or contain. Your consent is never given for you.</li>
+          <li>Never touches this product's own UI — third-party site popups only.</li>
+          <li>Never sends your data anywhere — all learning lives in local extension storage on this device.</li>
+          <li>Never tries to defeat anti-adblock or anti-automation defenses — popups it can't fairly reach are contained visually instead.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>On the horizon</h2>
+        <p class="muted">A future orchestration layer (working name: <b>Banana God</b>) may one day decide case-by-case which popups to show, suppress, or hand to a bananer — weighing privacy, security, and your quirks across every tab. It is not part of this version; today's simple rules are documented in the design notes, and the decision hook it will plug into already exists.</p>
+      </div>
+      <button id="onboard-done" class="btn">Got it — let's go 🍌</button>
+    </section>
+  </main>
+
+  <script src="../shared/constants.js"></script>
+  <script src="../shared/characters.js"></script>
+  <script src="../shared/storage.js"></script>
+  <script src="../shared/policy.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
