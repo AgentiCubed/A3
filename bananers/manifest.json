@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Bananers",
+  "version": "0.1.0",
+  "description": "Deploy a bananer to learn a popup inside and out — then never see that popup again. Unless you enjoy the show.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_title": "Bananers"
+  },
+  "options_page": "src/dashboard/dashboard.html",
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content/preempt.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/*"],
+      "matches": ["http://*/*", "https://*/*"]
+    }
+  ]
+}
