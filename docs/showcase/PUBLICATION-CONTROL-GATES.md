@@ -258,6 +258,18 @@ cd "$A3_STAGE_DIR"
 
 ## Gate 6 — Private GitHub preflight
 
+> **GATE 6 PASSED — real run, 2026-08-02.** `AgentiCubed/agenticubed-showcase`
+> created empty and private, pushed from the Gate 5 staging commit
+> (`03ea8259aaaffd7ef0555cad9e48ef05c8d2b02e`) over HTTPS (SSH was not
+> configured on the operator's machine). Rendered view confirmed by James: all
+> six Mermaid diagrams draw correctly, internal links resolve. Description and
+> topics set. Issues enabled; Wiki and Projects disabled. Actions disabled.
+> `AgentiCubed/A3` reconfirmed **Private** by direct inspection.
+>
+> **Noted, not blocking:** `AgentiCubed/A3` shows as "Private template" — the
+> Template repository setting is on. Unrelated to this publication; flagged for
+> James to review separately at Settings → General → Template repository.
+
 - [ ] `PUBLICATION-CHECKLIST.md` **R1–R5** complete.
 - [ ] **Note on R5.** The tree ships `.github/ISSUE_TEMPLATE/` (two issue forms).
       Issue templates are not workflows — R5's "the repo ships no workflows" is
@@ -304,8 +316,8 @@ Publication is prohibited until every field is complete.
 | JSON validation result | 2/2 parse, both carry `FABRICATED` |
 | Link validation result | 51/51 relative links + anchors resolve |
 | Human-review result | `PENDING` — Gate 4 passes A–D still to be signed off by James |
-| `AgentiCubed/A3` visibility verified | `PENDING` — reconfirm at Gate 6 |
-| Showcase private-preflight verified | `PENDING` — Gate 6 not yet run |
+| `AgentiCubed/A3` visibility verified | Yes — confirmed **Private** by James, 2026-08-02, github.com |
+| Showcase private-preflight verified | Yes — Gate 6 complete, 2026-08-02 |
 | Licensing decision approved | Yes — D4, MIT + CC BY 4.0 |
 | Contact destinations approved | Yes — D5, LinkedIn + X live; email withheld by design |
 | QR destination approved | `PENDING` — D9, generated only after Gate 9 |
