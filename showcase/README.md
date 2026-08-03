@@ -1,23 +1,21 @@
 # AgentiCubed
 
-**An agentic operating layer for work that spans systems you do not control.**
+AgentiCubed (also written **Agentic³** or **A³**) is a governed orchestration
+platform for agentic work: plan, approve, execute, evaluate, remediate, close.
+The direction is a platform-neutral layer above fragmented networks — X,
+Threads, Bluesky, Mastodon, LinkedIn, Reddit, YouTube, whatever replaces them —
+so identity, policy, approvals, memory, and audit get built once instead of
+rebuilt per platform. What ships today is the governance substrate that
+direction depends on.
 
-AgentiCubed (also written **Agentic³** or **A³**) is a platform-neutral operating
-layer that sits *above* fragmented networks and services. Instead of one more
-integration that logs into one more account, it treats identity, content,
-monitoring, agent workflows, approvals, memory, and cross-platform intelligence
-as first-class primitives — coordinated once, then projected onto whichever
-services happen to exist that year: X, Threads, Bluesky, Mastodon, LinkedIn,
-Reddit, YouTube, and whatever replaces them.
-
-> **Status, before anything else.** AgentiCubed is building a governed
-> social-operations layer. This public repository presents the architecture and
-> reasoning behind its governed execution model; **it does not currently connect
-> to social platforms.** The long-term thesis is an agentic social operating
-> system spanning fragmented networks. The present capability is the governed
-> orchestration substrate needed to plan, approve, execute, evaluate, remediate,
-> and close agentic work safely — and that substrate lives in a private
-> repository, not this one.
+> **Status, before anything else.** This is an MVP, and it changes daily — read
+> the [status table](#current-status) as accurate today, not as a fixed claim.
+> The governed loop (plan, approve, execute, evaluate, remediate, close) runs
+> now, against live model providers, in a private repository. The
+> social-platform layer described above is the direction this is heading, not a
+> shipped feature — **there is no connection to any social platform yet.** This
+> public repository documents the architecture and the reasoning behind it; it
+> is not the implementation.
 
 This repository is a **public architecture showcase**. It explains the problem,
 the thesis, the architecture, and the governance model. It contains prose,
@@ -69,10 +67,11 @@ Each platform assumes it is the top of the stack. None of them is.
 
 ## Product thesis
 
-> Platforms are peripherals. The operating layer belongs above them.
-
-AgentiCubed's bet is that the durable value is not in any one network integration
-but in the layer that makes networks interchangeable:
+Platforms are peripherals, not the foundation. Wire an agent straight into a
+network's API and identity, policy, approvals, memory, and audit all get rebuilt
+per platform — and all die together the day that platform changes its API or its
+mind. Put a platform-neutral layer above the networks instead, and the networks
+become the interchangeable part:
 
 | Primitive | What the operating layer owns |
 |-----------|-------------------------------|
@@ -85,16 +84,13 @@ but in the layer that makes networks interchangeable:
 | **Audit** | An append-only record of what was decided, by whom, on what evidence. |
 | **Adapters** | Platforms are pluggable at the edge. Adding one is configuration; losing one is survivable. |
 
-The second bet is more specific and more contrarian:
-
-> **Governance is the feature, not the friction.**
-
-Anyone can wire a model to an API. What is hard — and what determines whether an
-agentic system can be trusted with an account, a brand, or a budget — is the
-substrate underneath: approval gates that actually block, evaluators that cannot
-grade their own work, credentials that are never in a prompt, and a history that
-cannot be quietly rewritten. AgentiCubed is built governance-first and grows
-outward to surfaces, not the other way around.
+The harder claim: governance is the feature, not the tax you pay before the real
+work starts. Anyone can wire a model to an API in an afternoon. What actually
+decides whether an agentic system can be trusted with an account, a brand, or a
+budget is the substrate underneath it — approval gates that actually block,
+evaluators that cannot grade their own work, credentials that never touch a
+prompt, and a history nobody can quietly rewrite. That gets built first.
+Surfaces come after.
 
 ---
 
@@ -314,7 +310,9 @@ whether it succeeded or not.
 
 ## Current status
 
-Honest labels. Nothing below is aspirational unless it says so.
+Honest labels. Nothing below is aspirational unless it says so. This table
+changes as the MVP does — expect it to move, and if you're reading this weeks
+after a commit date, assume it has.
 
 Read the **Evidence** column first. `Working` means it runs in the private
 implementation and is covered by tests I have run — it does **not** mean you can

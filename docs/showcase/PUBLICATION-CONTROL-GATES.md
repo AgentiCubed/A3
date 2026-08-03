@@ -123,23 +123,46 @@ follows if the repository ever ships runnable code:
 
 ## Gate 4 — Independent human read-through
 
-- [ ] `PUBLICATION-CHECKLIST.md` section **C** complete (C1–C6).
+- [x] `PUBLICATION-CHECKLIST.md` section **C** complete (C1–C6).
 
 Read every public file end to end, in separate passes. Do not combine them.
 
-- [ ] **Pass A — skeptical technical reviewer.** Can a reader tell exactly what is
+- [x] **Pass A — skeptical technical reviewer.** Can a reader tell exactly what is
       implemented, private, synthetic, designed, and planned? Is every `Working`
       status supported?
-- [ ] **Pass B — security and privacy reviewer.** Does any combination of
+- [x] **Pass B — security and privacy reviewer.** Does any combination of
       individually harmless details reveal a protected architecture, provider
       relationship, or identifier? Are synthetic examples unmistakably synthetic?
-- [ ] **Pass C — IP and licensing reviewer.** Would the owner knowingly grant
+- [x] **Pass C — IP and licensing reviewer.** Would the owner knowingly grant
       every reuse right stated in the license map? Are trademarks excluded?
-- [ ] **Pass D — target reader.** Can an AI4 contact understand the project and
+- [x] **Pass D — target reader.** Can an AI4 contact understand the project and
       its real status in under sixty seconds? Do the contact links work? Is it
       credible on mobile?
 
-**Reviewer:** `PENDING` **Date:** `PENDING` **Result:** `PENDING`
+**Reviewer:** James Richmond (owner) **Date:** 2026-08-03 **Result:** **PASS** — all four passes
+
+> **Gate 4 record.** Conducted against the rendered private preflight repository
+> at the approved commit (`03ea8259`), not the source tree — the reviewed bytes
+> are the publishable bytes.
+>
+> - **Pass A.** Every `Working` row in the status table was mapped to named
+>   private tests. One evidence gap was found and repaired rather than waved
+>   through: the "run against live model providers" claim had gone stale when
+>   GitHub Models was retired (2026-07-30; nightly smoke red from 07-31).
+>   PR #121 migrated both live workflows to the `gemini` adapter, and run
+>   30783401657→30785033200 (2026-08-03) passed with the test **executed, not
+>   skipped** — verified by reading the pytest summary, not the check badge.
+> - **Pass B.** Full read of README, security-boundaries, provenance,
+>   architecture, and both demo fixtures with the cross-document-leak question
+>   held throughout. No findings. C6 re-checked against `provenance.md`
+>   specifically: no second provider, no fallback ordering, no routing logic.
+> - **Pass C.** Owner affirmed the CC BY 4.0 grant on prose and MIT on
+>   `demo/` + `assets/`, including commercial adaptation with attribution;
+>   trademark-exclusion sentence verified present; license-map paths verified
+>   against the actual tree.
+> - **Pass D.** Sixty-second mobile read passed — what it is, what works today,
+>   and how to reach the owner were all answerable from memory. Every contact
+>   link was opened by hand and confirmed to land on the intended profile.
 
 ## Gate 5 — Clean one-use local staging repository
 
@@ -258,6 +281,18 @@ cd "$A3_STAGE_DIR"
 
 ## Gate 6 — Private GitHub preflight
 
+> **GATE 6 PASSED — real run, 2026-08-02.** `AgentiCubed/agenticubed-showcase`
+> created empty and private, pushed from the Gate 5 staging commit
+> (`03ea8259aaaffd7ef0555cad9e48ef05c8d2b02e`) over HTTPS (SSH was not
+> configured on the operator's machine). Rendered view confirmed by James: all
+> six Mermaid diagrams draw correctly, internal links resolve. Description and
+> topics set. Issues enabled; Wiki and Projects disabled. Actions disabled.
+> `AgentiCubed/A3` reconfirmed **Private** by direct inspection.
+>
+> **Noted, not blocking:** `AgentiCubed/A3` shows as "Private template" — the
+> Template repository setting is on. Unrelated to this publication; flagged for
+> James to review separately at Settings → General → Template repository.
+
 - [ ] `PUBLICATION-CHECKLIST.md` **R1–R5** complete.
 - [ ] **Note on R5.** The tree ships `.github/ISSUE_TEMPLATE/` (two issue forms).
       Issue templates are not workflows — R5's "the repo ships no workflows" is
@@ -303,16 +338,18 @@ Publication is prohibited until every field is complete.
 | Gitleaks git-history result | 0 findings (1 commit scanned) |
 | JSON validation result | 2/2 parse, both carry `FABRICATED` |
 | Link validation result | 51/51 relative links + anchors resolve |
-| Human-review result | `PENDING` — Gate 4 passes A–D still to be signed off by James |
-| `AgentiCubed/A3` visibility verified | `PENDING` — reconfirm at Gate 6 |
-| Showcase private-preflight verified | `PENDING` — Gate 6 not yet run |
+| Human-review result | **PASS** — Gate 4 passes A–D completed 2026-08-03 by James Richmond; record above |
+| `AgentiCubed/A3` visibility verified | Yes — confirmed **Private** by James, 2026-08-02, github.com |
+| Showcase private-preflight verified | Yes — Gate 6 complete, 2026-08-02 |
 | Licensing decision approved | Yes — D4, MIT + CC BY 4.0 |
 | Contact destinations approved | Yes — D5, LinkedIn + X live; email withheld by design |
 | QR destination approved | `PENDING` — D9, generated only after Gate 9 |
-| Unresolved exceptions | must be `NONE` |
+| Unresolved exceptions | `NONE` — X-01 through X-07 all carry owner sign-off as of 2026-08-03 |
 
-- [ ] Every Gate 0–6 box complete.
-- [ ] James Richmond has personally reviewed the final rendering and file tree.
+- [x] Every Gate 0–6 box complete (Gates 0–3 per the release record and exception
+      log; Gate 4 per its record above; Gates 5–6 per their real-run records).
+- [x] James Richmond has personally reviewed the final rendering and file tree
+      (Gate 6 rendered-view check, 2026-08-02; Pass D mobile re-read, 2026-08-03).
 
 **Release authorization:** `NOT AUTHORIZED`
 **Authorized by:** `PENDING`
@@ -457,6 +494,7 @@ unless asked otherwise.
 | D7 | AI attribution | Disclosure kept; no vendor named | James Richmond | 2026-08-02 |
 | D8 | Naming GitHub | Stands, with primary sources linked | James Richmond | 2026-08-02 |
 | D9 | QR destination | README; generated only after name and owner lock | James Richmond | 2026-08-02 |
+| D10 | Post-staging README divergence | A voice rewrite of `showcase/README.md` landed in source *after* the Gate 5 staging commit. Release the reviewed bytes (`03ea8259`) unchanged; the rewrite ships as the first post-release revision after a delta review. Same facts, same claims — tonal only, verified by diff. | James Richmond | 2026-08-03 |
 
 ## Exception log
 
@@ -465,12 +503,13 @@ scans have run.
 
 | ID | File and line | Finding | Why acceptable | Approved by | Date |
 |---|---|---|---|---|---|
-| X-01 | `showcase/**` (12 sites) | B2 matches on `secret` / `token` / `api key` | All conceptual prose, `_absent_by_design` entries, or `.gitignore` patterns. No values. | *(pending owner sign-off)* | 2026-08-02 |
-| X-02 | `showcase/docs/provenance.md` | Names GitHub and one retired provider dependency | Deliberate per D8; anchored to GitHub's own changelog. C6 re-run and passed: no other provider, no fallback ordering, no routing logic. | *(pending owner sign-off)* | 2026-08-02 |
-| X-03 | `README.md:10`, `README.md:82`, `security-boundaries.md:105`, `security-boundaries.md:125` | Placeholder sweep matches `TODO` / `PENDING` | Substring false positives: "Mas**todo**n", and the ordinary English "blocked **pending** a decision" / "de**pending** on". Verified with `grep -o`. | *(pending owner sign-off)* | 2026-08-02 |
-| X-04 | `showcase/demo/mock-platform-events.json` | Domain `example.invalid` | RFC 2606 reserved TLD — guaranteed never resolvable. Deliberately chosen over `example.com` so a fabricated federated handle can never be mistaken for a real one. | *(pending owner sign-off)* | 2026-08-02 |
+| X-01 | `showcase/**` (12 sites) | B2 matches on `secret` / `token` / `api key` | All conceptual prose, `_absent_by_design` entries, or `.gitignore` patterns. No values. | James Richmond | 2026-08-03 |
+| X-02 | `showcase/docs/provenance.md` | Names GitHub and one retired provider dependency | Deliberate per D8; anchored to GitHub's own changelog. C6 re-run and passed: no other provider, no fallback ordering, no routing logic. | James Richmond | 2026-08-03 |
+| X-03 | `README.md:10`, `README.md:82`, `security-boundaries.md:105`, `security-boundaries.md:125` | Placeholder sweep matches `TODO` / `PENDING` | Substring false positives: "Mas**todo**n", and the ordinary English "blocked **pending** a decision" / "de**pending** on". Verified with `grep -o`. | James Richmond | 2026-08-03 |
+| X-04 | `showcase/demo/mock-platform-events.json` | Domain `example.invalid` | RFC 2606 reserved TLD — guaranteed never resolvable. Deliberately chosen over `example.com` so a fabricated federated handle can never be mistaken for a real one. | James Richmond | 2026-08-03 |
 | X-05 | `showcase/README.md`, `showcase/docs/ai4-positioning.md` | ~~Four `*(add before publishing)*` placeholders~~ | **RESOLVED 2026-08-02.** LinkedIn and X supplied by the owner and inserted in both files. Zero placeholders remain. Email line stays absent per D5 until an alias exists. | James Richmond | 2026-08-02 |
 | X-06 | `showcase/README.md`, `showcase/docs/ai4-positioning.md` | Two public contact identifiers ship: `linkedin.com/in/jamestrichmond`, `x.com/jamestrichmond` | Approved public destinations per D5. These are the **only** approved personal identifiers; B4 must still fail on any other. Both are intentionally public professional profiles. | James Richmond | 2026-08-02 |
+| X-07 | *(process)* `AgentiCubed/A3` repository settings | Gate 6's "disable Actions" step was applied to **A3** instead of the showcase repo. All A3 workflows queued without executing from ~2026-08-02T19:48Z until re-enable on 2026-08-03; PRs #119 and #121 merged inside that window with no CI run. | Detected during Pass A evidence verification (a dispatched run sat queued with zero jobs). Owner re-enabled Actions on A3 2026-08-03; the live smoke went green immediately after, confirming health. Showcase repo Actions remains disabled per R5. No content or publication artifact was affected. | James Richmond | 2026-08-03 |
 
 ---
 
