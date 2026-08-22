@@ -13,6 +13,7 @@ resolved at call time and is never persisted, logged, or returned.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -72,6 +73,10 @@ class OpenAICompatibleProvider:
     configured, since some local deployments front the server with a proxy.
     """
 
+    # HTTP status codes that indicate a transient server-side problem and are
+    # safe to retry immediately (without counting against max_attempts).
+    _TRANSIENT_5XX: frozenset[int] = frozenset({500, 502, 503})
+
     def __init__(
         self,
         *,
@@ -84,6 +89,7 @@ class OpenAICompatibleProvider:
         extra_headers: dict[str, str] | None = None,
         timeout_seconds: float = 60.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        transient_retry_delays: list[float] | None = None,
     ) -> None:
         self.name = name
         self._url = base_url.rstrip("/") + "/chat/completions"
@@ -94,6 +100,11 @@ class OpenAICompatibleProvider:
         self._extra_headers = dict(extra_headers or {})
         self._timeout = timeout_seconds
         self._transport = transport
+        # Delays (seconds) between successive retries on transient 5xx errors.
+        # The number of retries equals len(transient_retry_delays).
+        self._transient_retry_delays: list[float] = (
+            [1.0, 2.0] if transient_retry_delays is None else list(transient_retry_delays)
+        )
 
     def _resolve_token(self, request: AgentRunRequest) -> str | None:
         # Every raise below happens *outside* its except block so the public
@@ -230,6 +241,27 @@ class OpenAICompatibleProvider:
                     request, token=token, with_response_format=False
                 )
                 response = await self._post(client, retry_payload, retry_headers)
+            else:
+                retry_payload, retry_headers = payload, headers
+
+            # Retry transient server errors (500, 502, 503) before surfacing a
+            # failure to the dispatch loop. Each retry is independent of the
+            # max_attempts budget: a transient blip should not consume an
+            # operator-visible attempt. Retries reuse the payload that was
+            # effective at the end of the previous attempt (with or without
+            # response_format, whichever already succeeded the 4xx check).
+            effective_payload, effective_headers = retry_payload, retry_headers
+            for delay in self._transient_retry_delays:
+                if response.status_code not in self._TRANSIENT_5XX:
+                    break
+                await asyncio.sleep(delay)
+                response = await self._post(client, effective_payload, effective_headers)
+                if wants_response_format and 400 <= response.status_code <= 499:
+                    fallback_payload, fallback_headers = self._build(
+                        request, token=token, with_response_format=False
+                    )
+                    response = await self._post(client, fallback_payload, fallback_headers)
+                    effective_payload, effective_headers = fallback_payload, fallback_headers
 
         if not 200 <= response.status_code <= 299:
             raise ProviderCallError(
