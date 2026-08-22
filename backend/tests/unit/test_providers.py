@@ -522,6 +522,60 @@ async def test_openai_compatible_maps_410_gone_to_not_found(monkeypatch):
     assert str(caught.value) == "provider_http_status=410 provider_error_category=not_found"
 
 
+async def test_openai_compatible_retries_on_503_and_succeeds(monkeypatch):
+    """A transient 503 is retried transparently; the eventual 200 is returned."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    calls: list[int] = []
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(503, json={"error": "overloaded"})
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]},
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler), transient_retry_delays=[0.0])
+    result = await provider.run(AgentRunRequest(prompt="hi"))
+    assert result.output == "ok"
+    assert len(calls) == 2  # first call 503, second call 200
+
+
+async def test_openai_compatible_raises_after_all_transient_retries_exhausted(monkeypatch):
+    """If every attempt returns a 503, the provider raises ProviderCallError."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    calls: list[int] = []
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(503, json={"error": "overloaded"})
+
+    provider = _compat(transport=httpx.MockTransport(_handler), transient_retry_delays=[0.0, 0.0])
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="hi"))
+    assert caught.value.http_status == 503
+    assert caught.value.category is ProviderErrorCategory.PROVIDER_UNAVAILABLE
+    # 1 initial call + 2 retries = 3 total
+    assert len(calls) == 3
+
+
+async def test_openai_compatible_does_not_retry_non_transient_5xx(monkeypatch):
+    """501 and other non-transient 5xx codes are not retried."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    calls: list[int] = []
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(501, json={"error": "not implemented"})
+
+    provider = _compat(transport=httpx.MockTransport(_handler), transient_retry_delays=[0.0, 0.0])
+    with pytest.raises(ProviderCallError):
+        await provider.run(AgentRunRequest(prompt="hi"))
+    # No retries for 501
+    assert len(calls) == 1
+
+
 async def test_local_provider_runs_without_a_credential(monkeypatch):
     """Ollama accepts unauthenticated local calls; absence of a key is not an error."""
     monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
