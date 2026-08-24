@@ -26,11 +26,12 @@ describe("refreshTokens", () => {
   it("returns the new pair on success", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({ access_token: "new-access", refresh_token: "new-refresh" }),
-          { status: 200 },
-        ),
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ access_token: "new-access", refresh_token: "new-refresh" }),
+            { status: 200 },
+          ),
       ),
     );
     const pair = await refreshTokens("old-refresh");
@@ -38,16 +39,22 @@ describe("refreshTokens", () => {
   });
 
   it("returns null on 401 — a dead refresh token means signed out, not a crash", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 401 })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 401 })),
+    );
     expect(await refreshTokens("dead")).toBeNull();
   });
 
   it("returns null on a malformed body or network failure", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(JSON.stringify({ access_token: "only-half" }), {
-        status: 200,
-      })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ access_token: "only-half" }), {
+            status: 200,
+          }),
+      ),
     );
     expect(await refreshTokens("r")).toBeNull();
 
