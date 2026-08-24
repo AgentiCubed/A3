@@ -100,7 +100,7 @@ flowchart TB
 
     subgraph PROV ["5. Provider Integrations (app/orchestration/adapters)"]
         direction TB
-        prov["MockProvider (Deterministic), \nAnthropic Adapter, Extensible"]:::component
+        prov["MockProvider (Deterministic), \nOpenAICompatible (gemini, ollama), \nAnthropic Adapter"]:::component
     end
 
     XCUT["Cross-cutting: app/core (Config, Security/RBAC, Logging, Audit) \n app/db (Session, Unit of Work) \n app/workers (Celery behind WorkflowEngine port)"]:::crosscut
@@ -144,7 +144,7 @@ flowchart LR
 
     subgraph AdapterLayer ["3. Concrete Adapters (Interchangeable)"]
         direction TB
-        A1["MockProvider, AnthropicProvider"]:::adapter
+        A1["MockProvider, OpenAICompatibleProvider \n(gemini, ollama), AnthropicProvider"]:::adapter
         A2["Celery (Future: Temporal)"]:::adapter
         A3["LocalFs (Future: S3)"]:::adapter
         A4["SystemClock, FrozenClock"]:::adapter
@@ -168,7 +168,7 @@ flowchart LR
 
 | Port | Purpose | MVP adapter(s) | Future swap |
 |------|---------|----------------|-------------|
-| `AgentAdapter` | Run a prompt/tool-call against a model | `MockProvider`, `AnthropicProvider`, `GitHubModelsProvider` | Any provider |
+| `AgentAdapter` | Run a prompt/tool-call against a model | `MockProvider`, `OpenAICompatibleProvider` (registry entries `gemini`, `ollama`), `AnthropicProvider`; `github_models` remains as a retirement tombstone | Any OpenAI-compatible endpoint is a registry entry, not new code |
 | `WorkflowEngine` | Enqueue/track durable task execution | `CeleryWorkflowEngine` | `TemporalWorkflowEngine` |
 | `ArtifactStore` | Persist project artifacts | `LocalFsArtifactStore` | `S3ArtifactStore` |
 | `Clock` | Time source (testable) | `SystemClock` | `FrozenClock` |
