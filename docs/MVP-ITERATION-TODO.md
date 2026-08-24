@@ -26,8 +26,12 @@ within each section by dependency, not difficulty.
 - [ ] **A4 (C):** failure UX — a blocked/escalated task must show its
       error and a "retry with fixes" path on the dashboard, not hide it in
       the database.
-- [ ] **A5 (C):** rate-limit resilience — exponential backoff + optional
-      model fallback for 429s on the free tier.
+- [x] **A5 (C):** rate-limit resilience — DONE except model fallback:
+      the adapter retries 429s honoring Retry-After (capped 15s) before
+      surfacing a failure, dispatch paces retries (2s, 10s when
+      rate-limited) instead of re-firing instantly, and the attempt budget
+      was raised to 120s so in-adapter backoff fits inside it. Optional
+      model fallback remains open.
 
 ## B. Deliverable quality (code)
 
@@ -116,8 +120,13 @@ within each section by dependency, not difficulty.
 
 ## E. Paper cuts already found in first use
 
-- [ ] **E1 (C):** lengthen local session lifetime (15-minute logouts are
-      hostile on a personal machine); config-driven.
+- [x] **E1 (C):** DONE via silent refresh, which is strictly better than a
+      longer access token: the frontend now stores both tokens in httpOnly
+      cookies and the proxy renews the pair transparently on expiry, so
+      sessions last REFRESH_TOKEN_TTL_SECONDS (14 days) while a stolen
+      access token still dies within ACCESS_TOKEN_TTL_SECONDS. Both TTLs
+      remain config-driven and now reach the frontend container in prod
+      compose.
 - [ ] **E2 (C):** "Sign in to create a project." becomes a link to /login.
 - [ ] **E3 (C):** artifacts browser in the UI (list + download per
       project) — supersedes the `docker compose cp` workaround.

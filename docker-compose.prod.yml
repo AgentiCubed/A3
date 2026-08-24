@@ -115,6 +115,11 @@ services:
       NODE_ENV: production
       # Server-side calls (cookie proxy, SSE relay) go over the compose network.
       INTERNAL_API_BASE_URL: http://api:8000
+      # Cookie lifetimes must track the backend's token TTLs, and the frontend
+      # deliberately does NOT get the whole .env.prod (it holds backend
+      # secrets) — only these two values are interpolated through.
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-1209600}
     depends_on:
       api:
         condition: service_healthy

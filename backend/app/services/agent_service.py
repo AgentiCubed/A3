@@ -10,6 +10,7 @@ from app.core.audit import record_audit
 from app.core.capabilities import unknown_capabilities
 from app.core.enums import AgentKind, AgentRole, AgentStatus
 from app.core.roles import ActorType
+from app.core.secrets import allowed_credential_refs
 from app.db.queries import get_by_org, list_by_org
 from app.models.agent import Agent, AgentCapability
 from app.models.task import Task
@@ -34,6 +35,30 @@ class GovernedAssignmentLocked(Exception):
     """A materialized plan assignment cannot be changed outside plan governance."""
 
 
+class CredentialRefNotAllowed(Exception):
+    """Agent config names a credential reference outside the allowlist."""
+
+    def __init__(self, ref: object):
+        self.ref = ref
+        super().__init__(f"credential reference not permitted: {ref!r}")
+
+
+def _validate_credential_ref(config: dict | None) -> None:
+    """Reject an api_key_ref outside ALLOWED_CREDENTIAL_REFS at registration.
+
+    resolve_credential() re-enforces this at call time; validating here too
+    turns a policy violation into an immediate 422 instead of a failed task
+    days later. Non-string values are rejected outright.
+    """
+    if not config:
+        return
+    ref = config.get("api_key_ref")
+    if ref is None:
+        return
+    if not isinstance(ref, str) or ref not in allowed_credential_refs():
+        raise CredentialRefNotAllowed(ref)
+
+
 async def register_agent(
     session: AsyncSession,
     *,
@@ -52,6 +77,7 @@ async def register_agent(
             get_adapter(provider)
         except UnknownProvider as exc:
             raise UnknownProvider(provider) from exc
+    _validate_credential_ref(config)
 
     agent = Agent(
         organization_id=org_id,

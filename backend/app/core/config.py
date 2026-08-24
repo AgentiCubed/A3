@@ -27,6 +27,22 @@ class Settings(BaseSettings):
     access_token_ttl_seconds: int = 900
     refresh_token_ttl_seconds: int = 1209600
 
+    # Registration / abuse controls. Registration is open by default for local
+    # development; a hosted instance should either disable it outright or set
+    # an invite code (see .env.prod.example). Rate limiting is fixed-window,
+    # per client IP, applied to the auth endpoints; <= 0 disables it (tests).
+    registration_enabled: bool = Field(default=True)
+    registration_invite_code: str = Field(default="")
+    auth_rate_limit_per_minute: int = Field(default=10)
+
+    # Credential references an agent's config may name (comma-separated
+    # env-var keys). Anything else is refused both when the agent is
+    # registered and again at resolve time — an agent config must never be
+    # able to exfiltrate arbitrary server env vars (SECRET_KEY, DATABASE_URL,
+    # ...) by naming them as an api_key_ref and sending the value to a
+    # provider as a Bearer header.
+    allowed_credential_refs: str = Field(default="GEMINI_API_KEY,ANTHROPIC_API_KEY,OLLAMA_API_KEY")
+
     # CORS — comma-separated origins; "*" for dev only.
     cors_origins: str = Field(default="*")
 
@@ -82,6 +98,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.lower() in {"production", "prod"}
+
+    @property
+    def allowed_credential_ref_set(self) -> frozenset[str]:
+        return frozenset(
+            ref.strip() for ref in self.allowed_credential_refs.split(",") if ref.strip()
+        )
 
     @property
     def cors_origin_list(self) -> list[str]:

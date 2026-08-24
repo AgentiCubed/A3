@@ -13,6 +13,9 @@ class RegisterRequest(BaseModel):
     organization_name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     password: str = Field(min_length=10, max_length=200)
+    # Required when the deployment sets REGISTRATION_INVITE_CODE; ignored
+    # otherwise. Comparison happens in the service, constant-time.
+    invite_code: str | None = Field(default=None, max_length=200)
 
 
 class LoginRequest(BaseModel):

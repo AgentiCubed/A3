@@ -48,7 +48,7 @@ def _parse_dispatch_params(params: dict) -> dict:
         "actor_id": uuid.UUID(params["actor_id"]) if params.get("actor_id") else None,
         "actor_type": ActorType(params.get("actor_type", ActorType.SYSTEM.value)),
         "max_attempts": int(params.get("max_attempts", 2)),
-        "timeout_s": float(params.get("timeout_s", 30.0)),
+        "timeout_s": float(params.get("timeout_s", 120.0)),
     }
     raw_eval = params.get("evaluation")
     if raw_eval is not None:
