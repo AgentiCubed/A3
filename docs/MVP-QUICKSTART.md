@@ -2,8 +2,8 @@
 
 This is the shortest verified path from `git clone` to a running A3
 instance that plans, executes, evaluates, remediates, and closes a real
-project — first with the deterministic offline provider, then live on the
-free GitHub Models tier.
+project — first with the deterministic offline provider, then live on
+Google AI Studio's free Gemini tier.
 
 What you get at the end:
 
@@ -12,7 +12,7 @@ What you get at the end:
   rendered chart), full audit trail, approval gate, evaluation rubric, and
   one automatic remediation — all inspectable in the UI
 - A login of your own and the ability to create and run new projects
-- A zero-cost live-model path (GitHub Models free tier)
+- A zero-cost live-model path (Gemini free tier, no card required)
 
 ## Prerequisites
 
@@ -70,8 +70,8 @@ Same result as Path A, in smaller steps with no git commands.
    `docker compose up -d` brings it back. Your data persists between
    restarts.
 
-Then continue with "Go live on free models" below (that part is also
-command-free except editing `.env`).
+Then continue with "Go live on free models" below (two more copy-paste
+commands plus one `.env` edit).
 
 ## Path A — Docker (recommended, ~10 minutes)
 
@@ -114,18 +114,18 @@ text is canned.
 
 ## Go live on free models (~5 minutes more)
 
-The `github_models` provider calls the GitHub Models free tier — no paid
-API keys.
+The `gemini` provider calls Google AI Studio's free Gemini tier — no paid
+API key, no card. (The previous free path, GitHub Models, was retired by
+GitHub on 2026-07-30; the `github_models` provider is now a tombstone that
+refuses with migration guidance.)
 
-1. Create a GitHub fine-grained personal access token: github.com →
-   Settings → Developer settings → Fine-grained tokens → Generate new
-   token → Repository access: **Public repositories** → Account
-   permissions: **Models: Read-only** → Generate. Copy the
-   `github_pat_...` value.
-2. Add it to `.env`:
+1. Create an API key: sign in at **aistudio.google.com** → **Get API key**
+   → **Create API key**. Copy the value.
+2. Add it to `.env` (paste the value only — no quotes, no `<` `>`
+   brackets):
 
    ```
-   GITHUB_MODELS_TOKEN=github_pat_XXXXXXXX
+   GEMINI_API_KEY=PASTE_YOUR_KEY_HERE
    ```
 
 3. Recreate the containers so they pick up the new variable:
@@ -142,21 +142,26 @@ API keys.
    docker compose exec api python -m app.seed.live_agents --email you@example.com
    ```
 
-   Defaults to `github_models` / `openai/gpt-4o-mini`; pass `--model` for
-   any ID from github.com/marketplace/models (e.g. `openai/gpt-4.1`,
-   `deepseek/DeepSeek-R1`). The token is resolved by reference from
-   `GITHUB_MODELS_TOKEN` at call time; the secret value never enters the
+   Defaults to `gemini` / `gemini-flash-latest` (a moving alias that
+   tracks the current flash model, so it never goes stale; the `models/`
+   prefix in Gemini's catalog is added automatically). Pass `--model` to
+   pin a specific version. The key is resolved by reference from
+   `GEMINI_API_KEY` at call time; the secret value never enters the
    database, logs, or audit records.
 5. In a new project, pick **Live Planner** to generate the plan and
    **Live Analyst** (or **Live Writer**) as the executor. Outputs are now
    real model text; evaluation is graded by the independent
    **Live Evaluator**.
 
-Free-tier note: GitHub Models enforces per-model daily request and token
-caps. If a task fails with a rate-limit error, use a smaller model
-(`openai/gpt-4o-mini`) or wait for the window to reset. The nightly
-`live-provider-smoke` CI workflow proves this path stays green at zero
-cost.
+Free-tier notes: Google's free tier enforces per-minute and per-day
+request caps — if a task fails with a rate-limit error, wait a minute and
+retry, or re-dispatch later. The free tier may also use submitted prompts
+to improve Google's models, so keep confidential work off it — use a paid
+tier, or run fully offline with the `ollama` provider
+(`--provider ollama --model llama3.2` against a local Ollama server; no
+key, no network, nothing leaves your machine). The nightly
+`live-provider-smoke` CI workflow proves the Gemini path stays green at
+zero cost.
 
 ## Path B — no Docker (verified fallback)
 
@@ -201,9 +206,10 @@ container for you.
 | Seed fails with `email address is already registered` | That email already has an account from a previous seed run — pass a different `--email`, or reset with `docker compose down -v && docker compose up -d` first |
 | Ports 3000/8000/5432/6379 already bound | Stop the conflicting service or change the published port in `docker-compose.yml` |
 | Login fails after seeding | The seed's password is exactly `demo-password-123`; the email must match the `--email` you passed |
-| Live task fails with 401/403 | Token missing `models: read` permission, or `GITHUB_MODELS_TOKEN` not present in the container env (rerun `docker compose up -d`) |
-| Live task fails with 429 | Free-tier daily cap hit — smaller model or wait |
-| `plan_generation_failed` and `api` logs show `410 Gone` | The agent's model ID was retired from the GitHub Models catalog. Switch to a current ID — either reseed (`... app.seed.live_agents --model openai/gpt-4.1`) or update existing agents: `docker compose exec db psql -U agenticubed -d agenticubed -c "UPDATE agents SET model='openai/gpt-4.1' WHERE name LIKE 'Live %';"` |
+| Live task fails with `authentication` / 401 | `GEMINI_API_KEY` missing or malformed in `.env` — check for stray quotes/brackets, then rerun `docker compose up -d` so containers pick it up |
+| Live task fails with `rate_limited` / 429 | Free-tier per-minute or daily cap hit — wait and re-dispatch, or move to a paid tier |
+| Live task fails with `not_found` / 404 | Model ID unknown to Gemini's catalog — use the default `gemini-flash-latest`, or check current IDs at ai.google.dev/gemini-api/docs/models (the `models/` prefix is added automatically) |
+| Task fails with 410 and "provider … was retired" | The agent still targets the retired `github_models` provider — reseed with `docker compose exec api python -m app.seed.live_agents --email you@example.com` (defaults to `gemini`) or update the agent's provider in the UI |
 | `/readyz` red | `docker compose ps` — db/redis unhealthy; check `docker compose logs api` |
 
 ## What this MVP deliberately is not

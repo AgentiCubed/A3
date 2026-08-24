@@ -11,11 +11,11 @@ within each section by dependency, not difficulty.
 
 ## A. Unblock and harden live runs
 
-- [ ] **A1 (J, now):** finish the token repair — add the new token to
-      `.env` (`echo "GITHUB_MODELS_TOKEN=<paste>" >> .env`), run
-      `docker compose up -d`, verify with
-      `docker compose exec api printenv GITHUB_MODELS_TOKEN | cut -c1-14`
-      → must print `github_pat_` + 3 chars, nothing doubled.
+- [x] **A1 — OBSOLETE (superseded by the provider migration):** this item
+      predates GitHub Models' 2026-07-30 retirement. The live credential is
+      now `GEMINI_API_KEY` (Google AI Studio), already configured and
+      proven by a live run. Verify any time with
+      `docker compose exec api printenv GEMINI_API_KEY | cut -c1-6`.
 - [ ] **A2 (C):** actionable provider errors — map
       `invalid_request/status=none` class failures to human messages
       ("credential missing or malformed", "model ID unknown", "rate

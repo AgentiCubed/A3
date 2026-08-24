@@ -45,9 +45,12 @@ Notes that bite:
   `+psycopg`) must point at the **same** database.
 - `CORS_ORIGINS` is just `https://<your domain>` — the deployment is
   same-origin by construction, and production rejects a wildcard.
-- Provider keys (`GITHUB_MODELS_TOKEN`, `ANTHROPIC_API_KEY`, …) are optional
-  at boot: agents reference them by name (`api_key_ref`) and resolution
-  happens at call time. Blank keys mean those providers refuse cleanly.
+- Provider keys (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OLLAMA_API_KEY`, …)
+  are optional at boot: agents reference them by name (`api_key_ref`) and
+  resolution happens at call time. Blank keys mean those providers refuse
+  cleanly. `GEMINI_API_KEY` (Google AI Studio) serves the default live
+  provider; `GITHUB_MODELS_TOKEN` is dead — GitHub retired that service
+  2026-07-30 and the adapter is a tombstone.
 
 ## 3. First boot
 
