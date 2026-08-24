@@ -101,8 +101,20 @@ async def test_run_uses_defaults_and_omits_optional_fields(monkeypatch):
 
 
 async def test_run_honors_explicit_credential_ref(monkeypatch):
+    from app.core.config import get_settings
+
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setenv("MY_CUSTOM_KEY", "sk-custom")
+    # Custom refs must be allowlisted by the deployment before they resolve.
+    monkeypatch.setenv("ALLOWED_CREDENTIAL_REFS", "MY_CUSTOM_KEY,ANTHROPIC_API_KEY")
+    get_settings.cache_clear()
+    try:
+        await _run_with_custom_ref(monkeypatch)
+    finally:
+        get_settings.cache_clear()
+
+
+async def _run_with_custom_ref(monkeypatch):
     captured: dict = {}
 
     def handler(request: httpx.Request) -> httpx.Response:

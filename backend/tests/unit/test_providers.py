@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -148,17 +149,33 @@ async def test_openai_compatible_resolves_credential_before_network(monkeypatch)
     assert str(caught.value) == ("provider_http_status=none provider_error_category=authentication")
 
 
-async def test_openai_compatible_redacts_missing_credential_reference(monkeypatch):
+async def test_openai_compatible_refuses_non_allowlisted_reference_redacted(monkeypatch):
+    # A ref outside ALLOWED_CREDENTIAL_REFS is refused as an authorization
+    # error — even when the env var exists — and the public error carries
+    # neither the ref name nor an exception chain. This is the boundary that
+    # keeps user-supplied agent config from reading arbitrary server env vars.
     credential_ref = "secret-credential-reference-sentinel"
-    monkeypatch.delenv(credential_ref, raising=False)
+    monkeypatch.setenv(credential_ref, "the-secret-value")
     provider = _compat()
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(AgentRunRequest(prompt="hi", credential_ref=credential_ref))
 
-    assert str(caught.value) == ("provider_http_status=none provider_error_category=authentication")
+    assert str(caught.value) == ("provider_http_status=none provider_error_category=authorization")
     assert caught.value.__cause__ is None
     assert caught.value.__context__ is None
     assert credential_ref not in repr(caught.value)
+
+
+async def test_openai_compatible_missing_allowlisted_credential_is_authentication(monkeypatch):
+    # An allowlisted but unset ref stays an authentication failure, redacted.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    provider = _compat()
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="hi", credential_ref="ANTHROPIC_API_KEY"))
+
+    assert str(caught.value) == ("provider_http_status=none provider_error_category=authentication")
+    assert caught.value.__cause__ is None
+    assert caught.value.__context__ is None
 
 
 async def test_openai_compatible_redacts_malformed_credential_reference():
@@ -498,7 +515,9 @@ async def test_openai_compatible_surfaces_retry_failure_status(monkeypatch):
         body = json.loads(request.content)
         return httpx.Response(400 if "response_format" in body else 429, json={})
 
-    provider = _compat(transport=httpx.MockTransport(_handler))
+    # No 429 retry budget here: the test is about which status is reported,
+    # not about backoff (covered by its own tests below).
+    provider = _compat(transport=httpx.MockTransport(_handler), rate_limit_retry_delays=[])
     with pytest.raises(ProviderCallError) as caught:
         await provider.run(
             AgentRunRequest(prompt="hi", params={"response_format": {"type": "json_object"}})
@@ -731,3 +750,109 @@ def test_planner_prompt_example_satisfies_the_plan_contract():
     for task in spec.tasks:
         for criterion in task.acceptance_criteria:
             assert criterion.check
+
+
+# ── 429 backoff (MVP TODO A5) ─────────────────────────────────────────────
+
+
+async def test_openai_compatible_retries_429_and_succeeds(monkeypatch):
+    """A rate-limited call is retried after a pause instead of failing the attempt."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    slept: list[float] = []
+
+    async def _fake_sleep(delay: float) -> None:
+        slept.append(delay)
+
+    monkeypatch.setattr(asyncio, "sleep", _fake_sleep)
+    calls: list[int] = []
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(429, json={"error": "quota"})
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]},
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler), rate_limit_retry_delays=[2.0, 5.0])
+    result = await provider.run(AgentRunRequest(prompt="hi"))
+    assert result.output == "ok"
+    assert len(calls) == 2
+    assert slept == [2.0]  # configured fallback: no Retry-After header
+
+
+async def test_openai_compatible_honors_retry_after_header_capped(monkeypatch):
+    """Retry-After is obeyed when sane and capped so it cannot eat the attempt budget."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+    slept: list[float] = []
+
+    async def _fake_sleep(delay: float) -> None:
+        slept.append(delay)
+
+    monkeypatch.setattr(asyncio, "sleep", _fake_sleep)
+    calls: list[int] = []
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(429, json={}, headers={"Retry-After": "3"})
+        if len(calls) == 2:
+            return httpx.Response(429, json={}, headers={"Retry-After": "600"})
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]},
+        )
+
+    provider = _compat(transport=httpx.MockTransport(_handler), rate_limit_retry_delays=[1.0, 1.0])
+    result = await provider.run(AgentRunRequest(prompt="hi"))
+    assert result.output == "ok"
+    # First wait obeys the 3s header; second caps the absurd 600s at the max.
+    assert slept == [3.0, OpenAICompatibleProvider._RATE_LIMIT_MAX_DELAY]
+
+
+async def test_openai_compatible_429_budget_exhaustion_surfaces_rate_limited(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+
+    async def _fake_sleep(_delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", _fake_sleep)
+    calls: list[int] = []
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        calls.append(1)
+        return httpx.Response(429, json={"error": "quota"})
+
+    provider = _compat(transport=httpx.MockTransport(_handler), rate_limit_retry_delays=[0.0, 0.0])
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(AgentRunRequest(prompt="hi"))
+    assert caught.value.category is ProviderErrorCategory.RATE_LIMITED
+    assert len(calls) == 3  # initial + two retries
+
+
+async def test_openai_compatible_429_does_not_trigger_response_format_fallback(monkeypatch):
+    """Rate limiting says nothing about response_format; no immediate second shot."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+
+    async def _fake_sleep(_delay: float) -> None:
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", _fake_sleep)
+    bodies: list[dict] = []
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(429, json={"error": "quota"})
+
+    provider = _compat(transport=httpx.MockTransport(_handler), rate_limit_retry_delays=[])
+    with pytest.raises(ProviderCallError) as caught:
+        await provider.run(
+            AgentRunRequest(prompt="hi", params={"response_format": {"type": "json_object"}})
+        )
+    assert caught.value.category is ProviderErrorCategory.RATE_LIMITED
+    # Exactly one request, and response_format was never stripped: the old
+    # blanket-4xx fallback would have fired a second call into the same
+    # exhausted quota window.
+    assert len(bodies) == 1
+    assert "response_format" in bodies[0]

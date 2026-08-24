@@ -14,7 +14,7 @@ from app.schemas.project import AcceptanceCriterionIn
 
 class DispatchRequest(BaseModel):
     max_attempts: int = Field(default=2, ge=1, le=10)
-    timeout_s: float = Field(default=30.0, gt=0, le=600)
+    timeout_s: float = Field(default=120.0, gt=0, le=600)
     # Optional closed-loop evaluation. Omit for a plain run that completes on success.
     rubric: list[AcceptanceCriterionIn] | None = None
     evaluator_agent_id: uuid.UUID | None = None
@@ -38,7 +38,7 @@ class ProjectStartRequest(BaseModel):
     """Options applied to every task the scheduling pass dispatches."""
 
     max_attempts: int = Field(default=2, ge=1, le=10)
-    timeout_s: float = Field(default=30.0, gt=0, le=600)
+    timeout_s: float = Field(default=120.0, gt=0, le=600)
 
 
 class StartedTaskResponse(BaseModel):

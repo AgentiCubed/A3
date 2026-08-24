@@ -29,7 +29,7 @@ from app.models.project import Project
 from app.models.task import Task, TaskDependency
 from app.models.task_execution import TaskExecution
 from app.orchestration.adapters.registry import get_adapter
-from app.orchestration.ports import AgentRunRequest, ProviderCallError
+from app.orchestration.ports import AgentRunRequest, ProviderCallError, ProviderErrorCategory
 from app.orchestration.state_machine.machine import IllegalTransition, assert_transition
 from app.orchestration.state_machine.states import ExecutionState
 from app.remediation.policy import RemediationContext, select_remediation
@@ -110,6 +110,14 @@ class DispatchResult:
     execution_ids: list[uuid.UUID] = field(default_factory=list)
     verdict: Verdict | None = None
     remediations: int = 0
+
+
+# Pause between operator-visible attempts after a failed one, so the retry
+# does not land in the same failure window that killed its predecessor.
+# Rate-limited failures multiply this — the provider explicitly asked for
+# time, and the adapter's shorter in-call backoff already proved insufficient.
+_ATTEMPT_RETRY_PACING_S = 2.0
+_RATE_LIMIT_PACING_MULTIPLIER = 5
 
 
 def _now() -> datetime:
@@ -642,7 +650,7 @@ async def execute_task(
     actor_id: uuid.UUID | None = None,
     actor_type: ActorType = ActorType.USER,
     max_attempts: int = 2,
-    timeout_s: float = 30.0,
+    timeout_s: float = 120.0,
     evaluation: EvaluationConfig | None = None,
 ) -> DispatchResult:
     """Run a task end-to-end: execute (with retries) → evaluate → remediate.
@@ -775,12 +783,17 @@ async def execute_task(
             )
             if outcome is not None:
                 return DispatchResult(outcome, attempt, escalated=True, execution_ids=execution_ids)
+            await asyncio.sleep(_ATTEMPT_RETRY_PACING_S)
             continue
         except Exception as exc:  # noqa: BLE001 - any provider error is a failed attempt
             error = (
                 exc.public_message
                 if isinstance(exc, ProviderCallError)
                 else f"{type(exc).__name__}: {exc}"
+            )
+            rate_limited = (
+                isinstance(exc, ProviderCallError)
+                and exc.category is ProviderErrorCategory.RATE_LIMITED
             )
             execution_ids.append(
                 await _record(
@@ -804,6 +817,15 @@ async def execute_task(
             )
             if outcome is not None:
                 return DispatchResult(outcome, attempt, escalated=True, execution_ids=execution_ids)
+            # Pace the retry instead of re-firing instantly: back-to-back
+            # attempts land in the same failure window (a rate-limit quota
+            # especially), burning the whole max_attempts budget in seconds.
+            # Rate-limited failures wait longer — the adapter's own in-call
+            # backoff was already exhausted to get here. Sleeping outside
+            # asyncio.wait_for keeps this off the attempt's time budget.
+            await asyncio.sleep(
+                _ATTEMPT_RETRY_PACING_S * (_RATE_LIMIT_PACING_MULTIPLIER if rate_limited else 1)
+            )
             continue
 
         # Execution attempt succeeded — record it and move to evaluation.
