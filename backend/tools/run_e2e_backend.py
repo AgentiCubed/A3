@@ -22,6 +22,9 @@ os.environ.setdefault("DATABASE_URL", f"sqlite+aiosqlite:///{DB_PATH}")
 os.environ.setdefault("EVENT_BUS_BACKEND", "memory")
 os.environ.setdefault("WORKFLOW_ENGINE_BACKEND", "inline")
 os.environ.setdefault("DEFAULT_PROVIDER", "mock")
+# Disable auth rate limiting: e2e tests issue many rapid login calls from the
+# same IP (127.0.0.1) and the default 10-per-minute limit triggers 429s.
+os.environ.setdefault("AUTH_RATE_LIMIT_PER_MINUTE", "0")
 
 
 def main() -> None:
