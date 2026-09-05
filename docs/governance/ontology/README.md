@@ -57,8 +57,10 @@ relationships.
 The Ontology is subordinate to two Foundational Concepts (recorded as
 Adopted in [`ACR-0001`](../knowledge/ACR-0001-architectural-candidate-register.md)
 per [Issue #12](https://github.com/AgentiCubed/agenticubed/issues/12); the
-concept documents themselves declare Proposed — this **recorded status
-dispute** is resolved by Principal decisions P-1/P-2, see
+concept documents formerly declared Proposed — that **recorded status
+dispute** was resolved by Principal decisions P-1/P-2 (DR-0004,
+2026-07-26), and the concept documents' own headers now read Adopted, as
+amended, matching this register; see
 [`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2):
 
 **AC-0001 — Knowledge Gravity**
