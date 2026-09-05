@@ -121,11 +121,11 @@ sufficient.
 
 Per TARP-0001 — actual title "**Traceability and Review Protocol**"
 ([`docs/agentic3/TARP-0001-traceability-protocol.md`](../../agentic3/TARP-0001-traceability-protocol.md),
-status **Proposed**), whose review discipline is implemented by the Active
+status **Adopted**), whose review discipline is implemented by the Active
 standard [`STD-0002`](../playbook/STD-0002-traceable-architecture-reviews.md);
-the naming/status resolution is decision **P-4** — every significant
-architectural proposal requires a traceable chain from implementation to
-constitutional basis.
+the naming/status resolution was decided (DR-0004 P-4, 2026-07-26) — every
+significant architectural proposal requires a traceable chain from
+implementation to constitutional basis.
 
 The Ontology itself is a significant architectural specification. The traceability chain is:
 
@@ -212,10 +212,11 @@ mechanics forbid (recorded and resolved in
 [`PHASE0-RECONCILIATION.md`](../../agentic3/PHASE0-RECONCILIATION.md) §2).
 Candidates this document introduced (AC-0005 Explicit Relationships,
 AC-0006 Semantic Inheritance) are recorded there, alongside AC-0003, with
-their statuses. The recorded adoption status of AC-0001/AC-0002 is disputed
-by those documents' own headers; resolution is reserved to the Principal
-(decisions P-1/P-2). This section's former table is preserved in git
-history.
+their statuses. The recorded adoption status of AC-0001/AC-0002 was disputed by those
+documents' own headers at drafting time; the Principal has since resolved
+it (DR-0004 P-1/P-2, 2026-07-26): both are Adopted, as amended, matching
+this register and the concept documents' current headers. This section's
+former table is preserved in git history.
 
 ---
 
