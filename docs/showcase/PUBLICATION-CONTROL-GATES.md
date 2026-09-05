@@ -353,7 +353,7 @@ Publication is prohibited until every field is complete.
 
 **Release authorization:** `AUTHORIZED`
 **Authorized by:** `James Richmond`
-**Date and time:** `2026-09-05 HH:MM TZ`
+**Date and time:** `2026-09-04 23:30 EDT`
 
 Only James Richmond may change `NOT AUTHORIZED` to `AUTHORIZED`.
 
