@@ -1,4 +1,4 @@
-# AI4 positioning
+# Positioning
 
 The short version, for conversations. Written to be spoken, not read aloud.
 
@@ -102,7 +102,7 @@ than agreed with:
 - **Operators** who have tried to deploy agentic automation on real accounts and
   can tell me what actually broke.
 - Builders who think **governance-first is the wrong order** — that argument is
-  the most useful conversation I could have this week.
+  the most useful conversation you could bring me.
 
 ---
 

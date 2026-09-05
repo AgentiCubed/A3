@@ -81,7 +81,7 @@ attribution on the prose, one fewer file.
 Four placeholders read `*(add before publishing)*`:
 
 - `README.md` — "Connect at AI4": LinkedIn, X, email
-- `docs/ai4-positioning.md` — "Contact": LinkedIn, X, email
+- `docs/positioning.md` (renamed from ai4-positioning.md, 2026-09-05) — "Contact": LinkedIn, X, email
 
 Decide what public-facing email you want on a repo that will be linked from
 LinkedIn and a QR code. `jamestrichmond@gmail.com` is your personal address; a
@@ -90,7 +90,7 @@ worse than publishing with no contact section at all.
 
 ### D6 — Depth of the AI4 pitch
 
-`docs/ai4-positioning.md` includes a "Questions worth arguing about" section that
+`docs/positioning.md` (renamed from ai4-positioning.md, 2026-09-05) includes a "Questions worth arguing about" section that
 invites people to challenge the design, and states plainly that
 governance-first-is-wrong is the most useful argument you could have. That is a
 confident posture. It reads as strength to builders and as hedging to investors.
