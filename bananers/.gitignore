@@ -2,3 +2,4 @@ test/.scratch/
 test/.scratch-dbg/
 node_modules/
 dist/
+store-assets/
