@@ -76,7 +76,7 @@ Design docs (each owned by its spec):
 Zero dependencies — pure `node:test`:
 
 ```sh
-node --test bananers/tests/
+node --test bananers/tests/*.test.mjs
 ```
 
 Covers fingerprint hashing/fuzzy matching, detection scoring/classification,

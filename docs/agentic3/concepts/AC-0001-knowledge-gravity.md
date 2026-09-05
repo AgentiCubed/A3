@@ -13,15 +13,16 @@ analogy and STD-0001, the drafter must not be the sole reviewer
 
 ## Provenance and status discrepancy
 
-This concept has been cited across the Agentic³ design workstream (issues
-#16, #17, #19) without a defining repository artifact. Issue #17 lists
-AC-0001 under "existing approved architecture," but no adoption or
-ratification record exists in the repository. Per the rule that authority is
-conferred through governance relationships, not document existence
-(ARCHITECTURE-v2 §7), this document lands as a **proposal**. If the Principal
-has in fact already adopted the concept, the adoption decision should be
-recorded explicitly when this document is reviewed — that record, not this
-file, confers the status.
+*Historical record, preserved as drafting context — see Status above for
+the current, decided state.* This concept had been cited across the
+Agentic³ design workstream (issues #16, #17, #19) without a defining
+repository artifact. Issue #17 listed AC-0001 under "existing approved
+architecture," but no adoption or ratification record existed in the
+repository at drafting time. Per the rule that authority is conferred
+through governance relationships, not document existence (ARCHITECTURE-v2
+§7), this document landed as a **proposal**. The Principal has since
+recorded the adoption decision explicitly — [DR-0004](../../governance/decisions/DR-0004-Phase-0-Reconciliation-Decisions.md)
+P-1 — which, not this file, confers the status.
 
 Every definitional claim below is reconstructed from the following evidence:
 
@@ -62,13 +63,14 @@ auditable* instead of implicit in who remembers what.
 
 ## Rules
 
-1. **Bounded update vocabulary** **[proposed]**. Gravity changes *only*
-   through the four sources above — no update from popularity, recency
-   alone, author identity, citation count without outcomes, or manual
-   adjustment without evidence. Issue #16 names the four sources and warns
-   against "arbitrary scoring theater"; the **exclusivity** ("only these
-   four") is a new rule this document proposes as the enforceable form of
-   that warning. It is a decision for the Principal, not a fact of #16.
+1. **Bounded update vocabulary** **[proposed, adopted by DR-0004 P-1,
+   2026-07-26]**. Gravity changes *only* through the four sources above —
+   no update from popularity, recency alone, author identity, citation
+   count without outcomes, or manual adjustment without evidence. Issue #16
+   names the four sources and warns against "arbitrary scoring theater";
+   the **exclusivity** ("only these four") was a new rule this document
+   proposed as the enforceable form of that warning, and is now in force by
+   the Principal's decision, not merely a fact of #16.
 2. **Gravity is not authority** **[reconstructed]**. High-gravity knowledge
    informs decisions; it never makes them, and it never outranks a
    Delegation, an acceptance condition, or a Principal decision. Inferred
@@ -97,7 +99,7 @@ auditable* instead of implicit in who remembers what.
 - Not a substitute for verification — high gravity does not verify anything
   (Art. VI §5).
 
-## Open questions (for the adoption decision)
+## Open questions (deferred past adoption — implementation-level, owned by #16)
 
 1. Scale and representation: scalar, vector by context, or qualitative
    tiers? (Owned by #16.)

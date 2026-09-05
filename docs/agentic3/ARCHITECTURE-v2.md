@@ -408,8 +408,9 @@ load-bearing facts:
 - It may initiate only **reversible, pre-authorized work classes** — the
   standing policy instrument is
   [DR-0003](../governance/decisions/DR-0003-Reversible-Work-Standing-Policy.md)
-  (Proposed). Irreversible actions require an explicit, current, unexpired,
-  unrevoked human authorization artifact.
+  (**Ratified v1.0.0**, RR-0002, 2026-07-26; expires 2027-01-22). Irreversible
+  actions require an explicit, current, unexpired, unrevoked human
+  authorization artifact.
 - Schedule, timeout, urgency, silence, inferred intent, and model confidence
   never authorize anything (reconciled union, R-8).
 - Harvested runtime-authority rules (consistent with the adopted spec):
@@ -471,10 +472,12 @@ distinct lightweight track. The decision is the Principal's recorded act
 (DR-0004); lifecycle claims about Foundational Concepts are now
 enforceable.
 
-**Current registry:** AC-0001 and AC-0002 have landed as proposals (state 1;
-see §0.1) with every rule labeled supported/reconstructed/proposed;
-AC-0003…AC-0006 remain named candidates awaiting artifacts and cannot enter
-state 2 until state 1 is satisfied (§10 item 1).
+**Current registry:** AC-0001 and AC-0002 are **Adopted, as amended**
+(state 4 — DR-0004 P-1/P-2, 2026-07-26; see §0.1); their rule-by-rule
+supported/reconstructed/proposed labels are preserved as drafting
+provenance, not as an unresolved status. AC-0003…AC-0006 remain named
+candidates awaiting artifacts and cannot enter state 2 until state 1 is
+satisfied (§10 item 1).
 
 ## 8. Traceability
 
@@ -483,16 +486,17 @@ Architectural Principles → Patterns → Implementations. Every durable
 architectural statement must be traceable along explicit relationships
 (issue #16 acceptance criterion).*
 
-**[PARTIALLY UNBLOCKED: TARP-0001 landed as a proposed protocol
+**RESOLVED (DR-0004 P-4, 2026-07-26):** TARP-0001
 ([`TARP-0001-traceability-protocol.md`](TARP-0001-traceability-protocol.md))
-defining the chain and review rules; the relationship semantics a "trace" is
-made of now exist as Draft (ONTO-0002, `TRACES_TO`). This section finalizes
-after the Principal's decision **P-4**, which also resolves the instrument
-naming: STD-0002 (Active standard) implements the review discipline
-TARP-0001 (Proposed protocol) describes, and the superseded skeleton's
-eleven-stage chain variant (…candidates, contracts, work, Verification,
-Assurance/Governance, Memory, Learning) is recorded as a proposed extension
-of the six-stage chain above, not a replacement.]**
+is **Adopted** as the protocol the Active standard
+[`STD-0002`](../governance/playbook/STD-0002-traceable-architecture-reviews.md)
+implements, resolving the instrument naming; the relationship semantics a
+"trace" is made of exist as Draft (ONTO-0002, `TRACES_TO`), which is a
+separate, still-pending ontology-adoption question (see §0.1, §3) and does
+not reopen P-4. The superseded skeleton's eleven-stage chain variant
+(…candidates, contracts, work, Verification, Assurance/Governance, Memory,
+Learning) remains recorded as a proposed extension of the six-stage chain
+above, not a replacement.
 
 ## 9. Safety
 

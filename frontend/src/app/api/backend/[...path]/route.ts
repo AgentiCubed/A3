@@ -3,7 +3,7 @@
  *
  * Client components cannot read the httpOnly session cookies (by design —
  * issue 0005), so governed actions go through this handler, which attaches
- * the token server-side. The proxy grants nothing the caller's own
+ * the Bearer token server-side. The proxy grants nothing the caller's own
  * token does not already grant; it is plumbing, not privilege.
  *
  * Silent refresh: when the access token is missing or the backend answers
@@ -35,7 +35,7 @@ async function callBackend(
 ): Promise<Response> {
   const headers: Record<string, string> = {
     accept: "application/json",
-    authorization: ["Bearer", token].join(" "),
+    authorization: `Bearer ${token}`,
   };
   const init: RequestInit = { method, headers, cache: "no-store" };
   if (method === "POST") {

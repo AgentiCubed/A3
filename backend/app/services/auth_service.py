@@ -6,6 +6,7 @@ material identity changes. Raises domain errors that the API maps to HTTP codes.
 
 from __future__ import annotations
 
+import hmac
 import re
 import uuid
 
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import security
 from app.core.audit import record_audit
+from app.core.config import get_settings
 from app.core.roles import ActorType, SystemRole
 from app.models.organization import Organization
 from app.models.user import User
@@ -36,6 +38,14 @@ class AmbiguousLogin(AuthError):
     """Same email exists in multiple orgs; org context required (rare)."""
 
 
+class RegistrationClosed(AuthError):
+    """Self-registration is disabled, or the invite code is missing/wrong.
+
+    One error for both cases on purpose: distinguishing "closed" from "wrong
+    code" would let an attacker probe whether an invite code exists.
+    """
+
+
 def _slugify(name: str) -> str:
     base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "org"
     # Suffix with a short uuid fragment to guarantee global uniqueness.
@@ -43,7 +53,20 @@ def _slugify(name: str) -> str:
 
 
 async def register_organization(session: AsyncSession, req: RegisterRequest) -> User:
-    """Create a new organization with its first user as OWNER."""
+    """Create a new organization with its first user as OWNER.
+
+    Gated by deployment policy: REGISTRATION_ENABLED=false closes
+    self-registration entirely; REGISTRATION_INVITE_CODE (when set) requires
+    the matching code. The gate runs before the email-existence check so a
+    closed deployment leaks nothing about which emails are registered.
+    """
+    settings = get_settings()
+    if not settings.registration_enabled:
+        raise RegistrationClosed()
+    expected_code = settings.registration_invite_code
+    if expected_code and not hmac.compare_digest(req.invite_code or "", expected_code):
+        raise RegistrationClosed()
+
     existing = await session.execute(select(User).where(User.email == req.email))
     if existing.scalars().first() is not None:
         # Email is unique per org; for MVP login-by-email we also keep it globally

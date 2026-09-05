@@ -50,6 +50,11 @@ async def register_agent(req: AgentCreate, session: DbSession, user: AgentManage
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, f"unknown provider: {exc}"
         ) from exc
+    except agent_service.CredentialRefNotAllowed as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "config.api_key_ref must name an allowlisted provider credential",
+        ) from exc
     await session.commit()
     return AgentResponse.model_validate(agent)
 

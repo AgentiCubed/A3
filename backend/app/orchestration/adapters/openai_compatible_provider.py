@@ -19,7 +19,7 @@ from typing import Any
 
 import httpx
 
-from app.core.secrets import CredentialNotConfigured, resolve_credential
+from app.core.secrets import CredentialNotAllowed, CredentialNotConfigured, resolve_credential
 from app.orchestration.ports import (
     AgentRunRequest,
     AgentRunResult,
@@ -77,6 +77,13 @@ class OpenAICompatibleProvider:
     # safe to retry immediately (without counting against max_attempts).
     _TRANSIENT_5XX: frozenset[int] = frozenset({500, 502, 503})
 
+    # Longest single in-adapter sleep honoring a Retry-After header. The
+    # attempt's outer time budget (execute_task's timeout_s) wraps this whole
+    # call, so a provider asking for a 60s wait must not be obeyed literally —
+    # the dispatch loop's between-attempt delay and re-dispatch handle waits
+    # longer than this.
+    _RATE_LIMIT_MAX_DELAY: float = 15.0
+
     def __init__(
         self,
         *,
@@ -90,6 +97,7 @@ class OpenAICompatibleProvider:
         timeout_seconds: float = 60.0,
         transport: httpx.AsyncBaseTransport | None = None,
         transient_retry_delays: list[float] | None = None,
+        rate_limit_retry_delays: list[float] | None = None,
     ) -> None:
         self.name = name
         self._url = base_url.rstrip("/") + "/chat/completions"
@@ -105,6 +113,29 @@ class OpenAICompatibleProvider:
         self._transient_retry_delays: list[float] = (
             [1.0, 2.0] if transient_retry_delays is None else list(transient_retry_delays)
         )
+        # Fallback delays for 429 responses when no usable Retry-After header
+        # is present. The free Gemini tier enforces per-minute quotas, so a
+        # short in-adapter wait often clears the window without burning an
+        # operator-visible attempt.
+        self._rate_limit_retry_delays: list[float] = (
+            [2.0, 5.0] if rate_limit_retry_delays is None else list(rate_limit_retry_delays)
+        )
+
+    def _rate_limit_delay(self, response: httpx.Response, fallback: float) -> float:
+        """Delay before retrying a 429: Retry-After when sane, else fallback.
+
+        Only the integer-seconds form of Retry-After is honored (the HTTP-date
+        form is rare on model APIs and not worth parsing here), and it is
+        capped so a provider cannot park the whole attempt budget on a sleep.
+        """
+        raw = response.headers.get("retry-after", "")
+        try:
+            seconds = float(raw)
+        except ValueError:
+            return fallback
+        if seconds <= 0:
+            return fallback
+        return min(seconds, self._RATE_LIMIT_MAX_DELAY)
 
     def _resolve_token(self, request: AgentRunRequest) -> str | None:
         # Every raise below happens *outside* its except block so the public
@@ -115,6 +146,14 @@ class OpenAICompatibleProvider:
         error: ProviderCallError | None = None
         try:
             token = resolve_credential(ref)
+        except CredentialNotAllowed:
+            # A ref outside ALLOWED_CREDENTIAL_REFS is a policy refusal, not a
+            # missing secret — even for providers that would accept anonymous
+            # calls, because the config asked us to read a forbidden env var.
+            error = ProviderCallError(
+                http_status=None,
+                category=ProviderErrorCategory.AUTHORIZATION,
+            )
         except CredentialNotConfigured:
             if self._requires_credential:
                 error = ProviderCallError(
@@ -230,13 +269,18 @@ class OpenAICompatibleProvider:
             transport=self._transport,
         ) as client:
             response = await self._post(client, payload, headers)
-            # Structured-output support is not advertised uniformly across
-            # OpenAI-compatible servers or across models within one server. A
-            # 4xx on a request that carried response_format is retried once
-            # without it rather than failing the whole plan; the callers that
-            # ask for JSON already parse strictly, so a prose answer is caught
-            # downstream with a precise diagnostic.
-            if wants_response_format and 400 <= response.status_code <= 499:
+
+            def _format_rejected(status: int) -> bool:
+                # Structured-output support is not advertised uniformly across
+                # OpenAI-compatible servers or across models within one
+                # server, so a 4xx on a request that carried response_format
+                # is retried once without it. 429 is excluded: rate limiting
+                # says nothing about response_format, and the old blanket 4xx
+                # check made a rate-limited call *immediately* fire a second
+                # request into the same exhausted quota window.
+                return wants_response_format and 400 <= status <= 499 and status != 429
+
+            if _format_rejected(response.status_code):
                 retry_payload, retry_headers = self._build(
                     request, token=token, with_response_format=False
                 )
@@ -244,19 +288,27 @@ class OpenAICompatibleProvider:
             else:
                 retry_payload, retry_headers = payload, headers
 
-            # Retry transient server errors (500, 502, 503) before surfacing a
-            # failure to the dispatch loop. Each retry is independent of the
-            # max_attempts budget: a transient blip should not consume an
+            # Retry transient failures before surfacing anything to the
+            # dispatch loop, each class against its own budget: 5xx blips use
+            # transient_retry_delays as-is; 429s wait out the quota window,
+            # honoring a sane Retry-After header (capped) over the configured
+            # fallback delay. In-adapter retries do not consume an
             # operator-visible attempt. Retries reuse the payload that was
-            # effective at the end of the previous attempt (with or without
-            # response_format, whichever already succeeded the 4xx check).
+            # effective at the end of the previous exchange (with or without
+            # response_format, whichever the server last accepted).
             effective_payload, effective_headers = retry_payload, retry_headers
-            for delay in self._transient_retry_delays:
-                if response.status_code not in self._TRANSIENT_5XX:
+            transient_budget = list(self._transient_retry_delays)
+            rate_limit_budget = list(self._rate_limit_retry_delays)
+            while True:
+                if response.status_code in self._TRANSIENT_5XX and transient_budget:
+                    delay = transient_budget.pop(0)
+                elif response.status_code == 429 and rate_limit_budget:
+                    delay = self._rate_limit_delay(response, rate_limit_budget.pop(0))
+                else:
                     break
                 await asyncio.sleep(delay)
                 response = await self._post(client, effective_payload, effective_headers)
-                if wants_response_format and 400 <= response.status_code <= 499:
+                if _format_rejected(response.status_code):
                     fallback_payload, fallback_headers = self._build(
                         request, token=token, with_response_format=False
                     )

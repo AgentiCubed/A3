@@ -11,11 +11,14 @@ reviewer (STD-0001)
 
 ## Provenance and status discrepancy
 
-Cited across issues #16, #17, and #19 without a defining repository
-artifact; issue #17 lists AC-0002 under "existing approved architecture," but
-no adoption record exists. As with AC-0001, this document therefore lands as
-a **proposal** — if adoption has already occurred, the review of this
-document is the moment to record that decision explicitly.
+*Historical record, preserved as drafting context — see Status above for
+the current, decided state.* This concept had been cited across issues
+#16, #17, and #19 without a defining repository artifact; issue #17 listed
+AC-0002 under "existing approved architecture," but no adoption record
+existed at drafting time. As with AC-0001, this document had therefore
+landed as a **proposal** — the Principal has since recorded the adoption
+decision explicitly, [DR-0004](../../governance/decisions/DR-0004-Phase-0-Reconciliation-Decisions.md)
+P-2, which, not this file, confers the status.
 
 Evidence base for the reconstruction:
 
@@ -51,8 +54,8 @@ drift.
 1. **Membership is explicit** **[supported: #16 acceptance criteria]**, and
    **[reconstructed]** in its elaboration: resemblance, habit, or wide usage
    do not confer membership. #16 states the explicitness; the anti-drift
-   elaboration is inferred from it (and parallels AC-0001 rule 1, which is
-   itself proposed, not established).
+   elaboration is inferred from it (and parallels AC-0001 rule 1, adopted
+   by DR-0004 P-1).
 2. **Membership is versioned** **[supported: #16 acceptance criteria]**.
    The genome has identifiable states over time; any element's membership
    history (added, revised, removed, by which decision) is reconstructible.
@@ -60,13 +63,13 @@ drift.
    the addition that removal **never erases history** is
    **[reconstructed]** by analogy to Constitution Art. XII §4 and the
    knowledge system's append-only maintenance rule.
-4. **Adoption is governance** **[proposed]**. Entry to the genome follows
-   the candidate lifecycle (ARCHITECTURE-v2 §7): proposed → evaluated
-   repeatedly → decided under authority traceable to a Principal, stewarded
-   but not decided by the evolution engine (§5.6). This rule depends on the
-   proposed governance decision **GD-P1** (does §7 govern Foundational
-   Concepts and genome entries?) and has no force until that decision is
-   made.
+4. **Adoption is governance** **[proposed, adopted by DR-0004 P-2/P-3,
+   2026-07-26]**. Entry to the genome follows the candidate lifecycle
+   (ARCHITECTURE-v2 §7): proposed → evaluated repeatedly → decided under
+   authority traceable to a Principal, stewarded but not decided by the
+   evolution engine (§5.6). This rule depended on governance decision
+   **GD-P1** (does §7 govern Foundational Concepts and genome entries?),
+   which DR-0004 P-3 has decided: yes — the rule is now in force.
 5. **Universal expression** **[supported: #19 acceptance criteria]** in its
    first clause — genome elements apply across every subsystem. The second
    clause — a subsystem that cannot satisfy an element is a finding to
@@ -92,7 +95,7 @@ promotes anything automatically — promotion is always a recorded decision
 - Not the Constitution — the genome governs engineering practice and is
   subordinate to constitutional authority (Art. XI).
 
-## Open questions (for the adoption decision)
+## Open questions (deferred past adoption — implementation-level, owned by #16/#17)
 
 1. Granularity: are genome elements whole principles (AC-scale), patterns,
    or both?

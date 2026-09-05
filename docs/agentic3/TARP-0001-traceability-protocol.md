@@ -79,13 +79,17 @@ a new decision with no force until the Principal adopts it.
    ARCHITECTURE-v2 §0.2/§7 (themselves merged draft, not ratified doctrine).
    Layer 6 feeds evidence upward but never confers adoption in reverse.
 
-## Current state of the chain (at landing)
+## Current state of the chain
+
+*(Originally landed 2026-07-26 as a snapshot; updated in place per row as
+Principal decisions resolve each layer's status — see the cited decision in
+each changed row rather than treating this table as frozen history.)*
 
 | Layer | State |
 |-------|-------|
 | 1 Constitution | Ratified (v1.0 + A-0001) |
-| 2 Foundational Concepts | AC-0001, AC-0002 landed as proposals (this PR); AC-0003…0006 still unlanded |
-| 3 Ontology | Open — issue #16 |
+| 2 Foundational Concepts | AC-0001, AC-0002 **Adopted, as amended** (DR-0004 P-1/P-2, 2026-07-26); AC-0003…0006 still unlanded |
+| 3 Ontology | Open — issue #16 (drafts landed, ONTO-0001…0006; adoption review pending) |
 | 4 Architectural Principles | None adopted; lifecycle defined (ARCHITECTURE-v2 §7) |
 | 5 Patterns | Not yet cataloged; platform seams are candidates-in-waiting |
 | 6 Implementations | Shipped platform (backend/, frontend/) |

@@ -351,9 +351,9 @@ Publication is prohibited until every field is complete.
 - [x] James Richmond has personally reviewed the final rendering and file tree
       (Gate 6 rendered-view check, 2026-08-02; Pass D mobile re-read, 2026-08-03).
 
-**Release authorization:** `NOT AUTHORIZED`
-**Authorized by:** `PENDING`
-**Date and time:** `PENDING`
+**Release authorization:** `AUTHORIZED`
+**Authorized by:** `James Richmond`
+**Date and time:** `2026-09-04 23:30 EDT`
 
 Only James Richmond may change `NOT AUTHORIZED` to `AUTHORIZED`.
 

@@ -40,6 +40,23 @@ async def _override_db_session():
             raise
 
 
+@pytest.fixture(autouse=True)
+def _fresh_auth_rate_limit():
+    """Give every test its own rate-limit window.
+
+    All TestClient requests share one fake client IP, so without a per-test
+    reset the auth limiter's fixed window would leak budget between tests and
+    fail whichever unlucky test crossed the threshold. Rate-limit tests that
+    need a tight budget set AUTH_RATE_LIMIT_PER_MINUTE themselves and reset
+    again.
+    """
+    from app.core.rate_limit import reset_auth_limiter
+
+    reset_auth_limiter()
+    yield
+    reset_auth_limiter()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _prepare_database():
     if os.path.exists(TEST_DB_PATH):

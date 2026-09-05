@@ -51,6 +51,21 @@ Notes that bite:
   cleanly. `GEMINI_API_KEY` (Google AI Studio) serves the default live
   provider; `GITHUB_MODELS_TOKEN` is dead — GitHub retired that service
   2026-07-30 and the adapter is a tombstone.
+- `ALLOWED_CREDENTIAL_REFS` bounds which env-var keys an agent's
+  `api_key_ref` may name. Anything else is rejected at agent registration
+  and again at call time, so user-supplied config can never read arbitrary
+  server env vars (`SECRET_KEY`, `DATABASE_URL`, …).
+- `REGISTRATION_ENABLED=false` is the production default in the template: a
+  public instance must not offer open self-registration against your
+  provider keys. To create your own account, either flip it on briefly and
+  back off, or set `REGISTRATION_INVITE_CODE` and register with the code.
+  The auth endpoints are rate limited per client IP
+  (`AUTH_RATE_LIMIT_PER_MINUTE`, default 10).
+- Sessions renew silently: the frontend proxy holds both tokens in httpOnly
+  cookies and refreshes on expiry, so `ACCESS_TOKEN_TTL_SECONDS=900` no
+  longer means users are logged out every 15 minutes — it means a stolen
+  access token dies within 15. Sessions end at
+  `REFRESH_TOKEN_TTL_SECONDS` (14 days) or logout.
 
 ## 3. First boot
 
