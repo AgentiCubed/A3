@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Bananers — Popup-Dismissing Learning Companions",
-  "version": "0.1.0",
-  "description": "Deploy bananer characters that investigate, learn, and dismiss third-party popups — and remember how, so next time you never see them.",
+  "version": "1.0.0",
+  "description": "Deploy banana agents that investigate and dismiss cookie, ad, and newsletter popups — then vanish them before you see them.",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "scripting", "activeTab"],
   "optional_host_permissions": ["<all_urls>"],
