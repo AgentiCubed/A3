@@ -36,7 +36,7 @@ result on this page was produced by code in this repository.
 - [Roadmap](#roadmap)
 - [Security and privacy posture](#security-and-privacy-posture)
 - [Documentation map](#documentation-map)
-- [Connect at AI4](#connect-at-ai4)
+- [Connect](#connect)
 
 ---
 
@@ -106,7 +106,7 @@ It contains:
 - A public roadmap with honest status labels
 - Provenance notes: real decisions, including ones that were wrong first
 - Sanitized, non-functional mock data illustrating the shapes involved
-- Positioning material for conversations at AI4
+- Positioning material for conversations — the spoken version of this page
 
 ### What you can and cannot do with this repository
 
@@ -414,14 +414,14 @@ running instance.
 | [`docs/security-boundaries.md`](docs/security-boundaries.md) | Invariants and trust boundaries, stated without operational detail |
 | [`docs/roadmap.md`](docs/roadmap.md) | Horizons, sequencing rationale, explicit non-goals |
 | [`docs/provenance.md`](docs/provenance.md) | Where the design came from, including decisions that were wrong first |
-| [`docs/ai4-positioning.md`](docs/ai4-positioning.md) | The short version, for conversations |
+| [`docs/positioning.md`](docs/positioning.md) | The short version, for conversations |
 | [`demo/`](demo/) | Sanitized mock payloads showing the shapes involved |
 | [`assets/diagrams/`](assets/diagrams/) | Mermaid sources for the diagrams above |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | What is welcome here, and what will be closed |
 
 ---
 
-## Connect at AI4
+## Connect
 
 I am **James Richmond**, and I build AgentiCubed.
 

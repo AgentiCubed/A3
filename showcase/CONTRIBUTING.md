@@ -20,7 +20,7 @@ Open an issue for any of these, and thank you:
 
 If you think something here is a security or privacy problem, please **do not**
 open a public issue. Use one of the direct contact routes in the
-[README](README.md#connect-at-ai4) instead. Note that this repository contains no
+[README](README.md#connect) instead. Note that this repository contains no
 running system and no source code, so there is nothing here to exploit — but if
 something in it should not be public, that is worth telling me privately.
 
