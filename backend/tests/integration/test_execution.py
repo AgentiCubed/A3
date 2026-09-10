@@ -124,9 +124,10 @@ def test_provider_failure_persists_only_safe_diagnostic(client, monkeypatch):
     executions = client.get(
         f"/api/v1/projects/{pid}/tasks/{task_id}/executions", headers=headers
     ).json()
-    assert executions[0]["error"] == (
-        "provider_http_status=403 provider_error_category=authorization"
-    )
+    err = executions[0]["error"]
+    assert "provider_http_status=403" in err
+    assert "provider_error_category=authorization" in err
+    assert "Provider refused access" in err
 
 
 def test_dispatch_timeout_escalates(client):

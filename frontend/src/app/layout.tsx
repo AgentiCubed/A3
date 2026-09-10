@@ -8,8 +8,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: browser extensions inject attributes on
+    // <html>/<body> (e.g. data-darkreader, cz-shortcut-listen) that mismatch
+    // the server render and spam the console without affecting app state.
+    <html lang="en" suppressHydrationWarning>
       <body
+        suppressHydrationWarning
         style={{
           margin: 0,
           fontFamily:

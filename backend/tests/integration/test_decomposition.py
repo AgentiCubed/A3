@@ -437,7 +437,10 @@ def test_provider_failure_records_status_and_category_not_just_a_class_name(clie
 
     plans = client.get(f"/api/v1/projects/{project['id']}/plans", headers=headers).json()
     assert plans[0]["error_code"] == "planner_error"
-    assert plans[0]["diagnostic"] == ("provider_http_status=410 provider_error_category=not_found")
+    diagnostic = plans[0]["diagnostic"]
+    assert "provider_http_status=410" in diagnostic
+    assert "provider_error_category=not_found" in diagnostic
+    assert "Model or endpoint not found" in diagnostic
     # A truncation failure remains distinguishable: it stores output, this
     # does not reach the model at all.
     assert plans[0]["provider_output_chars"] == 0

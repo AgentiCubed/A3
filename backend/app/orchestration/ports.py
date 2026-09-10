@@ -31,6 +31,40 @@ class ProviderErrorCategory(StrEnum):
     NETWORK_ERROR = "network_error"
 
 
+# Operator-facing copy for each category. Never names secrets, URLs, prompts,
+# or provider payloads — only the class of failure and the next action.
+_PROVIDER_HUMAN_MESSAGES: dict[ProviderErrorCategory, str] = {
+    ProviderErrorCategory.AUTHENTICATION: (
+        "Credential missing or malformed — set the provider API key " "in the runtime environment"
+    ),
+    ProviderErrorCategory.AUTHORIZATION: (
+        "Provider refused access — check the credential's permissions"
+    ),
+    ProviderErrorCategory.INVALID_REQUEST: (
+        "Provider rejected the request — check the model ID and parameters"
+    ),
+    ProviderErrorCategory.NOT_FOUND: (
+        "Model or endpoint not found — the model ID may be unknown "
+        "or the provider endpoint was retired"
+    ),
+    ProviderErrorCategory.RATE_LIMITED: (
+        "Rate limited — wait and retry; the provider quota may be exhausted"
+    ),
+    ProviderErrorCategory.PROVIDER_UNAVAILABLE: (
+        "Provider unavailable — retry shortly or switch providers"
+    ),
+    ProviderErrorCategory.TIMEOUT: ("Provider timed out — retry; the model may be overloaded"),
+    ProviderErrorCategory.NETWORK_ERROR: (
+        "Could not reach the provider — check network connectivity"
+    ),
+}
+
+
+def human_message_for(category: ProviderErrorCategory) -> str:
+    """Return the allowlisted human message for a provider error category."""
+    return _PROVIDER_HUMAN_MESSAGES[category]
+
+
 _PROVIDER_DIAGNOSTIC_RE = re.compile(
     "provider_http_status=(none|[1-5][0-9]{2}) "
     "provider_error_category=("
@@ -60,19 +94,47 @@ class ProviderCallError(RuntimeError):
         self.public_message = (
             f"provider_http_status={status} provider_error_category={category.value}"
         )
+        # str(exc) stays the machine-stable public_message so parsers and
+        # existing equality checks keep working; operator_message is the
+        # form stored for humans.
         super().__init__(self.public_message)
+
+    @property
+    def human_message(self) -> str:
+        """Allowlisted, actionable explanation of this failure class."""
+        return human_message_for(self.category)
+
+    @property
+    def operator_message(self) -> str:
+        """Human explanation plus the machine diagnostic in parentheses."""
+        return f"{self.human_message} ({self.public_message})"
 
 
 def parse_provider_diagnostic(message: str | None) -> tuple[int | None, str | None]:
-    """Return only an exact allowlisted provider diagnostic.
+    """Return only an allowlisted provider diagnostic.
 
-    Unknown or embellished strings deliberately return null fields instead of
-    copying any raw error text into logs or evidence.
+    Accepts the bare machine form or the human-prefixed operator form
+    (``"<human> (<machine>)"``). Unknown or embellished strings deliberately
+    return null fields instead of copying any raw error text into logs or
+    evidence.
     """
 
-    match = _PROVIDER_DIAGNOSTIC_RE.fullmatch(message or "")
+    text = message or ""
+    match = _PROVIDER_DIAGNOSTIC_RE.fullmatch(text)
     if match is None:
-        return None, None
+        # Operator form ends with "(provider_http_status=… category=…)".
+        # Require the match to finish the string, optionally inside a final
+        # pair of parentheses, so trailing junk (secret=…) still fails closed.
+        matches = list(_PROVIDER_DIAGNOSTIC_RE.finditer(text))
+        if not matches:
+            return None, None
+        match = matches[-1]
+        trailing = text[match.end() :].strip()
+        if trailing not in ("", ")"):
+            return None, None
+        leading = text[: match.start()].rstrip()
+        if leading and not leading.endswith("("):
+            return None, None
     raw_status, category = match.groups()
     return (None if raw_status == "none" else int(raw_status), category)
 
