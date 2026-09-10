@@ -21,6 +21,7 @@ import {
   REFRESH_COOKIE,
   apiBase,
   applySessionCookies,
+  clearSessionCookies,
   readCookie,
   refreshTokens,
   type TokenPair,
@@ -59,12 +60,18 @@ async function forward(
   const body = method === "POST" ? await request.text() : undefined;
 
   let renewed: TokenPair | null = null;
+  let refreshFailed = false;
   if (!token && refreshToken) {
     renewed = await refreshTokens(refreshToken);
+    refreshFailed = !renewed;
     token = renewed?.access_token;
   }
   if (!token) {
-    return NextResponse.json({ error: "not signed in" }, { status: 401 });
+    const response = NextResponse.json({ error: "not signed in" }, { status: 401 });
+    if (refreshFailed) {
+      clearSessionCookies(response);
+    }
+    return response;
   }
 
   const segments = path.map((segment) => encodeURIComponent(segment)).join("/");
@@ -74,6 +81,7 @@ async function forward(
   let res = await callBackend(url, method, token, body);
   if (res.status === 401 && refreshToken && !renewed) {
     renewed = await refreshTokens(refreshToken);
+    refreshFailed = !renewed;
     if (renewed) {
       res = await callBackend(url, method, renewed.access_token, body);
     }
@@ -86,6 +94,8 @@ async function forward(
   });
   if (renewed) {
     applySessionCookies(response, renewed);
+  } else if (refreshFailed) {
+    clearSessionCookies(response);
   }
   return response;
 }
