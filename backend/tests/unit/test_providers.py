@@ -387,9 +387,7 @@ def test_provider_diagnostic_parser_fails_closed():
 
 
 def test_provider_call_error_exposes_human_and_operator_messages():
-    err = ProviderCallError(
-        http_status=None, category=ProviderErrorCategory.AUTHENTICATION
-    )
+    err = ProviderCallError(http_status=None, category=ProviderErrorCategory.AUTHENTICATION)
     assert err.public_message == (
         "provider_http_status=none provider_error_category=authentication"
     )
@@ -401,9 +399,7 @@ def test_provider_call_error_exposes_human_and_operator_messages():
 
 
 def test_provider_diagnostic_parser_accepts_operator_form():
-    err = ProviderCallError(
-        http_status=429, category=ProviderErrorCategory.RATE_LIMITED
-    )
+    err = ProviderCallError(http_status=429, category=ProviderErrorCategory.RATE_LIMITED)
     assert parse_provider_diagnostic(err.operator_message) == (429, "rate_limited")
     # Leading junk without a closing paren still fails closed.
     assert parse_provider_diagnostic(f"leak={{{{secret}}}} {err.public_message}") == (
