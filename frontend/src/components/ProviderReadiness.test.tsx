@@ -32,7 +32,9 @@ describe("ProviderReadiness", () => {
     await waitFor(() => expect(screen.getByLabelText("Provider")).toBeTruthy());
     fireEvent.click(screen.getByText("Verify provider"));
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(/Credential missing or malformed/);
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /Credential missing or malformed/,
+      );
       expect(screen.getByRole("status")).toHaveAttribute("data-preflight-ok", "false");
     });
   });
