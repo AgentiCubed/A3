@@ -32,7 +32,9 @@ describe("ProviderReadiness", () => {
     await waitFor(() => expect(screen.getByLabelText("Provider")).toBeTruthy());
     fireEvent.click(screen.getByText("Verify provider"));
     await waitFor(() => {
-      expect(screen.getByRole("status")).toHaveTextContent(/Credential missing or malformed/);
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /Credential missing or malformed/,
+      );
       expect(screen.getByRole("status")).toHaveAttribute("data-preflight-ok", "false");
     });
   });
@@ -64,5 +66,20 @@ describe("ProviderReadiness", () => {
       expect(screen.getByRole("status")).toHaveTextContent(/Ready/);
       expect(screen.getByRole("status")).toHaveAttribute("data-preflight-ok", "true");
     });
+  });
+
+  it("deduplicates the initial provider options", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise<Response>(() => {
+          // Keep the API request pending so the component stays on its initial list.
+        }),
+    );
+
+    render(<ProviderReadiness defaultProvider="mock" />);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "mock",
+      "ollama",
+    ]);
   });
 });

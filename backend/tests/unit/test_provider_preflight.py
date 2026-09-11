@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import httpx
 
+from app.orchestration.adapters.anthropic_provider import AnthropicProvider
 from app.orchestration.adapters.openai_compatible_provider import OpenAICompatibleProvider
-from app.orchestration.ports import ProviderErrorCategory
+from app.orchestration.ports import AgentRunResult, ProviderErrorCategory
 from app.services.provider_preflight import preflight_provider
 
 
@@ -97,3 +98,20 @@ async def test_live_preflight_maps_http_failure(monkeypatch):
     assert result.category == ProviderErrorCategory.NOT_FOUND.value
     assert result.http_status == 404
     assert "Model or endpoint not found" in result.message
+
+
+async def test_anthropic_preflight_reports_default_model(monkeypatch):
+    adapter = AnthropicProvider()
+
+    async def _run(_request):
+        return AgentRunResult(output="ok", provider="anthropic")
+
+    monkeypatch.setattr(adapter, "run", _run)
+    monkeypatch.setattr(
+        "app.services.provider_preflight.get_adapter",
+        lambda _name: adapter,
+    )
+
+    result = await preflight_provider("anthropic")
+    assert result.ok is True
+    assert result.model == "claude-sonnet-4-6"

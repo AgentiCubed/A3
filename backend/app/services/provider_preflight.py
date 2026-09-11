@@ -9,6 +9,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.orchestration.adapters.anthropic_provider import (
+    AnthropicProvider,
+    _DEFAULT_MODEL as ANTHROPIC_DEFAULT_MODEL,
+)
 from app.core.secrets import CredentialNotAllowed, CredentialNotConfigured
 from app.orchestration.adapters.mock_provider import MockProvider
 from app.orchestration.adapters.openai_compatible_provider import RetiredProvider
@@ -64,6 +68,17 @@ def _fail(
         diagnostic=err.public_message,
         model=model,
     )
+
+
+def _used_model(adapter: object, requested_model: str | None) -> str | None:
+    if requested_model:
+        return requested_model
+    default_model = getattr(adapter, "_default_model", None)
+    if default_model:
+        return str(default_model)
+    if isinstance(adapter, AnthropicProvider):
+        return ANTHROPIC_DEFAULT_MODEL
+    return None
 
 
 async def preflight_provider(
@@ -143,12 +158,12 @@ async def preflight_provider(
             model=model,
         )
 
-    used_model = model or getattr(adapter, "_default_model", None) or result.provider
+    used_model = _used_model(adapter, model)
     return PreflightResult(
         provider=adapter.name,
         ok=True,
         message="Provider credential and endpoint responded successfully.",
-        model=str(used_model) if used_model else model,
+        model=used_model,
     )
 
 

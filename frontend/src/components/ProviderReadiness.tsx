@@ -33,7 +33,9 @@ export function ProviderReadiness({
 }: {
   defaultProvider?: string;
 }) {
-  const [providers, setProviders] = useState<string[]>([defaultProvider, "mock", "ollama"]);
+  const [providers, setProviders] = useState<string[]>(() =>
+    Array.from(new Set([defaultProvider, "mock", "ollama"])),
+  );
   const [provider, setProvider] = useState(defaultProvider);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PreflightResult | null>(null);
@@ -82,8 +84,8 @@ export function ProviderReadiness({
     <section data-testid="provider-readiness" style={{ marginTop: 32 }}>
       <h2 style={{ fontSize: 18 }}>Provider readiness</h2>
       <p style={{ color: "#9fb0c0", fontSize: 14, marginTop: 4 }}>
-        Verify the live-model credential and endpoint before starting a project.
-        This does not create work or spend a project attempt.
+        Verify the live-model credential and endpoint before starting a project. This does
+        not create work or spend a project attempt.
       </p>
       {!signedIn ? (
         <p style={{ color: "#e0883a", fontSize: 13 }}>
@@ -106,7 +108,12 @@ export function ProviderReadiness({
               ))}
             </select>
           </label>
-          <button type="button" onClick={() => void runCheck()} disabled={busy} style={buttonStyle}>
+          <button
+            type="button"
+            onClick={() => void runCheck()}
+            disabled={busy}
+            style={buttonStyle}
+          >
             {busy ? "Checking…" : "Verify provider"}
           </button>
         </div>

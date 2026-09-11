@@ -480,9 +480,10 @@ async def generate_plan(
         if isinstance(exc, ProviderCallError):
             guidance = retirement_guidance(planner.provider)
             # Human-first operator message keeps the machine diagnostic parseable
-            # in parentheses; retirement guidance is appended when relevant.
+            # in parentheses; any extra guidance must come first so the machine
+            # substring remains the final parenthesized segment.
             base = exc.operator_message
-            diagnostic = f"{base} — {guidance}" if guidance else base
+            diagnostic = f"{guidance} — {base}" if guidance else base
         else:
             diagnostic = f"planner failed with {type(exc).__name__}"
 

@@ -789,7 +789,7 @@ async def execute_task(
             error = (
                 exc.operator_message
                 if isinstance(exc, ProviderCallError)
-                else f"{type(exc).__name__}: {exc}"
+                else f"provider call failed with {type(exc).__name__}"
             )
             rate_limited = (
                 isinstance(exc, ProviderCallError)
