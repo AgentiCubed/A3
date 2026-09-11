@@ -82,4 +82,30 @@ describe("ProviderReadiness", () => {
       "ollama",
     ]);
   });
+
+  it("recovers from a preflight network failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers") && (!init || init.method === "GET")) {
+        return Response.json({ providers: ["gemini"] });
+      }
+      if (url.endsWith("/api/backend/providers/preflight")) {
+        throw new TypeError("fetch failed");
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+    await waitFor(() => expect(screen.getByLabelText("Provider")).toBeTruthy());
+
+    const button = screen.getByRole("button", { name: "Verify provider" });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not reach the backend — retry shortly.",
+      );
+    });
+    expect(button).not.toBeDisabled();
+  });
 });

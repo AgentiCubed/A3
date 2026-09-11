@@ -63,21 +63,26 @@ export function ProviderReadiness({
     setBusy(true);
     setError(null);
     setResult(null);
-    const res = await backend<PreflightResult>("providers/preflight", {
-      method: "POST",
-      body: { provider },
-    });
-    setBusy(false);
-    if (res.status === 401) {
-      setSignedIn(false);
-      setError("Sign in to verify provider credentials.");
-      return;
+    try {
+      const res = await backend<PreflightResult>("providers/preflight", {
+        method: "POST",
+        body: { provider },
+      });
+      if (res.status === 401) {
+        setSignedIn(false);
+        setError("Sign in to verify provider credentials.");
+        return;
+      }
+      if (!res.ok) {
+        setError(errorDetail(res.body));
+        return;
+      }
+      setResult(res.body);
+    } catch {
+      setError("Could not reach the backend — retry shortly.");
+    } finally {
+      setBusy(false);
     }
-    if (!res.ok) {
-      setError(errorDetail(res.body));
-      return;
-    }
-    setResult(res.body);
   }
 
   return (
