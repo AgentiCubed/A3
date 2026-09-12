@@ -128,7 +128,7 @@ async def preflight_provider(
         params={"max_tokens": 1},
     )
     try:
-        result = await adapter.run(request)
+        await adapter.run(request)
     except ProviderCallError as exc:
         guidance = retirement_guidance(provider)
         extra = guidance
