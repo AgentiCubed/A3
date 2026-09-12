@@ -1,0 +1,111 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProviderReadiness } from "./ProviderReadiness";
+
+describe("ProviderReadiness", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("runs a preflight check and shows a human failure message", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers") && (!init || init.method === "GET")) {
+        return Response.json({ providers: ["mock", "gemini"] });
+      }
+      if (url.endsWith("/api/backend/providers/preflight")) {
+        return Response.json({
+          provider: "gemini",
+          ok: false,
+          message:
+            "Credential missing or malformed — set the provider API key in the runtime environment (provider_http_status=none provider_error_category=authentication)",
+          category: "authentication",
+          http_status: null,
+          diagnostic: "provider_http_status=none provider_error_category=authentication",
+          model: null,
+        });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+    await waitFor(() => expect(screen.getByLabelText("Provider")).toBeTruthy());
+    fireEvent.click(screen.getByText("Verify provider"));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(
+        /Credential missing or malformed/,
+      );
+      expect(screen.getByRole("status")).toHaveAttribute("data-preflight-ok", "false");
+    });
+  });
+
+  it("shows ready state on a successful mock preflight", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers")) {
+        return Response.json({ providers: ["mock"] });
+      }
+      if (url.endsWith("/api/backend/providers/preflight")) {
+        return Response.json({
+          provider: "mock",
+          ok: true,
+          message: "Mock provider is ready (deterministic, no network).",
+          category: null,
+          http_status: null,
+          diagnostic: null,
+          model: "mock",
+        });
+      }
+      return Response.json({}, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="mock" />);
+    await waitFor(() => expect(screen.getByLabelText("Provider")).toBeTruthy());
+    fireEvent.click(screen.getByText("Verify provider"));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent(/Ready/);
+      expect(screen.getByRole("status")).toHaveAttribute("data-preflight-ok", "true");
+    });
+  });
+
+  it("deduplicates the initial provider options", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      () =>
+        new Promise<Response>(() => {
+          // Keep the API request pending so the component stays on its initial list.
+        }),
+    );
+
+    render(<ProviderReadiness defaultProvider="mock" />);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "mock",
+      "ollama",
+    ]);
+  });
+
+  it("recovers from a preflight network failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers") && (!init || init.method === "GET")) {
+        return Response.json({ providers: ["gemini"] });
+      }
+      if (url.endsWith("/api/backend/providers/preflight")) {
+        throw new TypeError("fetch failed");
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+    await waitFor(() => expect(screen.getByLabelText("Provider")).toBeTruthy());
+
+    const button = screen.getByRole("button", { name: "Verify provider" });
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not reach the backend — retry shortly.",
+      );
+    });
+    expect(button).not.toBeDisabled();
+  });
+});

@@ -50,11 +50,13 @@ def _fresh_auth_rate_limit():
     need a tight budget set AUTH_RATE_LIMIT_PER_MINUTE themselves and reset
     again.
     """
-    from app.core.rate_limit import reset_auth_limiter
+    from app.core.rate_limit import reset_auth_limiter, reset_preflight_limiter
 
     reset_auth_limiter()
+    reset_preflight_limiter()
     yield
     reset_auth_limiter()
+    reset_preflight_limiter()
 
 
 @pytest.fixture(scope="session", autouse=True)

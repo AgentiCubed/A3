@@ -20,6 +20,7 @@ from app.orchestration.ports import (
     AgentRunResult,
     ProviderCallError,
     ProviderErrorCategory,
+    parse_provider_diagnostic,
 )
 from app.services import decomposition_service
 from tests.conftest import TestSessionFactory
@@ -437,7 +438,10 @@ def test_provider_failure_records_status_and_category_not_just_a_class_name(clie
 
     plans = client.get(f"/api/v1/projects/{project['id']}/plans", headers=headers).json()
     assert plans[0]["error_code"] == "planner_error"
-    assert plans[0]["diagnostic"] == ("provider_http_status=410 provider_error_category=not_found")
+    diagnostic = plans[0]["diagnostic"]
+    assert "provider_http_status=410" in diagnostic
+    assert "provider_error_category=not_found" in diagnostic
+    assert "Model or endpoint not found" in diagnostic
     # A truncation failure remains distinguishable: it stores output, this
     # does not reach the model at all.
     assert plans[0]["provider_output_chars"] == 0
@@ -459,3 +463,4 @@ def test_retired_provider_diagnostic_names_the_replacement(client, monkeypatch):
     assert "provider_http_status=410" in diagnostic
     assert "retired on 2026-07-30" in diagnostic
     assert "gemini" in diagnostic
+    assert parse_provider_diagnostic(diagnostic) == (410, "not_found")

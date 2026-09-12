@@ -1,6 +1,6 @@
 # Issue 0006 — Provider errors and credential preflight
 
-**Status:** DRAFT · **Source:** `docs/MVP-ITERATION-TODO.md` A2, A3
+**Status:** IMPLEMENTED · **Source:** `docs/MVP-ITERATION-TODO.md` A2, A3
 **Suggested labels:** `type:enhancement`, `area:backend`, `area:frontend`, `track:live-runs`
 
 ## Summary
@@ -18,14 +18,22 @@ The system should surface actionable provider diagnostics before a project runs
 and preserve human-readable failure reasons when a live execution still fails.
 
 ## Acceptance criteria
-- [ ] Missing or malformed credentials, unknown model IDs, and provider rate
+- [x] Missing or malformed credentials, unknown model IDs, and provider rate
       limits map to distinct human-readable error messages in stored execution
       records and in the dashboard UI.
-- [ ] A provider preflight check is available from the product surface before a
+- [x] A provider preflight check is available from the product surface before a
       live run starts and reports pass/fail without launching project work.
-- [ ] The live-agent seed path exposes a non-destructive verification mode for
+- [x] The live-agent seed path exposes a non-destructive verification mode for
       operator setup.
-- [ ] Automated tests cover the error mapping and the preflight failure modes.
+- [x] Automated tests cover the error mapping and the preflight failure modes.
+
+## Implementation notes
+- `ProviderCallError.operator_message` / `human_message` in `app/orchestration/ports.py`
+- `POST /api/v1/providers/preflight`, `GET /api/v1/providers`
+- `python -m app.seed.live_agents --verify`
+- Frontend: `humanizeProviderDiagnostic`, `ProviderReadiness` on the home page
+- Proof: `tests/unit/test_provider_preflight.py`, `tests/integration/test_provider_preflight_api.py`,
+  `frontend/tests/unit/error-detail.test.ts`, `ProviderReadiness.test.tsx`
 
 ## Dependencies
 - Provider adapter error classification.

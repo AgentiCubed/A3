@@ -87,6 +87,19 @@ async def seed_live_agents(
     return lines
 
 
+async def verify_provider(provider: str, model: str) -> int:
+    """Non-destructive credential/endpoint check; return process exit code."""
+    from app.services.provider_preflight import preflight_provider
+
+    result = await preflight_provider(provider, model=model)
+    status = "PASS" if result.ok else "FAIL"
+    print(f"[{status}] provider={result.provider} model={result.model or model}")  # noqa: T201
+    print(result.message)  # noqa: T201
+    if result.diagnostic:
+        print(f"diagnostic: {result.diagnostic}")  # noqa: T201
+    return 0 if result.ok else 1
+
+
 async def _main(email: str, provider: str, model: str) -> None:  # pragma: no cover
     from app.db.session import SessionFactory
 
@@ -98,16 +111,20 @@ async def _main(email: str, provider: str, model: str) -> None:  # pragma: no co
     print(  # noqa: T201
         "\nCredential is resolved by reference at call time; ensure the "
         "provider token (e.g. GEMINI_API_KEY) is present in the "
-        "runtime environment."
+        "runtime environment. Re-run with --verify to preflight without seeding."
     )
 
 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
     import asyncio
+    import sys
 
     parser = argparse.ArgumentParser(description="Register live-provider agents")
-    parser.add_argument("--email", required=True, help="Owner account email")
+    parser.add_argument(
+        "--email",
+        help="Owner account email (required unless --verify)",
+    )
     parser.add_argument(
         "--provider",
         default="gemini",
@@ -118,5 +135,14 @@ if __name__ == "__main__":  # pragma: no cover
         default="gemini-flash-latest",
         help="Model ID (default: gemini-flash-latest; the models/ prefix is optional)",
     )
+    parser.add_argument(
+        "--verify",
+        action="store_true",
+        help="Non-destructive provider preflight only (no agent registration)",
+    )
     args = parser.parse_args()
+    if args.verify:
+        sys.exit(asyncio.run(verify_provider(args.provider, args.model)))
+    if not args.email:
+        parser.error("--email is required unless --verify is set")
     asyncio.run(_main(args.email, args.provider, args.model))

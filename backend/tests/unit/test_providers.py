@@ -386,6 +386,34 @@ def test_provider_diagnostic_parser_fails_closed():
     assert parse_provider_diagnostic("HTTPStatusError: raw provider failure") == (None, None)
 
 
+def test_provider_call_error_exposes_human_and_operator_messages():
+    err = ProviderCallError(http_status=None, category=ProviderErrorCategory.AUTHENTICATION)
+    assert err.public_message == (
+        "provider_http_status=none provider_error_category=authentication"
+    )
+    assert "Credential missing or malformed" in err.human_message
+    assert err.public_message in err.operator_message
+    assert err.human_message in err.operator_message
+    # str(exc) stays machine-stable for equality/parsers.
+    assert str(err) == err.public_message
+
+
+def test_provider_diagnostic_parser_accepts_operator_form():
+    err = ProviderCallError(http_status=429, category=ProviderErrorCategory.RATE_LIMITED)
+    assert parse_provider_diagnostic(err.operator_message) == (429, "rate_limited")
+    retired = (
+        "provider 'github_models' was retired on 2026-07-30; "
+        f"reassign affected agents to 'gemini' — {err.operator_message}"
+    )
+    assert parse_provider_diagnostic(retired) == (429, "rate_limited")
+    # Leading junk without a closing paren still fails closed.
+    assert parse_provider_diagnostic(f"leak={{{{secret}}}} {err.public_message}") == (
+        None,
+        None,
+    )
+    assert parse_provider_diagnostic(f"secret=leak {err.operator_message}") == (None, None)
+
+
 def test_estimate_cost_known_model():
     # 1 000 000 input + 1 000 000 output tokens for claude-sonnet-4-6 → $18
     cost = _estimate_cost("claude-sonnet-4-6", 1_000_000, 1_000_000)

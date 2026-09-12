@@ -479,7 +479,11 @@ async def generate_plan(
         # a known tombstone.
         if isinstance(exc, ProviderCallError):
             guidance = retirement_guidance(planner.provider)
-            diagnostic = f"{exc.public_message} ({guidance})" if guidance else exc.public_message
+            # Human-first operator message keeps the machine diagnostic parseable
+            # in parentheses; any extra guidance must come first so the machine
+            # substring remains the final parenthesized segment.
+            base = exc.operator_message
+            diagnostic = f"{guidance} — {base}" if guidance else base
         else:
             diagnostic = f"planner failed with {type(exc).__name__}"
 
