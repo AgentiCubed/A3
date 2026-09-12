@@ -9,13 +9,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import httpx
+
 from app.core.secrets import CredentialNotAllowed, CredentialNotConfigured
-from app.orchestration.adapters.anthropic_provider import _DEFAULT_MODEL as ANTHROPIC_DEFAULT_MODEL
+from app.orchestration.adapters.anthropic_provider import (
+    _DEFAULT_MODEL as ANTHROPIC_DEFAULT_MODEL,
+)
 from app.orchestration.adapters.anthropic_provider import (
     AnthropicProvider,
 )
 from app.orchestration.adapters.mock_provider import MockProvider
-from app.orchestration.adapters.openai_compatible_provider import RetiredProvider
+from app.orchestration.adapters.openai_compatible_provider import (
+    RetiredProvider,
+    http_error_category,
+)
 from app.orchestration.adapters.registry import UnknownProvider, get_adapter, retirement_guidance
 from app.orchestration.ports import (
     AgentRunRequest,
@@ -149,6 +156,19 @@ async def preflight_provider(
         return _fail(
             provider,
             category=ProviderErrorCategory.AUTHORIZATION,
+            model=model,
+        )
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        category = (
+            http_error_category(status_code)
+            if status_code is not None
+            else ProviderErrorCategory.PROVIDER_UNAVAILABLE
+        )
+        return _fail(
+            provider,
+            category=category,
+            http_status=status_code,
             model=model,
         )
     except Exception:  # noqa: BLE001 - preflight must never leak raw exceptions

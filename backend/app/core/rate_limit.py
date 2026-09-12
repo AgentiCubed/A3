@@ -83,9 +83,7 @@ def _preflight() -> RateLimiter:
         # Reuse the existing deployment abuse-control budget, but keep a
         # separate counter so auth traffic never consumes provider-preflight
         # quota and vice versa.
-        _preflight_limiter = RateLimiter(
-            limit_per_minute=get_settings().auth_rate_limit_per_minute
-        )
+        _preflight_limiter = RateLimiter(limit_per_minute=get_settings().auth_rate_limit_per_minute)
     return _preflight_limiter
 
 
