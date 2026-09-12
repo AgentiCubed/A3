@@ -1,4 +1,4 @@
-"""Fixed-window rate limiting for the auth endpoints.
+"""Fixed-window rate limiting for auth and provider preflight endpoints.
 
 In-process and per-worker by design: the goal is stopping credential
 brute-force and registration floods on a single-node deployment, not precise
@@ -67,6 +67,7 @@ class RateLimiter:
 
 
 _auth_limiter: RateLimiter | None = None
+_preflight_limiter: RateLimiter | None = None
 
 
 def _limiter() -> RateLimiter:
@@ -76,10 +77,28 @@ def _limiter() -> RateLimiter:
     return _auth_limiter
 
 
+def _preflight() -> RateLimiter:
+    global _preflight_limiter  # noqa: PLW0603 - process-wide counter is the point
+    if _preflight_limiter is None:
+        # Reuse the existing deployment abuse-control budget, but keep a
+        # separate counter so auth traffic never consumes provider-preflight
+        # quota and vice versa.
+        _preflight_limiter = RateLimiter(
+            limit_per_minute=get_settings().auth_rate_limit_per_minute
+        )
+    return _preflight_limiter
+
+
 def reset_auth_limiter() -> None:
     """Drop all counters (tests)."""
     global _auth_limiter  # noqa: PLW0603
     _auth_limiter = None
+
+
+def reset_preflight_limiter() -> None:
+    """Drop all preflight counters (tests)."""
+    global _preflight_limiter  # noqa: PLW0603
+    _preflight_limiter = None
 
 
 def client_ip(request: Request) -> str:
@@ -93,6 +112,18 @@ def enforce_auth_rate_limit(request: Request, scope: str) -> None:
     """Raise 429 (with Retry-After) when this client exceeds the auth budget."""
     limiter = _limiter()
     key = f"{scope}:{client_ip(request)}"
+    if not limiter.allow(key):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="too many requests; slow down",
+            headers={"Retry-After": str(limiter.retry_after_seconds(key))},
+        )
+
+
+def enforce_preflight_rate_limit(request: Request) -> None:
+    """Raise 429 when this client exceeds the provider preflight budget."""
+    limiter = _preflight()
+    key = f"providers_preflight:{client_ip(request)}"
     if not limiter.allow(key):
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,

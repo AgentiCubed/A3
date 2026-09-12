@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
 from app.api.deps import CurrentUser
+from app.core.rate_limit import enforce_preflight_rate_limit
 from app.orchestration.adapters.registry import available_providers
 from app.services.provider_preflight import preflight_provider
 
@@ -39,10 +40,13 @@ async def list_providers(_user: CurrentUser) -> dict[str, list[str]]:
 
 
 @router.post("/providers/preflight", response_model=PreflightResponse)
-async def run_preflight(req: PreflightRequest, _user: CurrentUser) -> PreflightResponse:
+async def run_preflight(
+    req: PreflightRequest, _user: CurrentUser, request: Request
+) -> PreflightResponse:
     """Cheap provider ping: credential + trivial call, no project work.
 
     Authenticated callers only. Never echoes secrets or raw provider payloads.
     """
+    enforce_preflight_rate_limit(request)
     result = await preflight_provider(req.provider, model=req.model)
     return PreflightResponse(**result.to_dict())

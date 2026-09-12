@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+from app.core.config import get_settings
+from app.core.rate_limit import reset_auth_limiter, reset_preflight_limiter
 from app.orchestration.ports import ProviderErrorCategory
 
 
@@ -108,3 +110,29 @@ def test_preflight_never_echoes_exception_text(client, monkeypatch):
     assert "super-secret-token" not in blob
     assert "internal.example" not in blob
     assert body["category"] == ProviderErrorCategory.PROVIDER_UNAVAILABLE.value
+
+
+def test_preflight_rate_limit_returns_429_with_retry_after(client, monkeypatch):
+    monkeypatch.setenv("AUTH_RATE_LIMIT_PER_MINUTE", "1")
+    get_settings.cache_clear()
+    reset_auth_limiter()
+    reset_preflight_limiter()
+    try:
+        headers = _auth(client)
+        first = client.post(
+            "/api/v1/providers/preflight",
+            json={"provider": "mock"},
+            headers=headers,
+        )
+        assert first.status_code == 200
+        limited = client.post(
+            "/api/v1/providers/preflight",
+            json={"provider": "mock"},
+            headers=headers,
+        )
+        assert limited.status_code == 429
+        assert int(limited.headers["retry-after"]) >= 1
+    finally:
+        reset_auth_limiter()
+        reset_preflight_limiter()
+        get_settings.cache_clear()

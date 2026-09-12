@@ -405,11 +405,17 @@ def test_provider_diagnostic_parser_accepts_operator_form():
         http_status=429, category=ProviderErrorCategory.RATE_LIMITED
     )
     assert parse_provider_diagnostic(err.operator_message) == (429, "rate_limited")
+    retired = (
+        "provider 'github_models' was retired on 2026-07-30; "
+        f"reassign affected agents to 'gemini' — {err.operator_message}"
+    )
+    assert parse_provider_diagnostic(retired) == (429, "rate_limited")
     # Leading junk without a closing paren still fails closed.
     assert parse_provider_diagnostic(f"leak={{{{secret}}}} {err.public_message}") == (
         None,
         None,
     )
+    assert parse_provider_diagnostic(f"secret=leak {err.operator_message}") == (None, None)
 
 
 def test_estimate_cost_known_model():

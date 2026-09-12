@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 
 from app.orchestration.adapters.anthropic_provider import AnthropicProvider
 from app.orchestration.adapters.openai_compatible_provider import OpenAICompatibleProvider
@@ -115,3 +116,31 @@ async def test_anthropic_preflight_reports_default_model(monkeypatch):
     result = await preflight_provider("anthropic")
     assert result.ok is True
     assert result.model == "claude-sonnet-4-6"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "category"),
+    [
+        (401, ProviderErrorCategory.AUTHENTICATION),
+        (404, ProviderErrorCategory.NOT_FOUND),
+        (429, ProviderErrorCategory.RATE_LIMITED),
+    ],
+)
+async def test_anthropic_preflight_maps_http_status_failure(monkeypatch, status_code, category):
+    adapter = AnthropicProvider()
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(status_code, request=request)
+
+    async def _run(_request):
+        raise httpx.HTTPStatusError("boom", request=request, response=response)
+
+    monkeypatch.setattr(adapter, "run", _run)
+    monkeypatch.setattr(
+        "app.services.provider_preflight.get_adapter",
+        lambda _name: adapter,
+    )
+
+    result = await preflight_provider("anthropic")
+    assert result.ok is False
+    assert result.http_status == status_code
+    assert result.category == category.value
