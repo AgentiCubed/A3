@@ -46,6 +46,7 @@ export function ProviderReadiness({
     try {
       const res = await backend<{ providers: string[] }>("providers");
       if (res.status === 401) {
+        setError(null);
         setSignedIn(false);
         return;
       }
@@ -58,7 +59,11 @@ export function ProviderReadiness({
         setError(null);
         setProviders(names);
         setProvider((current) => (names.includes(current) ? current : names[0]));
+        return;
       }
+      setProviders([]);
+      setProvider("");
+      setError("No providers are configured.");
     } catch {
       setError("Could not reach the backend — retry shortly.");
     }
@@ -125,7 +130,7 @@ export function ProviderReadiness({
           <button
             type="button"
             onClick={() => void runCheck()}
-            disabled={busy}
+            disabled={busy || provider.length === 0}
             style={buttonStyle}
           >
             {busy ? "Checking…" : "Verify provider"}

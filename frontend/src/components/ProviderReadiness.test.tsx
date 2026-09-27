@@ -146,4 +146,39 @@ describe("ProviderReadiness", () => {
       );
     });
   });
+
+  it("shows the signed-out state when loading providers returns 401", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers") && (!init || init.method === "GET")) {
+        return Response.json({ error: "not signed in" }, { status: 401 });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Sign in to run a provider preflight check.")).toBeTruthy();
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("clears fallback providers when the backend returns an empty provider list", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers")) {
+        return Response.json({ providers: [] });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("No providers are configured.");
+    });
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Verify provider" })).toBeDisabled();
+  });
 });
