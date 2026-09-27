@@ -149,6 +149,26 @@ describe("ProviderReadiness", () => {
     expect(screen.getByRole("button", { name: "Verify provider" })).toBeDisabled();
   });
 
+  it("surfaces a backend error when loading providers returns a non-401 failure", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers") && (!init || init.method === "GET")) {
+        return Response.json({ detail: "providers unavailable" }, { status: 503 });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("providers unavailable");
+    });
+    expect(screen.getByLabelText("Provider")).toBeTruthy();
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Verify provider" })).toBeDisabled();
+    expect(screen.queryByText("Sign in to run a provider preflight check.")).toBeNull();
+  });
+
   it("shows the signed-out state when loading providers returns 401", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);

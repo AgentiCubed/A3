@@ -52,6 +52,8 @@ export function ProviderReadiness({
       }
       setSignedIn(true);
       if (!res.ok) {
+        setProviders([]);
+        setProvider("");
         setError(errorDetail(res.body));
         return;
       }
@@ -95,6 +97,7 @@ export function ProviderReadiness({
         setError(errorDetail(res.body));
         return;
       }
+      setSignedIn(true);
       setResult(res.body);
     } catch {
       setError("Could not reach the backend — retry shortly.");
