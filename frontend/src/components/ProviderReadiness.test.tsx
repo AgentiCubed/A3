@@ -83,6 +83,26 @@ describe("ProviderReadiness", () => {
     ]);
   });
 
+  it("deduplicates provider options returned by the backend", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers")) {
+        return Response.json({ providers: ["gemini", "gemini", "mock"] });
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="mock" />);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "gemini",
+        "mock",
+      ]);
+    });
+    expect(screen.getByLabelText("Provider")).toHaveValue("mock");
+  });
+
   it("recovers from a preflight network failure", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
@@ -107,5 +127,23 @@ describe("ProviderReadiness", () => {
       );
     });
     expect(button).not.toBeDisabled();
+  });
+
+  it("surfaces an error when loading providers fails", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/backend/providers") && (!init || init.method === "GET")) {
+        throw new TypeError("fetch failed");
+      }
+      return Response.json({ error: "unexpected" }, { status: 500 });
+    });
+
+    render(<ProviderReadiness defaultProvider="gemini" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not reach the backend — retry shortly.",
+      );
+    });
   });
 });

@@ -62,10 +62,12 @@ def _fail(
     category: ProviderErrorCategory,
     http_status: int | None = None,
     extra: str | None = None,
+    message: str | None = None,
     model: str | None = None,
 ) -> PreflightResult:
     err = ProviderCallError(http_status=http_status, category=category)
-    message = err.operator_message if extra is None else f"{err.operator_message} — {extra}"
+    base_message = err.operator_message if message is None else message
+    message = base_message if extra is None else f"{base_message} — {extra}"
     return PreflightResult(
         provider=provider,
         ok=False,
@@ -144,6 +146,7 @@ async def preflight_provider(
             category=exc.category,
             http_status=exc.http_status,
             extra=extra,
+            message=exc.operator_message,
             model=model,
         )
     except CredentialNotConfigured:

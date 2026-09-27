@@ -43,15 +43,24 @@ export function ProviderReadiness({
   const [signedIn, setSignedIn] = useState(true);
 
   const loadProviders = useCallback(async () => {
-    const res = await backend<{ providers: string[] }>("providers");
-    if (res.status === 401) {
-      setSignedIn(false);
-      return;
-    }
-    if (res.ok && Array.isArray(res.body.providers) && res.body.providers.length > 0) {
-      const names = res.body.providers;
-      setProviders(names);
-      setProvider((current) => (names.includes(current) ? current : names[0]));
+    try {
+      const res = await backend<{ providers: string[] }>("providers");
+      if (res.status === 401) {
+        setSignedIn(false);
+        return;
+      }
+      if (!res.ok) {
+        setError(errorDetail(res.body));
+        return;
+      }
+      if (Array.isArray(res.body.providers) && res.body.providers.length > 0) {
+        const names = Array.from(new Set(res.body.providers));
+        setError(null);
+        setProviders(names);
+        setProvider((current) => (names.includes(current) ? current : names[0]));
+      }
+    } catch {
+      setError("Could not reach the backend — retry shortly.");
     }
   }, []);
 
