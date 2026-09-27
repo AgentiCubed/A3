@@ -47,8 +47,8 @@ def _fresh_auth_rate_limit():
     All TestClient requests share one fake client IP, so without a per-test
     reset the auth limiter's fixed window would leak budget between tests and
     fail whichever unlucky test crossed the threshold. Rate-limit tests that
-    need a tight budget set AUTH_RATE_LIMIT_PER_MINUTE themselves and reset
-    again.
+    need a tight budget set AUTH_RATE_LIMIT_PER_MINUTE or
+    PREFLIGHT_RATE_LIMIT_PER_MINUTE themselves and reset again.
     """
     from app.core.rate_limit import reset_auth_limiter, reset_preflight_limiter
 

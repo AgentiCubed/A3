@@ -113,7 +113,7 @@ def test_preflight_never_echoes_exception_text(client, monkeypatch):
 
 
 def test_preflight_rate_limit_returns_429_with_retry_after(client, monkeypatch):
-    monkeypatch.setenv("AUTH_RATE_LIMIT_PER_MINUTE", "1")
+    monkeypatch.setenv("PREFLIGHT_RATE_LIMIT_PER_MINUTE", "1")
     get_settings.cache_clear()
     reset_auth_limiter()
     reset_preflight_limiter()

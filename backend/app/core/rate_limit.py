@@ -80,10 +80,9 @@ def _limiter() -> RateLimiter:
 def _preflight() -> RateLimiter:
     global _preflight_limiter  # noqa: PLW0603 - process-wide counter is the point
     if _preflight_limiter is None:
-        # Reuse the existing deployment abuse-control budget, but keep a
-        # separate counter so auth traffic never consumes provider-preflight
-        # quota and vice versa.
-        _preflight_limiter = RateLimiter(limit_per_minute=get_settings().auth_rate_limit_per_minute)
+        _preflight_limiter = RateLimiter(
+            limit_per_minute=get_settings().preflight_rate_limit_per_minute
+        )
     return _preflight_limiter
 
 
