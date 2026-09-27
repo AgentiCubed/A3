@@ -145,6 +145,8 @@ describe("ProviderReadiness", () => {
         "Could not reach the backend — retry shortly.",
       );
     });
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Verify provider" })).toBeDisabled();
   });
 
   it("shows the signed-out state when loading providers returns 401", async () => {

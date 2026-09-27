@@ -67,6 +67,8 @@ export function ProviderReadiness({
       setError("No providers are configured.");
     } catch {
       setSignedIn(true);
+      setProviders([]);
+      setProvider("");
       setError("Could not reach the backend — retry shortly.");
     }
   }, []);
