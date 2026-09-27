@@ -36,12 +36,10 @@ const PROVIDER_HUMAN: Record<string, string> = {
   authentication:
     "Credential missing or malformed — set the provider API key in the runtime environment",
   authorization: "Provider refused access — check the credential's permissions",
-  invalid_request:
-    "Provider rejected the request — check the model ID and parameters",
+  invalid_request: "Provider rejected the request — check the model ID and parameters",
   not_found:
     "Model or endpoint not found — the model ID may be unknown or the provider endpoint was retired",
-  rate_limited:
-    "Rate limited — wait and retry; the provider quota may be exhausted",
+  rate_limited: "Rate limited — wait and retry; the provider quota may be exhausted",
   provider_unavailable: "Provider unavailable — retry shortly or switch providers",
   timeout: "Provider timed out — retry; the model may be overloaded",
   network_error: "Could not reach the provider — check network connectivity",
@@ -57,9 +55,10 @@ export function humanizeProviderDiagnostic(text: string): string {
   const human = PROVIDER_HUMAN[match[1]];
   if (!human) return text;
   if (text.includes(human)) return text;
-  const machine = /provider_http_status=(?:none|[1-5][0-9]{2}) provider_error_category=[a-z_]+/.exec(
-    text,
-  );
+  const machine =
+    /provider_http_status=(?:none|[1-5][0-9]{2}) provider_error_category=[a-z_]+/.exec(
+      text,
+    );
   return machine ? `${human} (${machine[0]})` : `${human} — ${text}`;
 }
 
@@ -77,13 +76,7 @@ export function errorDetail(body: unknown): string {
       // actual reason sat in the database — the single most expensive
       // diagnostic failure in this project's history. Every field that
       // explains a failure must reach the screen.
-      const parts = [
-        record.error,
-        record.reason,
-        record.hint,
-        record.code,
-        record.detail,
-      ]
+      const parts = [record.error, record.reason, record.hint, record.code, record.detail]
         .filter((part): part is string => typeof part === "string")
         .map(humanizeProviderDiagnostic);
       if (parts.length > 0) return parts.join(" — ");
