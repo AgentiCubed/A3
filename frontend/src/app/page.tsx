@@ -1,5 +1,6 @@
 import { HealthBadge, type HealthState } from "@/components/HealthBadge";
 import { NewProjectForm } from "@/components/NewProjectForm";
+import { ProviderReadiness } from "@/components/ProviderReadiness";
 import { Wordmark } from "@/components/Wordmark";
 import { api, type ApiMeta, type ReadyStatus } from "@/lib/api";
 
@@ -43,6 +44,7 @@ export default async function Home() {
       </p>
 
       <NewProjectForm />
+      <ProviderReadiness />
 
       <section style={{ marginTop: 32 }}>
         <h2 style={{ fontSize: 18 }}>API readiness</h2>

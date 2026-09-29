@@ -16,13 +16,15 @@ within each section by dependency, not difficulty.
       now `GEMINI_API_KEY` (Google AI Studio), already configured and
       proven by a live run. Verify any time with
       `docker compose exec api printenv GEMINI_API_KEY | cut -c1-6`.
-- [ ] **A2 (C):** actionable provider errors — map
-      `invalid_request/status=none` class failures to human messages
-      ("credential missing or malformed", "model ID unknown", "rate
-      limited — retry after X") in the stored task error and the UI.
-- [ ] **A3 (C):** credential preflight — a cheap provider ping surfaced on
-      the dashboard (and a CLI `--verify` on the live-agents seed) so a bad
-      token is caught before a project fails.
+- [x] **A2 (C):** actionable provider errors — DONE: each
+      `ProviderErrorCategory` maps to allowlisted human copy; execution
+      and plan diagnostics store `operator_message` (human + machine
+      form); the dashboard humanizes bare machine diagnostics. Machine
+      form remains parseable via `parse_provider_diagnostic`.
+- [x] **A3 (C):** credential preflight — DONE: `POST /api/v1/providers/preflight`
+      and `GET /api/v1/providers`; home-page Provider readiness panel;
+      `python -m app.seed.live_agents --verify` for non-destructive CLI
+      setup checks.
 - [ ] **A4 (C):** failure UX — a blocked/escalated task must show its
       error and a "retry with fixes" path on the dashboard, not hide it in
       the database.
@@ -127,11 +129,11 @@ within each section by dependency, not difficulty.
       access token still dies within ACCESS_TOKEN_TTL_SECONDS. Both TTLs
       remain config-driven and now reach the frontend container in prod
       compose.
-- [ ] **E2 (C):** "Sign in to create a project." becomes a link to /login.
+- [x] **E2 (C):** DONE — "Sign in to create a project." links to /login.
 - [ ] **E3 (C):** artifacts browser in the UI (list + download per
       project) — supersedes the `docker compose cp` workaround.
-- [ ] **E4 (C):** hydration-warning hygiene on / and /login (extension
-      attribute noise suppressed via suppressHydrationWarning on body).
+- [x] **E4 (C):** DONE — `suppressHydrationWarning` on root `<html>` and
+      `<body>` to silence extension-injected attribute mismatches.
 
 ## F. Process
 

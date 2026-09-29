@@ -30,10 +30,12 @@ class Settings(BaseSettings):
     # Registration / abuse controls. Registration is open by default for local
     # development; a hosted instance should either disable it outright or set
     # an invite code (see .env.prod.example). Rate limiting is fixed-window,
-    # per client IP, applied to the auth endpoints; <= 0 disables it (tests).
+    # per client IP, with separate budgets for auth and provider preflight;
+    # <= 0 disables a limiter (tests).
     registration_enabled: bool = Field(default=True)
     registration_invite_code: str = Field(default="")
     auth_rate_limit_per_minute: int = Field(default=10)
+    preflight_rate_limit_per_minute: int = Field(default=10)
 
     # Credential references an agent's config may name (comma-separated
     # env-var keys). Anything else is refused both when the agent is

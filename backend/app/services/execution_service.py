@@ -787,9 +787,9 @@ async def execute_task(
             continue
         except Exception as exc:  # noqa: BLE001 - any provider error is a failed attempt
             error = (
-                exc.public_message
+                exc.operator_message
                 if isinstance(exc, ProviderCallError)
-                else f"{type(exc).__name__}: {exc}"
+                else f"provider call failed with {type(exc).__name__}"
             )
             rate_limited = (
                 isinstance(exc, ProviderCallError)

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   backend,
   errorDetail,
+  humanizeProviderDiagnostic,
   type AgentSummary,
   type DecompositionPlan,
 } from "@/lib/backend";
@@ -195,7 +196,7 @@ export function PlanPanel({ projectId }: { projectId: string }) {
               Last plan: <StatusPill status={latest.status} />
               {latest.decision_comment ? ` — ${latest.decision_comment}` : ""}
               {latest.status === "invalid" && latest.diagnostic
-                ? ` — ${latest.diagnostic}`
+                ? ` — ${humanizeProviderDiagnostic(latest.diagnostic)}`
                 : ""}
             </p>
           )}
