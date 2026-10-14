@@ -71,6 +71,13 @@ _PROVIDER_DIAGNOSTIC_RE = re.compile(
     + "|".join(category.value for category in ProviderErrorCategory)
     + ")"
 )
+_PROVIDER_OPERATOR_PREFIX_RE = re.compile(
+    r"(?:(?:provider '[^']+' was retired on \d{4}-\d{2}-\d{2}; "
+    r"reassign affected agents to '[^']+' — )?"
+    r"(?:"
+    + "|".join(re.escape(message) for message in _PROVIDER_HUMAN_MESSAGES.values())
+    + r") \()"
+)
 
 
 class ProviderCallError(RuntimeError):
@@ -133,7 +140,7 @@ def parse_provider_diagnostic(message: str | None) -> tuple[int | None, str | No
         if trailing not in ("", ")"):
             return None, None
         leading = text[: match.start()].rstrip()
-        if leading and not leading.endswith("("):
+        if leading and not _PROVIDER_OPERATOR_PREFIX_RE.fullmatch(leading):
             return None, None
     raw_status, category = match.groups()
     return (None if raw_status == "none" else int(raw_status), category)

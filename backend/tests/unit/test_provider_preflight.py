@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 
+from app.orchestration.adapters.anthropic_provider import AnthropicProvider
 from app.orchestration.adapters.openai_compatible_provider import OpenAICompatibleProvider
-from app.orchestration.ports import ProviderErrorCategory
+from app.orchestration.ports import AgentRunResult, ProviderCallError, ProviderErrorCategory
 from app.services.provider_preflight import preflight_provider
 
 
@@ -97,3 +99,83 @@ async def test_live_preflight_maps_http_failure(monkeypatch):
     assert result.category == ProviderErrorCategory.NOT_FOUND.value
     assert result.http_status == 404
     assert "Model or endpoint not found" in result.message
+
+
+async def test_live_preflight_preserves_provider_operator_message(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-token")
+
+    class RichProviderCallError(ProviderCallError):
+        @property
+        def operator_message(self) -> str:
+            return "Provider rejected the request — choose a supported model"
+
+    stub = OpenAICompatibleProvider(
+        name="gemini",
+        base_url="https://compat.example.invalid/v1",
+        default_model="gemini-2.5-flash",
+        default_credential_ref="GEMINI_API_KEY",
+        transport=httpx.MockTransport(lambda _request: httpx.Response(200, json={})),
+    )
+
+    async def _run(_request):
+        raise RichProviderCallError(
+            http_status=404,
+            category=ProviderErrorCategory.NOT_FOUND,
+        )
+
+    monkeypatch.setattr(stub, "run", _run)
+    monkeypatch.setattr(
+        "app.services.provider_preflight.get_adapter",
+        lambda _name: stub,
+    )
+
+    result = await preflight_provider("gemini")
+    assert result.ok is False
+    assert result.http_status == 404
+    assert result.category == ProviderErrorCategory.NOT_FOUND.value
+    assert result.message == "Provider rejected the request — choose a supported model"
+
+
+async def test_anthropic_preflight_reports_default_model(monkeypatch):
+    adapter = AnthropicProvider()
+
+    async def _run(_request):
+        return AgentRunResult(output="ok", provider="anthropic")
+
+    monkeypatch.setattr(adapter, "run", _run)
+    monkeypatch.setattr(
+        "app.services.provider_preflight.get_adapter",
+        lambda _name: adapter,
+    )
+
+    result = await preflight_provider("anthropic")
+    assert result.ok is True
+    assert result.model == "claude-sonnet-4-6"
+
+
+@pytest.mark.parametrize(
+    ("status_code", "category"),
+    [
+        (401, ProviderErrorCategory.AUTHENTICATION),
+        (404, ProviderErrorCategory.NOT_FOUND),
+        (429, ProviderErrorCategory.RATE_LIMITED),
+    ],
+)
+async def test_anthropic_preflight_maps_http_status_failure(monkeypatch, status_code, category):
+    adapter = AnthropicProvider()
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    response = httpx.Response(status_code, request=request)
+
+    async def _run(_request):
+        raise httpx.HTTPStatusError("boom", request=request, response=response)
+
+    monkeypatch.setattr(adapter, "run", _run)
+    monkeypatch.setattr(
+        "app.services.provider_preflight.get_adapter",
+        lambda _name: adapter,
+    )
+
+    result = await preflight_provider("anthropic")
+    assert result.ok is False
+    assert result.http_status == status_code
+    assert result.category == category.value

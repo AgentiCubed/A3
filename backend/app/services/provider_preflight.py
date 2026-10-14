@@ -9,9 +9,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import httpx
+
 from app.core.secrets import CredentialNotAllowed, CredentialNotConfigured
+from app.orchestration.adapters.anthropic_provider import (
+    _DEFAULT_MODEL as ANTHROPIC_DEFAULT_MODEL,
+)
+from app.orchestration.adapters.anthropic_provider import (
+    AnthropicProvider,
+)
 from app.orchestration.adapters.mock_provider import MockProvider
-from app.orchestration.adapters.openai_compatible_provider import RetiredProvider
+from app.orchestration.adapters.openai_compatible_provider import (
+    RetiredProvider,
+    http_error_category,
+)
 from app.orchestration.adapters.registry import UnknownProvider, get_adapter, retirement_guidance
 from app.orchestration.ports import (
     AgentRunRequest,
@@ -51,10 +62,12 @@ def _fail(
     category: ProviderErrorCategory,
     http_status: int | None = None,
     extra: str | None = None,
+    message: str | None = None,
     model: str | None = None,
 ) -> PreflightResult:
     err = ProviderCallError(http_status=http_status, category=category)
-    message = err.operator_message if extra is None else f"{err.operator_message} — {extra}"
+    base_message = err.operator_message if message is None else message
+    message = base_message if extra is None else f"{base_message} — {extra}"
     return PreflightResult(
         provider=provider,
         ok=False,
@@ -64,6 +77,17 @@ def _fail(
         diagnostic=err.public_message,
         model=model,
     )
+
+
+def _used_model(adapter: object, requested_model: str | None) -> str | None:
+    if requested_model:
+        return requested_model
+    default_model = getattr(adapter, "_default_model", None)
+    if default_model:
+        return str(default_model)
+    if isinstance(adapter, AnthropicProvider):
+        return ANTHROPIC_DEFAULT_MODEL
+    return None
 
 
 async def preflight_provider(
@@ -113,7 +137,7 @@ async def preflight_provider(
         params={"max_tokens": 1},
     )
     try:
-        result = await adapter.run(request)
+        await adapter.run(request)
     except ProviderCallError as exc:
         guidance = retirement_guidance(provider)
         extra = guidance
@@ -122,6 +146,7 @@ async def preflight_provider(
             category=exc.category,
             http_status=exc.http_status,
             extra=extra,
+            message=exc.operator_message,
             model=model,
         )
     except CredentialNotConfigured:
@@ -136,6 +161,19 @@ async def preflight_provider(
             category=ProviderErrorCategory.AUTHORIZATION,
             model=model,
         )
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        category = (
+            http_error_category(status_code)
+            if status_code is not None
+            else ProviderErrorCategory.PROVIDER_UNAVAILABLE
+        )
+        return _fail(
+            provider,
+            category=category,
+            http_status=status_code,
+            model=model,
+        )
     except Exception:  # noqa: BLE001 - preflight must never leak raw exceptions
         return _fail(
             provider,
@@ -143,12 +181,12 @@ async def preflight_provider(
             model=model,
         )
 
-    used_model = model or getattr(adapter, "_default_model", None) or result.provider
+    used_model = _used_model(adapter, model)
     return PreflightResult(
         provider=adapter.name,
         ok=True,
         message="Provider credential and endpoint responded successfully.",
-        model=str(used_model) if used_model else model,
+        model=used_model,
     )
 
 

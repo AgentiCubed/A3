@@ -130,6 +130,32 @@ def test_provider_failure_persists_only_safe_diagnostic(client, monkeypatch):
     assert "Provider refused access" in err
 
 
+def test_non_provider_failure_does_not_persist_raw_exception_text(client, monkeypatch):
+    class _FailingProvider:
+        async def run(self, _request):
+            raise RuntimeError("secret=super-secret-token host=internal.example")
+
+    monkeypatch.setattr(execution_service, "get_adapter", lambda _name: _FailingProvider())
+    headers = _auth(client)
+    pid = _project(client, headers)
+    task_id = _task(client, headers, pid)
+    agent_id = _agent(client, headers)
+    _assign(client, headers, pid, task_id, agent_id)
+
+    response = client.post(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/dispatch",
+        json={"max_attempts": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    executions = client.get(
+        f"/api/v1/projects/{pid}/tasks/{task_id}/executions", headers=headers
+    ).json()
+    assert executions[0]["error"] == "provider call failed with RuntimeError"
+    assert "super-secret-token" not in executions[0]["error"]
+    assert "internal.example" not in executions[0]["error"]
+
+
 def test_dispatch_timeout_escalates(client):
     headers = _auth(client)
     pid = _project(client, headers)

@@ -20,6 +20,7 @@ from app.orchestration.ports import (
     AgentRunResult,
     ProviderCallError,
     ProviderErrorCategory,
+    parse_provider_diagnostic,
 )
 from app.services import decomposition_service
 from tests.conftest import TestSessionFactory
@@ -462,3 +463,4 @@ def test_retired_provider_diagnostic_names_the_replacement(client, monkeypatch):
     assert "provider_http_status=410" in diagnostic
     assert "retired on 2026-07-30" in diagnostic
     assert "gemini" in diagnostic
+    assert parse_provider_diagnostic(diagnostic) == (410, "not_found")

@@ -33,11 +33,9 @@ export function ProviderReadiness({
 }: {
   defaultProvider?: string;
 }) {
-  const [providers, setProviders] = useState<string[]>([
-    defaultProvider,
-    "mock",
-    "ollama",
-  ]);
+  const [providers, setProviders] = useState<string[]>(() =>
+    Array.from(new Set([defaultProvider, "mock", "ollama"])),
+  );
   const [provider, setProvider] = useState(defaultProvider);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PreflightResult | null>(null);
@@ -45,15 +43,35 @@ export function ProviderReadiness({
   const [signedIn, setSignedIn] = useState(true);
 
   const loadProviders = useCallback(async () => {
-    const res = await backend<{ providers: string[] }>("providers");
-    if (res.status === 401) {
-      setSignedIn(false);
-      return;
-    }
-    if (res.ok && Array.isArray(res.body.providers) && res.body.providers.length > 0) {
-      const names = res.body.providers;
-      setProviders(names);
-      setProvider((current) => (names.includes(current) ? current : names[0]));
+    try {
+      const res = await backend<{ providers: string[] }>("providers");
+      if (res.status === 401) {
+        setError(null);
+        setSignedIn(false);
+        return;
+      }
+      setSignedIn(true);
+      if (!res.ok) {
+        setProviders([]);
+        setProvider("");
+        setError(errorDetail(res.body));
+        return;
+      }
+      if (Array.isArray(res.body.providers) && res.body.providers.length > 0) {
+        const names = Array.from(new Set(res.body.providers));
+        setError(null);
+        setProviders(names);
+        setProvider((current) => (names.includes(current) ? current : names[0]));
+        return;
+      }
+      setProviders([]);
+      setProvider("");
+      setError("No providers are configured.");
+    } catch {
+      setSignedIn(true);
+      setProviders([]);
+      setProvider("");
+      setError("Could not reach the backend — retry shortly.");
     }
   }, []);
 
@@ -65,21 +83,27 @@ export function ProviderReadiness({
     setBusy(true);
     setError(null);
     setResult(null);
-    const res = await backend<PreflightResult>("providers/preflight", {
-      method: "POST",
-      body: { provider },
-    });
-    setBusy(false);
-    if (res.status === 401) {
-      setSignedIn(false);
-      setError("Sign in to verify provider credentials.");
-      return;
+    try {
+      const res = await backend<PreflightResult>("providers/preflight", {
+        method: "POST",
+        body: { provider },
+      });
+      if (res.status === 401) {
+        setSignedIn(false);
+        setError("Sign in to verify provider credentials.");
+        return;
+      }
+      if (!res.ok) {
+        setError(errorDetail(res.body));
+        return;
+      }
+      setSignedIn(true);
+      setResult(res.body);
+    } catch {
+      setError("Could not reach the backend — retry shortly.");
+    } finally {
+      setBusy(false);
     }
-    if (!res.ok) {
-      setError(errorDetail(res.body));
-      return;
-    }
-    setResult(res.body);
   }
 
   return (
@@ -113,7 +137,7 @@ export function ProviderReadiness({
           <button
             type="button"
             onClick={() => void runCheck()}
-            disabled={busy}
+            disabled={busy || provider.length === 0}
             style={buttonStyle}
           >
             {busy ? "Checking…" : "Verify provider"}
