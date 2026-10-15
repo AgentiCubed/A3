@@ -49,6 +49,12 @@ _RESULT_TEXT_MAX = 4000
 class ToolDenied(Exception):
     """A tool call was refused (unknown, unpermitted, or unimplemented)."""
 
+    operator_message: str
+
+    def __init__(self, message: str, *, operator_message: str) -> None:
+        super().__init__(message)
+        self.operator_message = operator_message
+
 
 class ToolBudgetExceeded(Exception):
     """The tool loop hit its iteration or call budget."""
@@ -232,18 +238,24 @@ async def _execute_call(
     )
     if tool is None:
         await _audit(session, ctx, "tool.denied", {"tool": name, "reason": "unknown tool"})
-        raise ToolDenied(f"unknown tool: {name}")
+        raise ToolDenied(f"unknown tool: {name}", operator_message="unknown tool")
     if not await tool_service.has_permission(
         session, agent_id=agent.id, tool_id=tool.id, now=datetime.now(UTC)
     ):
         await _audit(session, ctx, "tool.denied", {"tool": name, "reason": "no permission"})
-        raise ToolDenied(f"agent has no permission for tool: {name}")
+        raise ToolDenied(
+            f"agent has no permission for tool: {name}",
+            operator_message="agent has no permission for tool",
+        )
     impl = TOOL_IMPLEMENTATIONS.get(tool.name)
     if impl is None:
         await _audit(
             session, ctx, "tool.denied", {"tool": name, "reason": "no server-side implementation"}
         )
-        raise ToolDenied(f"tool has no server-side implementation: {name}")
+        raise ToolDenied(
+            f"tool has no server-side implementation: {name}",
+            operator_message="tool has no server-side implementation",
+        )
 
     try:
         output = await impl(session, ctx, arguments or {})

@@ -191,7 +191,7 @@ def test_denied_tool_halts_attempt_with_audit(client, monkeypatch, tmp_path):
     assert body["escalated"] is True
 
     execs = _executions(client, headers, pid, task_id)
-    assert "no permission for tool" in execs[0]["error"]
+    assert execs[0]["error"] == "agent has no permission for tool"
 
     denied = _audits_for_task(task_id, "tool.denied")
     assert len(denied) == 1

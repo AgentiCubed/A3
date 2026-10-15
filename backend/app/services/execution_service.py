@@ -786,11 +786,10 @@ async def execute_task(
             await asyncio.sleep(_ATTEMPT_RETRY_PACING_S)
             continue
         except Exception as exc:  # noqa: BLE001 - any provider error is a failed attempt
-            error = (
-                exc.operator_message
-                if isinstance(exc, ProviderCallError)
-                else f"provider call failed with {type(exc).__name__}"
-            )
+            if isinstance(exc, ProviderCallError | tool_runtime.ToolDenied):
+                error = exc.operator_message
+            else:
+                error = f"provider call failed with {type(exc).__name__}"
             rate_limited = (
                 isinstance(exc, ProviderCallError)
                 and exc.category is ProviderErrorCategory.RATE_LIMITED
