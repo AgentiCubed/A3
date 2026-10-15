@@ -124,6 +124,24 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+def _persisted_attempt_error(exc: BaseException) -> str:
+    """Return the attempt error safe to store on TaskExecution.
+
+    ProviderCallError already carries a redacted operator diagnostic. Governed
+    tool halts are raised by our runtime with fixed, secret-free text and must
+    stay readable — a class name alone hides why the attempt was blocked.
+    Anything else is an untrusted provider failure and is recorded by type only
+    so raw SDK text (URLs, tokens) never lands in the execution row.
+    """
+    if isinstance(exc, ProviderCallError):
+        return exc.operator_message
+    if isinstance(exc, (tool_runtime.ToolDenied, tool_runtime.ToolBudgetExceeded)):
+        detail = str(exc).strip()
+        name = type(exc).__name__
+        return f"{name}: {detail}" if detail else name
+    return f"provider call failed with {type(exc).__name__}"
+
+
 def build_prompt(task: Task, extra_context: str | None = None) -> str:
     parts = [f"Task: {task.title}"]
     if task.description:
@@ -785,12 +803,8 @@ async def execute_task(
                 return DispatchResult(outcome, attempt, escalated=True, execution_ids=execution_ids)
             await asyncio.sleep(_ATTEMPT_RETRY_PACING_S)
             continue
-        except Exception as exc:  # noqa: BLE001 - any provider error is a failed attempt
-            error = (
-                exc.operator_message
-                if isinstance(exc, ProviderCallError)
-                else f"provider call failed with {type(exc).__name__}"
-            )
+        except Exception as exc:  # noqa: BLE001 - provider and tool-loop failures are attempts
+            error = _persisted_attempt_error(exc)
             rate_limited = (
                 isinstance(exc, ProviderCallError)
                 and exc.category is ProviderErrorCategory.RATE_LIMITED
