@@ -11,9 +11,10 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
+import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from jose import JWTError, jwt
+from jwt.exceptions import PyJWTError
 
 from app.core.config import get_settings
 
@@ -87,7 +88,7 @@ def decode_token(token: str, *, expected_type: TokenType) -> dict[str, Any]:
     settings = get_settings()
     try:
         claims = jwt.decode(token, settings.secret_key, algorithms=[_ALGORITHM])
-    except JWTError as exc:
+    except PyJWTError as exc:
         raise TokenError(f"invalid token: {type(exc).__name__}") from exc
     if claims.get("type") != expected_type:
         raise TokenError("unexpected token type")

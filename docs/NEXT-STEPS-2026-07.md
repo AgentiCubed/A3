@@ -105,9 +105,9 @@ failure mode was demonstrated on real data, not a seed: on arrival the gate
 caught two live critical advisories on `main` — `next@15.1.12`
 (GHSA-f82v-jwr5-mffw, middleware authorization bypass) and `vitest`
 (GHSA-5xrq-8626-4rwp) — fixed in the same change by bumping to
-`next@15.5.20` and `vitest@4.1.10`. One waiver is active: `ecdsa`
-(PYSEC-2026-1325, no fix released, EC path unused — JWTs are HS256), expiring
-2026-10-31.
+`next@15.5.20` and `vitest@4.1.10`. The `ecdsa` waiver (PYSEC-2026-1325)
+was later removed when unmaintained `python-jose` (CVE-2026-85394, no fix)
+was replaced with `PyJWT>=2.15.1`, which also drops that transitive dependency.
 
 ### Step 3 — Live-provider opt-in smoke (closes G4)
 
